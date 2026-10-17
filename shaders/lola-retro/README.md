@@ -124,19 +124,19 @@ casing in the scene's colour.
 
 | | Scene |
 |---|---|
-| 2 | Space: stars in layers that slowly come closer and drift, over a faint nebula. |
-| 3 | Synthwave: a big striped sun over mountains, a neon grid floor that runs toward you, a purple sky. |
-| 4 | Tiles: a 90s desktop wallpaper in the 16 Windows colours, scrolling slowly and diagonally. Four patterns (cubes, triangles, raised blocks, a woven mat) take turns every two minutes. |
-| 5 | Bouncing lines: two shapes whose corners bounce off the edges of the screen, followed by fading copies, as on 90s screensavers. |
-| 6 | Underwater: a calm sea floor from a 16-bit game: light falling in slanted rays, bubbles rising, seaweed swaying over the sand, a few fish far away. |
-| 7 | Copper bars: Amiga raster bars swinging around an invisible cylinder, stars flying sideways, a checkerboard floor. |
-| 8 | Amiga demo: a screen from an early-90s Amiga demo, in 320×256 and 4096 colours. A glenz vector (a see-through solid of white and blue triangles) and a cube of vector balls that turns into a ball swing out from behind the monitor, stars fly toward you, a twister turns along the bottom and a DYCP scroller runs along the top. The heaviest scene. |
-| 9 | Hills: a 16-bit landscape in parallax layers: clouds, mountains, hills, trees and grass. |
-| 10 | Night city: a skyline in three layers, windows lighting up and going dark, a moon. |
-| 11 | Arcade carpet: neon shapes on black, like the carpets of 90s arcades, glowing as under black light. |
+| 2 | Space: the Milky Way across the sky with dark lanes of dust, clouds of glowing gas, bright stars with spikes of light and now and then a small galaxy; nearer stars slowly come closer and drift past. |
+| 3 | Synthwave: a big striped sun over two ranges of mountains (the near one with neon lines along its slopes), palm trees at the sides, a neon grid floor that runs toward you, a purple sky full of stars. |
+| 4 | Tiles: a 90s desktop wallpaper in the 16 Windows colours, scrolling slowly and diagonally. Eight patterns (cubes, studs, raised bricks, scales, pearls, a woven mat, a honeycomb, argyle) take turns every two minutes. |
+| 5 | Bouncing lines: two shapes whose corners bounce off the edges of the screen, followed by fading copies that change colour along the trail, as on 90s screensavers. |
+| 6 | Underwater: a calm sea floor from a 16-bit game: the surface rippling at the top, light falling in slanted rays, a reef far away, fish passing and now and then a school of small fish, rocks, corals, sponges and kelp on the sand with patches of light drifting over it, bubbles rising. |
+| 7 | Copper bars: Amiga raster bars swinging around an invisible cylinder, stars flying sideways over a sky the copper fades to violet, a polished checkerboard floor that shows the bars. |
+| 8 | Amiga demo: a screen from an early-90s Amiga demo, in 320×256 and 4096 colours. A glenz vector (a see-through solid of white and blue triangles, lit from one side) and a cube of vector balls that turns into a ball swing out from behind the monitor, stars fly toward you, a twister turns along the bottom and a DYCP scroller runs along the top, over a copper background. |
+| 9 | Hills: a 16-bit landscape in parallax layers: the sun, clouds near and far, birds, pale mountains far away and snowy ones nearer, hills with bushes, round trees and pines, grass with flowers. |
+| 10 | Night city: a skyline in three layers under a full moon: windows lighting up and going dark, thin clouds drifting past, now and then a plane, rooftops with water tanks, red lights and a hotel sign, cars on the street below. |
+| 11 | Arcade carpet: neon shapes on black, like the carpets of 90s arcades, glowing as under black light: planets, stars, moons, lightning, spirals and more, with confetti between them. |
 
 The pixel-art scenes draw their pixels as squares of a whole number of screen pixels, so they stay sharp on any
-display.
+display. Space, Bouncing lines and Amiga demo take the most GPU time; on a slow GPU the other scenes are lighter.
 
 ### Console timing ids
 
