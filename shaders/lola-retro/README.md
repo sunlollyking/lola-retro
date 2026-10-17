@@ -128,9 +128,9 @@ casing in the scene's colour.
 | 3 | Synthwave: a big striped sun over mountains, a neon grid floor that runs toward you, a purple sky. |
 | 4 | Tiles: a 90s desktop wallpaper in the 16 Windows colours, scrolling slowly and diagonally. Four patterns (cubes, triangles, raised blocks, a woven mat) take turns every two minutes. |
 | 5 | Bouncing lines: two shapes whose corners bounce off the edges of the screen, followed by fading copies, as on 90s screensavers. |
-| 6 | Plasma: the demo effect, waves of colour at 320×200 with a cycling palette. |
+| 6 | Underwater: a calm sea floor from a 16-bit game: light falling in slanted rays, bubbles rising, seaweed swaying over the sand, a few fish far away. |
 | 7 | Copper bars: Amiga raster bars swinging around an invisible cylinder, stars flying sideways, a checkerboard floor. |
-| 8 | Tunnel: flying down a checked tunnel from a 90s demo. |
+| 8 | Snowy night: snow falling in three layers over snowy hills, pine trees and a cabin with a lit window. |
 | 9 | Hills: a 16-bit landscape in parallax layers: clouds, mountains, hills, trees and grass. |
 | 10 | Night city: a skyline in three layers, windows lighting up and going dark, a moon. |
 | 11 | Arcade carpet: neon shapes on black, like the carpets of 90s arcades, glowing as under black light. |

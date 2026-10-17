@@ -56,7 +56,7 @@ To fill more of the screen, raise the shader's **Overscan** (like turning up the
 To see the monitor at its real size on a large display instead, enter your screen's height under
 **Real size** (in cm, or in inches with unit 1), in full screen. **Around the tube** then puts the
 monitor around it, as large as the real one: in a room (1), or in front of one of ten moving scenes
-(2–11: space, synthwave, tiles, bouncing lines, plasma, copper bars, tunnel, hills, night city, arcade carpet;
+(2–11: space, synthwave, tiles, bouncing lines, underwater, copper bars, snowy night, hills, night city, arcade carpet;
 **Scene speed** slows them down or stops them). With
 **View → Fullscreen stretch mode → Full screen stretch** it fills the whole screen (the tube stays 4:3).
 **Room light** sets how bright the room is: 1 a dim room, 3 a lit room, 20 daylight, and **Screen light on

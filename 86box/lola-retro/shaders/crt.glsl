@@ -779,20 +779,63 @@ vec3 bounceLines(vec2 s, vec2 hs, float t, float pix)
     return col;
 }
 
-// Plasma (6): the 90s demo effect, waves of colour flowing through each other, drawn at 320x200
-// with a 256-colour palette that cycles, in the 64 levels per colour of a VGA card.
-vec3 plasmaColour(float x)
+// a sprite's own pixel (its centre), seen from screen pixel fc: the sprite stands at pos, in scene
+// pixels of n screen pixels; it moves in whole screen pixels and keeps its big pixels
+vec2 spritePix(vec2 fc, vec2 pos, float n) { return floor((fc - floor(pos * n)) / n) + 0.5; }
+
+// Underwater (6): a calm sea floor from a 16-bit game: light falling in slanted rays that sway
+// slowly, bubbles rising, seaweed swaying over the sand, a few fish far away. Drawn at 224 lines.
+// hs: half the screen's size in screen heights.
+vec3 underwater(vec2 fc, vec2 hs, float t, float pix)
 {
-    vec3 c = 0.5 + 0.5 * cos(TAU * (x + vec3(0.0, 0.33, 0.67)));
-    return pow(floor(c * 63.0 + 0.5) / 63.0, vec3(2.2));
-}
-vec3 plasma(vec2 fc, float t, float pix)
-{
-    float n = pixSize(200.0, pix);
-    vec2 p = (floor(fc / n) + 0.5) * n * pix;                 // the 320x200 pixel, in screen heights
-    float v = sin(p.x * 16.0 + t * 0.9) + sin(p.y * 13.0 - t * 0.7) + sin((p.x + p.y) * 11.0 + t * 0.5)
-            + sin(length(p - 0.5 * vec2(sin(t * 0.21), cos(t * 0.17))) * 18.0 - t * 1.1);
-    return 0.35 * plasmaColour(floor(fract(v * 0.25 + t * 0.04) * 256.0) / 256.0);
+    float n = pixSize(224.0, pix);
+    vec2 p = floor(fc / n);
+    float x = p.x + 0.5, y = p.y + 0.5;
+    // the water, lighter toward the surface, in bands
+    vec3 col = mix(rgb8(8.0, 30.0, 70.0), rgb8(40.0, 120.0, 156.0), clamp(floor((y + 100.0) / 26.0) / 7.0, 0.0, 1.0));
+    // light falling in slanted rays, swaying slowly, fainter deeper down (dithered at the edges)
+    float u = x + 0.5 * y;
+    float ray = sin(u * 0.045 + 0.8 * sin(t * 0.13)) + 0.6 * sin(u * 0.11 - t * 0.07);
+    if (ray > 0.95 || (ray > 0.75 && mod(p.x + p.y, 2.0) < 1.0))
+        col = mix(col, rgb8(110.0, 190.0, 210.0), 0.3 * smoothstep(-60.0, 90.0, y));
+    // fish far away, dark, crossing slowly
+    float span = 2.0 * hs.x / (n * pix) + 40.0;
+    for (int i = 0; i < 3; i++)
+    {
+        float h = hash13(vec3(float(i), 3.0, 63.0));
+        vec2 fp = vec2(mod(h * span + t * (4.0 + 4.0 * h), span) - 0.5 * span,
+                       -10.0 + 60.0 * fract(h * 7.0) + 4.0 * sin(t * 0.4 + h * 9.0));
+        vec2 d = spritePix(fc, fp, n);
+        if (d.x * d.x / 36.0 + d.y * d.y / 9.0 < 1.0 || (d.x < -5.0 && d.x > -10.0 && abs(d.y) < (-4.0 - d.x) * 0.7))
+            col = mix(col, rgb8(6.0, 22.0, 52.0), 0.75);
+    }
+    // the sand, in little dunes; rocks; seaweed swaying over it
+    float sand = -84.0 + 3.0 * sin(x * 0.06) + 2.0 * sin(x * 0.17 + 1.0);
+    float rc = floor(x / 70.0), hr = hash13(vec3(rc, 9.0, 61.0));
+    vec2 rd = vec2((x - rc * 70.0 - 20.0 - 30.0 * hr) / (8.0 + 6.0 * hr), (y - sand) / (5.0 + 4.0 * hr));
+    if (hr > 0.4 && dot(rd, rd) < 1.0) col = rd.y > 0.6 ? rgb8(60.0, 84.0, 104.0) : rgb8(36.0, 56.0, 76.0);
+    float sc = floor(x / 11.0), hw = hash13(vec3(sc, 8.0, 61.0));
+    if (hw > 0.35)
+    {
+        float top = sand + 14.0 + 34.0 * fract(hw * 7.0);
+        float k = clamp((y - sand) / (top - sand), 0.0, 1.0);
+        float dx = abs(x - (sc * 11.0 + 5.5 + 3.0 * k * k * sin(t * 0.7 + hw * 20.0 + y * 0.08)));
+        if (y < top && dx < 1.5) col = dx < 0.5 ? rgb8(50.0, 120.0, 90.0) : rgb8(22.0, 78.0, 66.0);
+    }
+    if (y < sand) col = y > sand - 2.0 ? rgb8(104.0, 120.0, 126.0) : hash13(vec3(p, 64.0)) > 0.9 ? rgb8(70.0, 84.0, 96.0) : rgb8(82.0, 96.0, 108.0);
+    // bubbles rising from a few places
+    float bc = floor(x / 48.0), hb = hash13(vec3(bc, 7.0, 61.0));
+    if (hb > 0.72)
+    {
+        float yy = fc.y / n - t * 9.0 - 300.0 * hb, cell = floor(yy / 30.0);
+        float hc = hash13(vec3(bc, cell, 62.0)), r = 2.2 + 1.4 * hc;
+        vec2 bp = vec2(bc * 48.0 + 8.0 + 32.0 * hb + 1.5 * sin(cell * 1.7 + t * 1.3), (cell * 30.0 + 15.0) + t * 9.0 + 300.0 * hb);
+        vec2 d = spritePix(fc, bp, n);
+        float L = length(d);
+        if (hc > 0.45 && L < r + 0.5 && y > sand + 2.0)
+            col = mix(col, rgb8(170.0, 225.0, 240.0), L > r - 1.0 ? 0.5 : (d.x < -0.5 && d.y > 0.5 && L < 1.6 ? 0.6 : 0.08));
+    }
+    return 0.55 * col;
 }
 
 // Copper bars (7): Amiga demo raster bars, shiny bands swinging up and down around an invisible
@@ -846,22 +889,56 @@ vec3 copper(vec2 fc, vec2 hs, float t, float pix)
     return 0.5 * col;
 }
 
-// Tunnel (8): flying down a tunnel from a 90s demo: checked walls rushing toward the viewer, slowly
-// turning and twisting, darker in the distance. Drawn at 320x200.
-vec3 tunnel(vec2 fc, float t, float pix)
+// Snowy night (8): a quiet winter night: snow falling in three layers over snowy hills, pine trees
+// and a cabin with a lit window. Drawn at 224 lines.
+float snowHill(float x) { return -64.0 + 9.0 * sin(x * 0.03 + 2.0) + 4.0 * sin(x * 0.09); }
+vec3 snowNight(vec2 fc, float t, float pix)
 {
-    float n = pixSize(200.0, pix);
-    vec2 p = (floor(fc / n) + 0.5) * n * pix;
-    vec2 d = p - 0.05 * vec2(sin(t * 0.37), cos(t * 0.29));
-    float r = max(length(d), 1e-3);
-    float u = (0.3 / r + t * 0.12) * 12.0;                   // rings, rushing toward the viewer
-    float v = atan(d.y, d.x) / TAU * 24.0 + t * 0.5 + 3.0 * sin(u * 0.04);   // around, turning, twisting
-    vec2 cell = floor(vec2(u, v)), f = fract(vec2(u, v));
-    float hue = 0.5 + 0.5 * sin(cell.x * 0.11);              // blue, purple and cyan in turn along the tunnel
-    vec3 c = mix(mix(vec3(0.15, 0.35, 1.0), vec3(0.65, 0.25, 1.0), hue), vec3(0.15, 0.85, 1.0), 0.5 + 0.5 * sin(cell.x * 0.047));
-    c *= mod(cell.x + cell.y, 2.0) < 0.5 ? 1.0 : 0.4;
-    if (min(min(f.x, 1.0 - f.x), min(f.y, 1.0 - f.y)) < 0.06) c *= 0.3;   // the seams
-    return 0.45 * c * c * smoothstep(0.12, 0.7, r);
+    float n = pixSize(224.0, pix);
+    vec2 p = floor(fc / n);
+    float x = p.x + 0.5, y = p.y + 0.5;
+    vec3 col = mix(rgb8(46.0, 54.0, 100.0), rgb8(8.0, 10.0, 32.0), clamp(floor((y + 20.0) / 18.0) / 7.0, 0.0, 1.0));
+    float hs = hash13(vec3(p, 71.0));
+    if (y > 15.0 && hs > 0.996) col = rgb8(210.0, 215.0, 255.0) * (0.75 + 0.25 * sin(t * 1.3 + hs * 500.0));
+    // far hills, pale in the moonlight
+    float h1 = -28.0 + 12.0 * sin(x * 0.021 + 1.0) + 6.0 * sin(x * 0.057);
+    if (y < h1) col = y > h1 - 2.0 ? rgb8(196.0, 206.0, 238.0) : rgb8(136.0, 148.0, 192.0);
+    // the near hill
+    float h2 = snowHill(x);
+    if (y < h2) col = y > h2 - 2.0 ? rgb8(220.0, 228.0, 252.0) : rgb8(176.0, 186.0, 224.0);
+    // pine trees on it: tiers of branches with snow along their lower edges
+    float tc = floor(x / 16.0), ht = hash13(vec3(tc, 1.0, 72.0));
+    float tx = tc * 16.0 + 8.0, base = floor(snowHill(tx)) - 2.0, top = base + floor(16.0 + 14.0 * ht);
+    float r = top - y, dx = abs(x - tx);
+    if (ht > 0.3 && abs(tx - 118.0) > 22.0 && r >= 0.0 && y > base)
+    {
+        float w = 1.0 + mod(r, 6.0) * 0.8 + floor(r / 6.0) * 1.5;
+        if (dx < w) col = mod(r, 6.0) > 4.5 ? rgb8(180.0, 192.0, 230.0) : rgb8(18.0, 40.0, 50.0);
+    }
+    if (ht > 0.3 && abs(tx - 118.0) > 22.0 && dx < 1.0 && y > base - 3.0 && y <= base) col = rgb8(40.0, 30.0, 30.0);
+    // a cabin with a lit window, right of the monitor
+    float cb = floor(snowHill(118.0)) - 1.0, cx = x - 118.0, cy = y - cb;
+    if (abs(cx) < 10.0 && cy >= 0.0 && cy < 11.0)
+    {
+        col = rgb8(70.0, 46.0, 40.0);
+        if (cx > -6.0 && cx < -1.0 && cy > 3.0 && cy < 8.0) col = rgb8(255.0, 196.0, 110.0);
+        if (cx > 3.0 && cx < 7.0 && cy < 8.0) col = rgb8(40.0, 26.0, 22.0);
+    }
+    if (cx > 4.0 && cx < 7.0 && cy >= 11.0 && cy < 21.0) col = rgb8(50.0, 36.0, 34.0);
+    if (cy >= 11.0 && cy < 19.0 && abs(cx) < 13.0 - (cy - 11.0) * 1.5)
+        col = abs(cx) > 11.0 - (cy - 11.0) * 1.5 ? rgb8(120.0, 128.0, 168.0) : rgb8(214.0, 222.0, 250.0);
+    // the snow, in three layers: far ones small and slow, near ones bigger and faster
+    for (int i = 0; i < 3; i++)
+    {
+        float fi = float(i), cs = 9.0 + 6.0 * fi, sz = i == 2 ? 2.0 : 1.0;
+        vec2 q = fc / n + vec2(-2.0 * t, (5.0 + 6.0 * fi) * t);
+        vec2 cell = floor(q / cs);
+        float h = hash13(vec3(cell, 73.0 + fi));
+        vec2 fp = cell * cs + vec2(0.2 + 0.6 * h, 0.2 + 0.6 * fract(h * 17.0)) * cs + vec2(1.5 * sin(t * 0.9 + h * 30.0), 0.0);
+        if (h > 0.45 && all(greaterThanEqual(q, fp)) && all(lessThan(q, fp + sz)))
+            col = mix(col, rgb8(235.0, 240.0, 255.0), 0.5 + 0.25 * fi);
+    }
+    return 0.5 * col;
 }
 
 // Hills (9): a 16-bit side-scroller landscape in layers, each moving slower the further away it
@@ -1044,9 +1121,9 @@ vec3 scene(int k, vec2 s, vec2 fc, vec2 hs, float t, float pix)
     if (k == 3) return synthwave(s, t, pix);
     if (k == 4) return tiles(fc, t, pix);
     if (k == 5) return bounceLines(s, hs, t, pix);
-    if (k == 6) return plasma(fc, t, pix);
+    if (k == 6) return underwater(fc, hs, t, pix);
     if (k == 7) return copper(fc, hs, t, pix);
-    if (k == 8) return tunnel(fc, t, pix);
+    if (k == 8) return snowNight(fc, t, pix);
     if (k == 9) return hills(fc, t, pix);
     if (k == 10) return city(fc, t, pix);
     return carpet(s, t, pix);
@@ -1059,9 +1136,9 @@ vec3 sceneLight(int k, float t)
     if (k == 3) return vec3(1.0, 0.72, 0.95);                 // synthwave: pink, like its sun
     if (k == 4) return tilesLight(t);
     if (k == 5) return vec3(0.85, 0.9, 1.0);
-    if (k == 6) return vec3(0.95, 0.88, 1.0);
+    if (k == 6) return vec3(0.7, 0.9, 1.0);                   // underwater: blue-green
     if (k == 7) return vec3(1.0, 0.85, 0.9);
-    if (k == 8) return vec3(0.75, 0.82, 1.0);
+    if (k == 8) return vec3(0.82, 0.88, 1.0);                 // snowy night: moonlight
     if (k == 9) return vec3(1.0, 0.98, 0.92);
     if (k == 10) return vec3(0.72, 0.76, 1.0);
     return vec3(0.82, 0.6, 1.0);                              // carpet: black light
