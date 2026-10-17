@@ -118,7 +118,7 @@ in its own colours, changing with the picture.
 is smaller than the 15-inch PC monitor and TV.</sub>
 
 Around the tube 2 to 11 put the monitor in front of a scene instead, ten in all: floating in space, a synthwave
-sunset, a 90s tiled wallpaper, bouncing lines, a sea floor, Amiga copper bars, a snowy night, a 16-bit
+sunset, a 90s tiled wallpaper, bouncing lines, a sea floor, Amiga copper bars, an Amiga demo screen, a 16-bit
 landscape, a city at night and an arcade carpet. They all move; **Scene speed** slows them down or stops them.
 The list is in [Scenes](shaders/lola-retro/README.md#scenes), all the settings in
 [Parameters](shaders/lola-retro/README.md#parameters).

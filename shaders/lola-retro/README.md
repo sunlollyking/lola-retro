@@ -130,7 +130,7 @@ casing in the scene's colour.
 | 5 | Bouncing lines: two shapes whose corners bounce off the edges of the screen, followed by fading copies, as on 90s screensavers. |
 | 6 | Underwater: a calm sea floor from a 16-bit game: light falling in slanted rays, bubbles rising, seaweed swaying over the sand, a few fish far away. |
 | 7 | Copper bars: Amiga raster bars swinging around an invisible cylinder, stars flying sideways, a checkerboard floor. |
-| 8 | Snowy night: snow falling in three layers over snowy hills, pine trees and a cabin with a lit window. |
+| 8 | Amiga demo: a screen from an early-90s Amiga demo, in 320×256 and 4096 colours. A glenz vector (a see-through solid of white and blue triangles) and a cube of vector balls that turns into a ball swing out from behind the monitor, stars fly toward you, a twister turns along the bottom and a DYCP scroller runs along the top. The heaviest scene. |
 | 9 | Hills: a 16-bit landscape in parallax layers: clouds, mountains, hills, trees and grass. |
 | 10 | Night city: a skyline in three layers, windows lighting up and going dark, a moon. |
 | 11 | Arcade carpet: neon shapes on black, like the carpets of 90s arcades, glowing as under black light. |

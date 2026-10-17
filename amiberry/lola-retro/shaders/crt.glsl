@@ -902,56 +902,180 @@ vec3 copper(vec2 fc, vec2 hs, float t, float pix)
     return 0.5 * col;
 }
 
-// Snowy night (8): a quiet winter night: snow falling in three layers over snowy hills, pine trees
-// and a cabin with a lit window. Drawn at 224 lines.
-float snowHill(float x) { return -64.0 + 9.0 * sin(x * 0.03 + 2.0) + 4.0 * sin(x * 0.09); }
-vec3 snowNight(vec2 fc, float t, float pix)
+// Amiga demo (8): a screen from an early-90s Amiga demo, built the way they were: everything in
+// 320x256 pixels and the Amiga's 4096 colours, all motion from sine waves. A glenz vector (a
+// see-through solid of 24 triangles, white and blue) and a cube of vector balls that turns into a
+// ball and back swing out from behind the monitor, one on each side; stars fly toward the viewer;
+// a twister turns along the bottom; a DYCP scroller (every letter on its own sine) runs along the
+// top in copper colours. Heavier than the other scenes.
+const uint DEMO_FONT[88] = uint[88](
+    0x00000000u, 0x00000000u, 0x3C66C3C3u, 0xFFC3C300u, 0xFCC6C6FCu, 0xC6C6FC00u, 0x3E63C0C0u, 0xC0633E00u,
+    0xF8CCC6C6u, 0xC6CCF800u, 0xFEC0C0FCu, 0xC0C0FE00u, 0xFEC0C0FCu, 0xC0C0C000u, 0x3E60C0CEu, 0xC6663C00u,
+    0xC6C6C6FEu, 0xC6C6C600u, 0x7E181818u, 0x18187E00u, 0x0E060606u, 0xC6C67C00u, 0xC6CCD8F0u, 0xD8CCC600u,
+    0xC0C0C0C0u, 0xC0C0FE00u, 0xC3E7FFDBu, 0xC3C3C300u, 0xC6E6F6DEu, 0xCEC6C600u, 0x3C66C3C3u, 0xC3663C00u,
+    0xFCC6C6FCu, 0xC0C0C000u, 0x3C66C3C3u, 0xCB663B00u, 0xFCC6C6FCu, 0xD8CCC600u, 0x7EC0C07Cu, 0x0606FC00u,
+    0xFF181818u, 0x18181800u, 0xC6C6C6C6u, 0xC6C67C00u, 0xC6C6C6C6u, 0x6C381000u, 0xC3C3C3DBu, 0xFFE7C300u,
+    0xC66C3838u, 0x6CC6C600u, 0xC3663C18u, 0x18181800u, 0xFE060C18u, 0x3060FE00u, 0x3C66CEDEu, 0xF6663C00u,
+    0x18387818u, 0x18187E00u, 0x7CC6061Cu, 0x70C0FE00u, 0x7CC6063Cu, 0x06C67C00u, 0x0E1E3666u, 0xFE060600u,
+    0xFEC0FC06u, 0x06C67C00u, 0x3C60C0FCu, 0xC6C67C00u, 0xFE060C18u, 0x30303000u, 0x7CC6C67Cu, 0xC6C67C00u,
+    0x7CC6C67Eu, 0x060C7800u, 0x00000000u, 0x00181800u, 0x00000000u, 0x00181830u, 0x18181818u, 0x18001800u,
+    0x0000007Eu, 0x00000000u, 0x00181800u, 0x18180000u, 0x18183000u, 0x00000000u, 0x7CC6061Cu, 0x18001800u);
+const int DEMO_TEXT[319] = int[319](
+    12, 15, 12, 1, 0, 18, 5, 20, 18, 15, 0, 16, 18, 5, 19, 5, 14, 20, 19, 37, 37, 37, 0, 20,
+    8, 5, 0, 19, 3, 18, 5, 5, 14, 0, 1, 18, 15, 21, 14, 4, 0, 25, 15, 21, 18, 0, 13, 15,
+    14, 9, 20, 15, 18, 39, 0, 0, 0, 7, 12, 5, 14, 26, 0, 22, 5, 3, 20, 15, 18, 19, 38, 0,
+    22, 5, 3, 20, 15, 18, 0, 2, 1, 12, 12, 19, 38, 0, 1, 0, 20, 23, 9, 19, 20, 5, 18, 0,
+    1, 14, 4, 0, 20, 8, 9, 19, 0, 12, 9, 20, 20, 12, 5, 0, 4, 25, 3, 16, 0, 19, 3, 18,
+    15, 12, 12, 5, 18, 38, 0, 1, 12, 12, 0, 9, 14, 0, 30, 29, 27, 24, 29, 32, 33, 0, 1, 14,
+    4, 0, 31, 27, 36, 33, 0, 3, 15, 12, 15, 21, 18, 19, 38, 0, 20, 8, 5, 0, 23, 1, 25, 0,
+    20, 8, 5, 0, 1, 13, 9, 7, 1, 0, 4, 9, 4, 0, 9, 20, 37, 0, 0, 0, 7, 18, 5, 5,
+    20, 9, 14, 7, 19, 0, 20, 15, 0, 1, 12, 12, 0, 1, 13, 9, 7, 1, 0, 6, 18, 5, 1, 11,
+    19, 38, 0, 19, 3, 5, 14, 5, 18, 19, 0, 1, 14, 4, 0, 3, 18, 20, 0, 12, 15, 22, 5, 18,
+    19, 39, 0, 0, 0, 12, 15, 12, 1, 0, 9, 19, 0, 1, 0, 18, 5, 20, 18, 9, 5, 22, 5, 18,
+    38, 0, 18, 5, 20, 18, 15, 0, 2, 5, 3, 1, 21, 19, 5, 0, 9, 20, 0, 9, 19, 0, 18, 5,
+    20, 18, 15, 37, 37, 37, 0, 0, 0, 20, 5, 24, 20, 0, 18, 5, 19, 20, 1, 18, 20, 19, 37, 37,
+    37, 0, 0, 0, 0, 0, 0);
+mat3 demoRot(vec3 a)
 {
-    float n = pixSize(224.0, pix);
-    vec2 p = floor(fc / n);
-    float x = p.x + 0.5, y = p.y + 0.5;
-    vec3 col = mix(rgb8(46.0, 54.0, 100.0), rgb8(8.0, 10.0, 32.0), clamp(floor((y + 20.0) / 18.0) / 7.0, 0.0, 1.0));
-    float hs = hash13(vec3(p, 71.0));
-    if (y > 15.0 && hs > 0.996) col = rgb8(210.0, 215.0, 255.0) * (0.75 + 0.25 * sin(t * 1.3 + hs * 500.0));
-    // far hills, pale in the moonlight
-    float h1 = -28.0 + 12.0 * sin(x * 0.021 + 1.0) + 6.0 * sin(x * 0.057);
-    if (y < h1) col = y > h1 - 2.0 ? rgb8(196.0, 206.0, 238.0) : rgb8(136.0, 148.0, 192.0);
-    // the near hill
-    float h2 = snowHill(x);
-    if (y < h2) col = y > h2 - 2.0 ? rgb8(220.0, 228.0, 252.0) : rgb8(176.0, 186.0, 224.0);
-    // pine trees on it: tiers of branches with snow along their lower edges
-    float tc = floor(x / 16.0), ht = hash13(vec3(tc, 1.0, 72.0));
-    float tx = tc * 16.0 + 8.0, base = floor(snowHill(tx)) - 2.0, top = base + floor(16.0 + 14.0 * ht);
-    float r = top - y, dx = abs(x - tx);
-    if (ht > 0.3 && abs(tx - 118.0) > 22.0 && r >= 0.0 && y > base)
+    vec3 c = cos(a), s = sin(a);
+    return mat3(c.y * c.z, c.y * s.z, -s.y,
+                s.x * s.y * c.z - c.x * s.z, s.x * s.y * s.z + c.x * c.z, s.x * c.y,
+                c.x * s.y * c.z + s.x * s.z, c.x * s.y * s.z - s.x * c.z, c.x * c.y);
+}
+vec3 demoRainbow(float x) { return 0.5 + 0.5 * cos(TAU * (x + vec3(0.0, 0.33, 0.67))); }
+// one pixel of the scroller's font: glyph g, column x and row y (0-7, top row 0)
+bool demoFontPixel(int g, int x, int y)
+{
+    uint w = DEMO_FONT[g * 2 + (y >> 2)];
+    return ((w >> uint((3 - (y & 3)) * 8 + 7 - x)) & 1u) == 1u;
+}
+vec3 amigaDemo(vec2 fc, vec2 hs, float t, float pix)
+{
+    float n = pixSize(256.0, pix);
+    vec2 P = floor(fc / n);                                   // the Amiga pixel, from the centre, y up
+    float L = 1.0 / (n * pix);                                // the screen's height in Amiga pixels
+    vec2 s = (P + 0.5) / L;                                   // its centre, in screen heights
+    vec3 col = vec3(0.0);
+
+    // stars flying toward the viewer: layers that grow from the centre, three shades as on a 3-plane screen
+    for (int i = 0; i < 4; i++)
     {
-        float w = 1.0 + mod(r, 6.0) * 0.8 + floor(r / 6.0) * 1.5;
-        if (dx < w) col = mod(r, 6.0) > 4.5 ? rgb8(180.0, 192.0, 230.0) : rgb8(18.0, 40.0, 50.0);
+        float k = t * 0.22 + float(i) * 0.25, z = fract(k), seed = floor(k) * 4.0 + float(i);
+        float cell = 0.02 * exp2(4.0 * z);
+        vec2 off = 50.0 * vec2(hash13(vec3(seed, 1.0, 81.0)), hash13(vec3(seed, 2.0, 81.0)));
+        vec2 id = floor(s / cell + off);
+        float h = hash13(vec3(id, seed + 3.0));
+        vec2 sp = (id - off + 0.25 + 0.5 * vec2(h, fract(h * 13.0))) * cell;   // the star, in screen heights
+        if (h > 0.75 && all(equal(floor(sp * L), P)) && z > 0.15)
+            col = max(col, vec3(z < 0.45 ? 0.27 : z < 0.75 ? 0.6 : 1.0));
     }
-    if (ht > 0.3 && abs(tx - 118.0) > 22.0 && dx < 1.0 && y > base - 3.0 && y <= base) col = rgb8(40.0, 30.0, 30.0);
-    // a cabin with a lit window, right of the monitor
-    float cb = floor(snowHill(118.0)) - 1.0, cx = x - 118.0, cy = y - cb;
-    if (abs(cx) < 10.0 && cy >= 0.0 && cy < 11.0)
+
+    // the two objects swing from one side of the monitor to the other, opposite each other
+    float sw = sin(t * 0.42), A = max(hs.x - 0.22, 0.3);
+    vec2 cg = vec2(A * sw, 0.06 * sin(t * 0.9));               // the glenz vector
+    vec2 cb = vec2(-A * sw, 0.06 * sin(t * 0.9 + 2.0));        // the vector balls
+
+    // glenz vector: a tetrakis hexahedron (a cube with a low pyramid on each face). A ray from the eye
+    // enters through one face and leaves through another; white faces are solid, blue ones show the
+    // back faces through them, as two bitplanes of front and back faces did
+    const float H = 0.6, GS = 0.1;
+    vec2 u = (s - cg) / GS;
+    if (dot(u, u) < 8.0)
     {
-        col = rgb8(70.0, 46.0, 40.0);
-        if (cx > -6.0 && cx < -1.0 && cy > 3.0 && cy < 8.0) col = rgb8(255.0, 196.0, 110.0);
-        if (cx > 3.0 && cx < 7.0 && cy < 8.0) col = rgb8(40.0, 26.0, 22.0);
+        mat3 R = demoRot(vec3(t * 0.8, t * 1.1, t * 0.5));
+        vec3 o = vec3(0.0, 0.0, 5.0) * R, d = vec3(u, -5.0) * R;   // the ray, in the object's frame
+        float tin = -1e9, tout = 1e9;
+        int kin = 0, kout = 0;
+        for (int k = 0; k < 24; k++)
+        {
+            int f = k / 4, e = k % 4, ax = f / 2, ex = (ax + 1 + e / 2) % 3;
+            vec3 nk = (ax == 0 ? vec3(1.0, 0.0, 0.0) : ax == 1 ? vec3(0.0, 1.0, 0.0) : vec3(0.0, 0.0, 1.0)) * (f % 2 == 0 ? 1.0 : -1.0)
+                    + (ex == 0 ? vec3(1.0, 0.0, 0.0) : ex == 1 ? vec3(0.0, 1.0, 0.0) : vec3(0.0, 0.0, 1.0)) * (e % 2 == 0 ? H : -H);
+            float nd = dot(nk, d), tt = (1.0 + H - dot(nk, o)) / nd;
+            if (nd < 0.0) { if (tt > tin) { tin = tt; kin = k; } }
+            else if (tt < tout) { tout = tt; kout = k; }
+        }
+        if (tin < tout)
+        {
+            bool frontWhite = kin % 4 < 2, backWhite = kout % 4 < 2;   // a checkerboard of triangles
+            vec3 back = backWhite ? vec3(0.55, 0.6, 0.85) : vec3(0.05, 0.1, 0.45);
+            col = frontWhite ? vec3(0.95, 0.95, 1.0) : mix(back, vec3(0.2, 0.45, 1.0), 0.4);
+        }
     }
-    if (cx > 4.0 && cx < 7.0 && cy >= 11.0 && cy < 21.0) col = rgb8(50.0, 36.0, 34.0);
-    if (cy >= 11.0 && cy < 19.0 && abs(cx) < 13.0 - (cy - 11.0) * 1.5)
-        col = abs(cx) > 11.0 - (cy - 11.0) * 1.5 ? rgb8(120.0, 128.0, 168.0) : rgb8(214.0, 222.0, 250.0);
-    // the snow, in three layers: far ones small and slow, near ones bigger and faster
-    for (int i = 0; i < 3; i++)
+
+    // vector balls: 26 balls in a 3x3x3 cube that turns into a ball and back, nearer balls in front,
+    // each shaded like a bob drawn in eight shades
+    const float BS = 0.085;
+    vec2 ub = (s - cb) / BS;
+    if (dot(ub, ub) < 10.0)
     {
-        float fi = float(i), cs = 9.0 + 6.0 * fi, sz = i == 2 ? 2.0 : 1.0;
-        vec2 q = fc / n + vec2(-2.0 * t, (5.0 + 6.0 * fi) * t);
-        vec2 cell = floor(q / cs);
-        float h = hash13(vec3(cell, 73.0 + fi));
-        vec2 fp = cell * cs + vec2(0.2 + 0.6 * h, 0.2 + 0.6 * fract(h * 17.0)) * cs + vec2(1.5 * sin(t * 0.9 + h * 30.0), 0.0);
-        if (h > 0.45 && all(greaterThanEqual(q, fp)) && all(lessThan(q, fp + sz)))
-            col = mix(col, rgb8(235.0, 240.0, 255.0), 0.5 + 0.25 * fi);
+        mat3 R = demoRot(vec3(t * 0.9, t * 0.6, t * 0.35));
+        float m = smoothstep(-0.4, 0.4, sin(t * 0.33)), zb = -1e9;
+        vec2 bd = vec2(0.0);
+        int bi = 0;
+        for (int i = 0; i < 27; i++)
+        {
+            if (i == 13) continue;
+            vec3 q = vec3(float(i % 3), float((i / 3) % 3), float(i / 9)) - 1.0;
+            float fi = float(i < 13 ? i : i - 1), zz = 1.0 - (2.0 * fi + 1.0) / 26.0, ph = fi * 2.39996;
+            vec3 p = R * mix(q, 1.45 * vec3(sqrt(1.0 - zz * zz) * vec2(cos(ph), sin(ph)), zz), m);
+            float w = 1.0 / (1.0 - p.z * 0.18), r = 0.33 * w;
+            vec2 dd = (ub - p.xy * w) / r;
+            if (dot(dd, dd) < 1.0 && p.z > zb) { zb = p.z; bd = dd; bi = i; }
+        }
+        if (zb > -1e8)
+        {
+            vec3 nb = vec3(bd, sqrt(max(1.0 - dot(bd, bd), 0.0)));
+            float l = dot(nb, normalize(vec3(-0.5, 0.6, 0.62)));
+            float lev = floor((0.25 + 0.75 * max(l, 0.0)) * 7.0 + 0.5) / 7.0;
+            vec3 base = bi / 9 == 0 ? vec3(1.0, 0.35, 0.2) : bi / 9 == 1 ? vec3(1.0, 0.8, 0.25) : vec3(0.35, 0.7, 1.0);
+            col = base * lev + (l > 0.93 ? 0.6 : 0.0);
+        }
     }
-    return 0.5 * col;
+
+    // the twister along the bottom: a bar with a square cross-section, turned a little more at
+    // every column, its four faces in copper colours with a checked pattern
+    float Yc = -0.43 * L + 3.0 * sin(P.x * 0.045 + t * 1.3);
+    if (abs(P.y + 0.5 - Yc) < 16.0)
+    {
+        float a = t * 1.7 + P.x * 0.03 * sin(t * 0.31);
+        for (int i = 0; i < 4; i++)
+        {
+            float a0 = a + float(i) * 1.5707963, y0 = Yc + 15.5 * sin(a0), y1 = Yc + 15.5 * sin(a0 + 1.5707963);
+            float y = P.y + 0.5;
+            if (y1 > y0 && y >= y0 && y < y1)
+            {
+                float v = (y - y0) / (y1 - y0), shade = cos(a0 + 0.7853982);
+                float chk = mod(floor(v * 4.0) + floor((P.x + t * 24.0) / 8.0), 2.0);
+                vec3 fcol = demoRainbow(float(i) * 0.25 + 0.08 * sin(t * 0.2));
+                col = fcol * (0.3 + 0.7 * shade) * (chk < 0.5 ? 1.0 : 0.65) * (v < 0.06 || v > 0.94 ? 0.4 : 1.0);
+            }
+        }
+    }
+
+    // the DYCP scroller along the top: 16x16 letters, each on its own sine, coloured line by line
+    // like a copper list, with a shadow
+    float base = floor(0.43 * L);
+    float sx = P.x + floor(t * 70.0);
+    float slot = floor(sx / 16.0);
+    int ch = DEMO_TEXT[int(mod(slot, float(DEMO_TEXT.length())))];
+    float oy = floor(7.0 * sin(slot * 0.55 + t * 3.2));
+    int gx = int(floor((sx - slot * 16.0) / 2.0)), gy = int(floor((base + oy - P.y) / 2.0));
+    if (gy >= 0 && gy < 8 && demoFontPixel(ch, gx, gy))
+        col = demoRainbow(P.y * 0.022 - t * 0.35) * 0.9 + 0.1;
+    else
+    {
+        float sx2 = sx - 2.0, slot2 = floor(sx2 / 16.0);
+        int ch2 = DEMO_TEXT[int(mod(slot2, float(DEMO_TEXT.length())))];
+        float oy2 = floor(7.0 * sin(slot2 * 0.55 + t * 3.2));
+        int gx2 = int(floor((sx2 - slot2 * 16.0) / 2.0)), gy2 = int(floor((base + oy2 - P.y - 2.0) / 2.0));
+        if (gy2 >= 0 && gy2 < 8 && demoFontPixel(ch2, gx2, gy2)) col *= 0.25;
+    }
+    // a copper bar above and below the scroller
+    float cl = min(abs(P.y - (base - 26.0)), abs(P.y - (base + 10.0)));
+    if (cl < 2.0) col = demoRainbow(P.x * 0.004 + t * 0.15) * (1.0 - 0.35 * cl);
+
+    return 0.55 * amiga12(col);
 }
 
 // Hills (9): a 16-bit side-scroller landscape in layers, each moving slower the further away it
@@ -1136,7 +1260,7 @@ vec3 scene(int k, vec2 s, vec2 fc, vec2 hs, float t, float pix)
     if (k == 5) return bounceLines(s, hs, t, pix);
     if (k == 6) return underwater(fc, hs, t, pix);
     if (k == 7) return copper(fc, hs, t, pix);
-    if (k == 8) return snowNight(fc, t, pix);
+    if (k == 8) return amigaDemo(fc, hs, t, pix);
     if (k == 9) return hills(fc, t, pix);
     if (k == 10) return city(fc, t, pix);
     return carpet(s, t, pix);
@@ -1151,7 +1275,7 @@ vec3 sceneLight(int k, float t)
     if (k == 5) return vec3(0.85, 0.9, 1.0);
     if (k == 6) return vec3(0.7, 0.9, 1.0);                   // underwater: blue-green
     if (k == 7) return vec3(1.0, 0.85, 0.9);
-    if (k == 8) return vec3(0.82, 0.88, 1.0);                 // snowy night: moonlight
+    if (k == 8) return vec3(0.85, 0.85, 1.0);                 // Amiga demo
     if (k == 9) return vec3(1.0, 0.98, 0.92);
     if (k == 10) return vec3(0.72, 0.76, 1.0);
     return vec3(0.82, 0.6, 1.0);                              // carpet: black light
