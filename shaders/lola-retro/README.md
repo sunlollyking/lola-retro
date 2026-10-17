@@ -110,10 +110,33 @@ Every preset only sets parameters, so you can tweak any preset in **Quick Menu �
 | Spot size in dark areas / on white | The beam spot in mm (width at half brightness). 0.30 / 0.45 is a typical 15-inch PC monitor, 0.28 / 0.65 the 1084S; lower both for a sharper tube. |
 | Spot size in the corners | How much larger the spot is in the corners than in the centre (deflection defocus). 1.4 is typical for a PC monitor (dynamic focus kept good ones below 1.5, cheap ones reached 2); the 1084S had static focus, 1.5. |
 | Real size: your screen's height, unit | Draws the tube as large as the monitor in **Monitor size** really was, with black (or **Around the tube**) around it, instead of filling your screen. Enter the height of your screen's picture area (measured, in cm, or in inches with unit 1); 0 fills the screen. On a large display this puts the monitor at its real size in front of you. Needs the picture area as tall as the screen (full screen). |
-| Around the tube | What is around the tube: 0 black, 1 the monitor in a room, 2 the monitor floating in space, 3 the monitor in a synthwave scene. The casing is measured on photos of real monitors and drawn as large as the real one, so it shows best with **Real size**. `amiga-1084s` gets an Amiga monitor (after the M1438S): warm off-white, a thick flat front, a tunnel with mitred corners down to a thin black mask at the glass, a plain chin with a green power light. The PC presets get a 90s PC monitor (after a Compaq 151FS): aged cream, a raised rim around a shallower recess, a blank plaque, and a control strip below with buttons and a green light. The TV presets get a 90s TV (after photos of several): dark grey plastic, thin sides, the glass almost flush with the front, and a tall chin with a speaker grille on each side of the controls (a power switch, a red light, four small buttons). TVs came from 14 to 29 inches, so the TV is sized to **Monitor size**. The walls around the glass face the picture, so the screen lights them softly in its colours and they change with it (**Screen light on the casing**); the room lights them from above, darker at the top and lighter at the bottom, and the satin plastic catches a little of the ceiling and the lamp on the edges that face up. The scenes are decoration, not a simulation: in space, stars in layers that slowly come closer and drift, over a faint nebula; in synthwave, a big striped sun over mountains and a neon grid floor that runs toward you, under a purple sky. Both move. |
-| Room light | How bright the room is: 1 a dim room (warm lamps), 3 a lit room, 20 daylight. It lights the casing and the wall (in space and synthwave only the casing, in front of the scene: white in space, pink in synthwave, like its sun), and sets the reflection on the glass too (Room reflection is how much the tube reflects in a dim room), so in daylight the tube's black turns grey, as on the real one. Lower Room reflection if you want it darker. |
+| Around the tube | What is around the tube: 0 black, 1 the monitor in a room, 2–11 the monitor in a scene (see [Scenes](#scenes)). The casing is measured on photos of real monitors and drawn as large as the real one, so it shows best with **Real size**. `amiga-1084s` gets an Amiga monitor (after the M1438S): warm off-white, a thick flat front, a tunnel with mitred corners down to a thin black mask at the glass, a plain chin with a green power light. The PC presets get a 90s PC monitor (after a Compaq 151FS): aged cream, a raised rim around a shallower recess, a blank plaque, and a control strip below with buttons and a green light. The TV presets get a 90s TV (after photos of several): dark grey plastic, thin sides, the glass almost flush with the front, and a tall chin with a speaker grille on each side of the controls (a power switch, a red light, four small buttons). TVs came from 14 to 29 inches, so the TV is sized to **Monitor size**. The walls around the glass face the picture, so the screen lights them softly in its colours and they change with it (**Screen light on the casing**); the room lights them from above, darker at the top and lighter at the bottom, and the satin plastic catches a little of the ceiling and the lamp on the edges that face up. |
+| Room light | How bright the room is: 1 a dim room (warm lamps), 3 a lit room, 20 daylight. It lights the casing and the wall (in a scene only the casing, in the scene's colour: white in space, pink in synthwave, like its sun), and sets the reflection on the glass too (Room reflection is how much the tube reflects in a dim room), so in daylight the tube's black turns grey, as on the real one. Lower Room reflection if you want it darker. |
 | Screen light on the casing | How strongly the screen lights the walls around the glass: 0 off, 1 as on the real monitor (worked out from the screen's light, the angle of the walls and the tinted glass; about 3–5% of the picture beside them, softly spread, as plastic scatters it), up to 3. Best seen in a dark room. |
+| Scene speed | How fast the scenes move: 1 normal, 0 a still picture, up to 3. |
 | HDR: paper white, HDR: display peak | Only in the `hdr` presets. Paper white is how bright a full white screen is, display peak the most your display can show. See [HDR](#hdr). |
+
+### Scenes
+
+**Around the tube** 2–11 put the monitor in front of a scene instead of in a room. They are decoration, not a
+simulation, all drawn by the shader (no pictures), and they move (**Scene speed**). **Room light** lights the
+casing in the scene's colour.
+
+| | Scene |
+|---|---|
+| 2 | Space: stars in layers that slowly come closer and drift, over a faint nebula. |
+| 3 | Synthwave: a big striped sun over mountains, a neon grid floor that runs toward you, a purple sky. |
+| 4 | Tiles: a 90s desktop wallpaper in the 16 Windows colours, scrolling slowly and diagonally. Four patterns (cubes, triangles, raised blocks, a woven mat) take turns every two minutes. |
+| 5 | Bouncing lines: two shapes whose corners bounce off the edges of the screen, followed by fading copies, as on 90s screensavers. |
+| 6 | Plasma: the demo effect, waves of colour at 320×200 with a cycling palette. |
+| 7 | Copper bars: Amiga raster bars swinging around an invisible cylinder, stars flying sideways, a checkerboard floor. |
+| 8 | Tunnel: flying down a checked tunnel from a 90s demo. |
+| 9 | Hills: a 16-bit landscape in parallax layers: clouds, mountains, hills, trees and grass. |
+| 10 | Night city: a skyline in three layers, windows lighting up and going dark, a moon. |
+| 11 | Arcade carpet: neon shapes on black, like the carpets of 90s arcades, glowing as under black light. |
+
+The pixel-art scenes draw their pixels as squares of a whole number of screen pixels, so they stay sharp on any
+display.
 
 ### Console timing ids
 

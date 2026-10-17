@@ -117,9 +117,11 @@ in its own colours, changing with the picture.
 <sub>Real size on a screen 39.5 cm tall, Room light 6. All three at the same scale: the 14-inch Amiga monitor
 is smaller than the 15-inch PC monitor and TV.</sub>
 
-Around the tube 2 and 3 put the monitor in a scene instead: floating in space, among stars that slowly come
-closer, or in front of a synthwave sunset with a neon grid that runs toward you. Both scenes move. All the
-settings are in [Parameters](shaders/lola-retro/README.md#parameters).
+Around the tube 2 to 11 put the monitor in front of a scene instead, ten in all: floating in space, a synthwave
+sunset, a 90s tiled wallpaper, bouncing lines, a demo plasma, Amiga copper bars, a demo tunnel, a 16-bit
+landscape, a city at night and an arcade carpet. They all move; **Scene speed** slows them down or stops them.
+The list is in [Scenes](shaders/lola-retro/README.md#scenes), all the settings in
+[Parameters](shaders/lola-retro/README.md#parameters).
 
 ![The Amiga monitor in space and the TV in the synthwave scene](docs/around-the-tube-scenes.jpg)
 
@@ -186,7 +188,7 @@ Which preset and settings to use per system: [RECOMMENDED-CORES.md](shaders/lola
 - **Glass.** Curvature, halation, white point (6500–9300 K), vignette, room reflection, misconvergence, afterglow
   (RetroArch only: Amiberry and 86Box have no feedback textures).
 - **Around the tube.** The monitor or TV at its real size, its casing measured on real ones and lit by the room
-  and by the picture. Or, just for fun, space or a synthwave scene.
+  and by the picture. Or, just for fun, one of ten moving scenes.
 - **Internal resolution.** PS1 and PS2 cores running at 2× and up are read as blocks of one console pixel,
   so the signal stays right and the extra detail only makes edges smoother.
 - **HDR output.** On an HDR display the phosphor dots and scanline centres get the brightness a real tube

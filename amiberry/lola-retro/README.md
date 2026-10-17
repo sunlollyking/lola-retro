@@ -29,14 +29,15 @@ The defaults are right. What matters:
 **Overscan** in the shader parameters is the monitor's width and height: 0.1 leaves about 5 mm of black
 around a 320×256 screen, −0.015 is the factory setting with its wide black borders. To see the monitor at its real size on a large display instead, enter your screen's
 height under **Real size** (in cm, or in inches with unit 1), in full screen. **Around the tube** then
-puts the monitor around it, as large as the real one: in a room (1), floating in space (2) or in a
-synthwave scene (3). **Room light**
+puts the monitor around it, as large as the real one: in a room (1), or in front of one of ten moving
+scenes (2–11: space, synthwave, tiles, bouncing lines, plasma, copper bars, tunnel, hills, night city, arcade
+carpet; **Scene speed** slows them down or stops them). **Room light**
 sets how bright the room is: 1 a dim room, 3 a lit room, 20 daylight, and **Screen light on the casing**
 how strongly the screen lights the walls around the glass (1 as on the real monitor).
 
 ## Parameters
 
-**Filter → Shader Parameters...** lists 30 of them, each once. They mean the same as in RetroArch
+**Filter → Shader Parameters...** lists 31 of them, each once. They mean the same as in RetroArch
 (see the [shader pack's README](https://github.com/zoran123456/lola-retro/blob/main/shaders/lola-retro/README.md)); **Reset to Shader Defaults** returns to
 the 1084S. Fixed in this version: the cable (RGB), the console timing (Amiga) and the tube described in
 millimetres.

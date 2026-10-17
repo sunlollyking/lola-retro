@@ -50,6 +50,7 @@ float LR_SCREEN_UNIT;
 float LR_BACKDROP;
 float LR_ROOM;
 float LR_SPILL;
+float LR_SCENE_SPEED;
 
 // Lola Retro - pass 6 for SDR displays. The pass itself is in crt.inc.
 
@@ -377,7 +378,7 @@ void lr_main()
     if (vPhos > 1.5) vWhite = inverse(phosphorMatrix(vPhos)) * vWhite;
 }
 
-flat out vec4 lrParams[6];
+flat out vec4 lrParams[7];
 
 void main()
 {
@@ -406,12 +407,14 @@ void main()
     LR_BACKDROP = texelFetch(LR_Signal, ivec2(27, 0), 0).b;
     LR_ROOM = texelFetch(LR_Signal, ivec2(28, 0), 0).b;
     LR_SPILL = texelFetch(LR_Signal, ivec2(29, 0), 0).b;
+    LR_SCENE_SPEED = texelFetch(LR_Signal, ivec2(30, 0), 0).b;
     lrParams[0] = vec4(LR_NORM, LR_STEADY, LR_CONV, LR_MASK_TYPE);
     lrParams[1] = vec4(LR_MASK_STR, LR_WHITE, LR_PHOS, LR_CURV_X);
     lrParams[2] = vec4(LR_CURV_Y, LR_CORNER, LR_GLOW, LR_VIGNETTE);
     lrParams[3] = vec4(LR_OVERSCAN, LR_AMBIENT, LR_MON_SIZE, LR_MON_PITCH);
     lrParams[4] = vec4(LR_MON_SPOT_LO, LR_MON_SPOT_HI, LR_MON_CORNER, LR_SCREEN_H);
     lrParams[5] = vec4(LR_SCREEN_UNIT, LR_BACKDROP, LR_ROOM, LR_SPILL);
+    lrParams[6] = vec4(LR_SCENE_SPEED, 0.0, 0.0, 0.0);
     lr_main();
 }
 
@@ -656,6 +659,427 @@ vec3 synthwave(vec2 s, float t, float pix)
     return col;
 }
 
+// ---------------------------------------------------------------------------
+// More scenes (Around the tube 4-11). Decoration, not a simulation, all drawn here (no pictures).
+// fc: the screen pixel, counted from the centre (y up). The pixel-art scenes draw their pixels as
+// squares of a whole number of screen pixels and scroll in whole screen pixels, so they stay sharp.
+// ---------------------------------------------------------------------------
+
+// a colour given as 0-255 sRGB, in linear light like the picture
+vec3 rgb8(float r, float g, float b) { return pow(vec3(r, g, b) / 255.0, vec3(2.2)); }
+
+// screen pixels per pixel of a picture this many lines tall on the screen
+float pixSize(float lines, float pix) { return max(1.0, floor(1.0 / (lines * pix) + 0.5)); }
+
+// the pixel column of a layer that moves left at v screen heights per second; pixels n screen pixels wide
+float layerX(float fx, float t, float v, float n, float pix) { return floor((fx + floor(t * v / pix)) / n); }
+
+// 4x4 ordered dither threshold, 0..15/16
+float bayer2(vec2 a) { return 2.0 * a.x + 3.0 * a.y - 4.0 * a.x * a.y; }
+float bayer4(vec2 p) { return (4.0 * bayer2(mod(p, 2.0)) + bayer2(mod(floor(p * 0.5), 2.0))) / 16.0; }
+
+// Tiles (4): a 90s desktop wallpaper, a small pattern in the 16 Windows colours repeated over a
+// 640x480 desktop, scrolling slowly and diagonally. Four patterns take turns every two minutes,
+// dissolving into each other. p: the pattern's pixel.
+vec3 tilePattern(int k, vec2 p)
+{
+    vec3 c;
+    if (k == 0)
+    {
+        // cubes: hexagons of three faces, light on top, teal on the left, dark teal on the right
+        vec2 q = (p + 0.5) / 16.0;
+        q.x *= 0.8660254;                                     // 2:1 pixel slopes
+        float j = floor(q.y / 1.5);
+        vec2 best = vec2(1e9);
+        for (int i = 0; i < 2; i++)
+        {
+            float jj = j + float(i), sh = 0.5 * mod(jj, 2.0);
+            vec2 d = q - vec2((floor(q.x / 1.7320508 - sh + 0.5) + sh) * 1.7320508, 1.5 * jj);
+            if (dot(d, d) < dot(best, best)) best = d;
+        }
+        if (best.y * 1.7320508 > abs(best.x)) c = rgb8(192.0, 192.0, 192.0);
+        else if (best.x < 0.0) c = rgb8(0.0, 128.0, 128.0);
+        else c = mod(p.x + p.y, 2.0) < 1.0 ? rgb8(0.0, 128.0, 128.0) : vec3(0.0);
+    }
+    else if (k == 1)
+    {
+        // triangles: squares cut along a diagonal that turns from square to square, navy and purple
+        vec2 cell = floor(p / 16.0), f = p - cell * 16.0;
+        float u = mod(cell.x + cell.y, 2.0) > 0.5 ? 15.0 - f.x : f.x;
+        float dd = f.y - u;
+        c = dd > 0.5 ? rgb8(0.0, 0.0, 128.0) : dd < -0.5 ? rgb8(128.0, 0.0, 128.0) : vec3(0.0);
+    }
+    else if (k == 2)
+    {
+        // blocks: raised bricks like 90s buttons, light on the top and left edges
+        float row = floor(p.y / 16.0);
+        vec2 f = vec2(mod(p.x + 16.0 * mod(row, 2.0), 32.0), p.y - row * 16.0);
+        c = rgb8(192.0, 192.0, 192.0);
+        if (f.x > 30.5 || f.y < 0.5) c = vec3(0.0);
+        else if (f.x > 29.5 || f.y < 1.5) c = rgb8(128.0, 128.0, 128.0);
+        else if (f.x < 0.5 || f.y > 14.5) c = vec3(1.0);
+    }
+    else
+    {
+        // weave: a straw mat, strips going across and up in turn, olive with maroon shadows
+        vec2 b = floor(p / 16.0), f = p - b * 16.0;
+        float w = mod(mod(b.x + b.y, 2.0) < 0.5 ? f.y : f.x, 4.0);
+        c = w < 0.5 ? rgb8(128.0, 0.0, 0.0) : rgb8(128.0, 128.0, 0.0);
+        if (w > 2.5 && mod(p.x + p.y, 2.0) < 1.0) c = rgb8(255.0, 255.0, 0.0);
+    }
+    return c;
+}
+vec3 tiles(vec2 fc, float t, float pix)
+{
+    float n = pixSize(480.0, pix);
+    vec2 p = floor((fc - floor(t * 0.012 / pix) * vec2(1.0, -1.0)) / n);   // moving right and down
+    float turn = t / 120.0;
+    int k = int(mod(floor(turn), 4.0));
+    vec3 c = tilePattern(k, p);
+    if (fract(turn) * 120.0 - 118.0 > 2.0 * bayer4(p))                    // the last two seconds: dissolve
+        c = tilePattern(int(mod(float(k + 1), 4.0)), p);
+    return 0.4 * c;
+}
+vec3 tilesLight(float t)
+{
+    float turn = t / 120.0;
+    int k = int(mod(floor(turn), 4.0)), k1 = int(mod(float(k + 1), 4.0));
+    vec3 l[4] = vec3[4](vec3(0.86, 0.98, 0.98), vec3(0.9, 0.82, 1.0), vec3(1.0), vec3(1.0, 0.97, 0.8));
+    return mix(l[k], l[k1], clamp(fract(turn) * 60.0 - 59.0, 0.0, 1.0));
+}
+
+// Bouncing lines (5): two four-cornered shapes whose corners bounce off the edges of the screen,
+// each followed by fading copies of itself, on black (in the spirit of the 90s screensavers).
+// hs: half the screen's size in screen heights.
+vec3 bounceLines(vec2 s, vec2 hs, float t, float pix)
+{
+    vec3 col = vec3(0.0);
+    float w = max(pix, 1.0 / 960.0);                          // half the line's width
+    for (int sh = 0; sh < 2; sh++)
+    {
+        vec3 tint = 0.5 + 0.5 * cos(TAU * (t * 0.013 + 0.5 * float(sh) + vec3(0.0, 0.33, 0.67)));
+        tint *= tint;
+        vec2 ph[4], rate[4];
+        for (int i = 0; i < 4; i++)
+        {
+            float h = float(sh * 4 + i);
+            ph[i] = vec2(hash13(vec3(h, 1.0, 7.0)), hash13(vec3(h, 2.0, 7.0)));
+            rate[i] = 0.035 + 0.04 * vec2(hash13(vec3(h, 3.0, 7.0)), hash13(vec3(h, 4.0, 7.0)));
+        }
+        for (int k = 0; k < 6; k++)
+        {
+            float tk = t - 0.22 * float(k);
+            vec2 v[4];
+            vec2 lo = vec2(1e9), hi = vec2(-1e9);
+            for (int i = 0; i < 4; i++)
+            {
+                v[i] = (abs(fract(ph[i] + rate[i] * tk) * 2.0 - 1.0) * 2.0 - 1.0) * (hs - 0.02);
+                lo = min(lo, v[i]);
+                hi = max(hi, v[i]);
+            }
+            float m = w + 8.0 * pix;
+            if (any(lessThan(s, lo - m)) || any(greaterThan(s, hi + m))) continue;
+            float d = 1e9;
+            for (int i = 0; i < 4; i++)
+            {
+                vec2 a = v[i], b = v[(i + 1) % 4];
+                vec2 ba = b - a, pa = s - a;
+                d = min(d, length(pa - ba * clamp(dot(pa, ba) / max(dot(ba, ba), 1e-8), 0.0, 1.0)));
+            }
+            col += tint * pow(0.72, float(k)) * (0.8 * clamp((w - d) / pix + 0.5, 0.0, 1.0) + 0.08 * exp(-d / (3.0 * pix)));
+        }
+    }
+    return col;
+}
+
+// Plasma (6): the 90s demo effect, waves of colour flowing through each other, drawn at 320x200
+// with a 256-colour palette that cycles, in the 64 levels per colour of a VGA card.
+vec3 plasmaColour(float x)
+{
+    vec3 c = 0.5 + 0.5 * cos(TAU * (x + vec3(0.0, 0.33, 0.67)));
+    return pow(floor(c * 63.0 + 0.5) / 63.0, vec3(2.2));
+}
+vec3 plasma(vec2 fc, float t, float pix)
+{
+    float n = pixSize(200.0, pix);
+    vec2 p = (floor(fc / n) + 0.5) * n * pix;                 // the 320x200 pixel, in screen heights
+    float v = sin(p.x * 16.0 + t * 0.9) + sin(p.y * 13.0 - t * 0.7) + sin((p.x + p.y) * 11.0 + t * 0.5)
+            + sin(length(p - 0.5 * vec2(sin(t * 0.21), cos(t * 0.17))) * 18.0 - t * 1.1);
+    return 0.35 * plasmaColour(floor(fract(v * 0.25 + t * 0.04) * 256.0) / 256.0);
+}
+
+// Copper bars (7): Amiga demo raster bars, shiny bands swinging up and down around an invisible
+// cylinder, stars flying sideways behind them, a checkerboard floor rushing toward the viewer.
+// Drawn at 256 lines, in the Amiga's 4096 colours.
+vec3 amiga12(vec3 c) { return pow(floor(clamp(c, 0.0, 1.0) * 15.0 + 0.5) / 15.0, vec3(2.2)); }
+vec3 copper(vec2 fc, vec2 hs, float t, float pix)
+{
+    float n = pixSize(256.0, pix);
+    vec2 p = floor(fc / n);
+    float L = 1.0 / (n * pix);                                // the screen's height in lines
+    float y = p.y + 0.5, hz = -0.2 * L;
+    vec3 col = vec3(0.0);
+    if (y > hz)
+    {
+        // stars flying to the left at three speeds, one on most lines
+        if (hash13(vec3(p.y, 3.0, 17.0)) > 0.35)
+        {
+            float lay = floor(hash13(vec3(p.y, 4.0, 17.0)) * 3.0), w = 2.0 * hs.x * L;
+            float x = mod(hash13(vec3(p.y, 5.0, 17.0)) * w - t * (14.0 + 22.0 * lay), w) - 0.5 * w;
+            if (p.x == floor(x)) col = amiga12(vec3(0.3 + 0.35 * lay));
+        }
+        // the bars, the nearer ones in front, darker at the back
+        const vec3 BAR[6] = vec3[6](vec3(1.0, 0.25, 0.2), vec3(1.0, 0.6, 0.1), vec3(1.0, 0.95, 0.3),
+                                    vec3(0.3, 1.0, 0.35), vec3(0.2, 0.75, 1.0), vec3(0.75, 0.35, 1.0));
+        float zb = -2.0;
+        for (int i = 0; i < 6; i++)
+        {
+            float a = t * 1.1 + float(i) * TAU / 6.0, z = cos(a);
+            float dy = abs(y - (0.17 * L + 0.17 * L * sin(a))) / 10.0;
+            if (dy < 1.0 && z > zb)
+            {
+                zb = z;
+                col = amiga12(BAR[i] * (1.0 - dy * dy) * (0.6 + 0.4 * z) + 0.25 * pow(1.0 - dy, 6.0));
+            }
+        }
+        if (abs(y - hz - 0.5) < 0.6) col = amiga12(vec3(0.55, 0.65, 1.0));   // the horizon
+    }
+    else
+    {
+        // the floor: a checkerboard in perspective, fading out in the distance
+        float dy = (hz - y) / L;
+        float z = 0.09 / dy;
+        vec2 g = vec2((p.x + 0.5) / L * z * 7.0, z * 7.0 + t * 1.6);
+        float ch = mod(floor(g.x) + floor(g.y), 2.0);
+        vec3 c = mix(vec3(0.85, 0.85, 1.0), vec3(0.2, 0.1, 0.55), ch);
+        float cell = max(z * 7.0 / L, 0.09 / (dy * dy) * 7.0 / L);   // cell size against a pixel
+        c = mix(c, vec3(0.52, 0.48, 0.78), smoothstep(0.25, 0.6, cell));
+        col = amiga12(c * exp(-0.12 * z));
+    }
+    return 0.5 * col;
+}
+
+// Tunnel (8): flying down a tunnel from a 90s demo: checked walls rushing toward the viewer, slowly
+// turning and twisting, darker in the distance. Drawn at 320x200.
+vec3 tunnel(vec2 fc, float t, float pix)
+{
+    float n = pixSize(200.0, pix);
+    vec2 p = (floor(fc / n) + 0.5) * n * pix;
+    vec2 d = p - 0.05 * vec2(sin(t * 0.37), cos(t * 0.29));
+    float r = max(length(d), 1e-3);
+    float u = (0.3 / r + t * 0.12) * 12.0;                   // rings, rushing toward the viewer
+    float v = atan(d.y, d.x) / TAU * 24.0 + t * 0.5 + 3.0 * sin(u * 0.04);   // around, turning, twisting
+    vec2 cell = floor(vec2(u, v)), f = fract(vec2(u, v));
+    float hue = 0.5 + 0.5 * sin(cell.x * 0.11);              // blue, purple and cyan in turn along the tunnel
+    vec3 c = mix(mix(vec3(0.15, 0.35, 1.0), vec3(0.65, 0.25, 1.0), hue), vec3(0.15, 0.85, 1.0), 0.5 + 0.5 * sin(cell.x * 0.047));
+    c *= mod(cell.x + cell.y, 2.0) < 0.5 ? 1.0 : 0.4;
+    if (min(min(f.x, 1.0 - f.x), min(f.y, 1.0 - f.y)) < 0.06) c *= 0.3;   // the seams
+    return 0.45 * c * c * smoothstep(0.12, 0.7, r);
+}
+
+// Hills (9): a 16-bit side-scroller landscape in layers, each moving slower the further away it
+// is: sky, clouds, mountains, hills, trees and grass. Drawn at 224 lines.
+vec3 hills(vec2 fc, float t, float pix)
+{
+    float n = pixSize(224.0, pix);
+    float y = floor(fc.y / n) + 0.5;
+    vec3 col = mix(rgb8(150.0, 205.0, 255.0), rgb8(48.0, 96.0, 208.0), clamp(floor((y + 40.0) / 19.0) / 7.0, 0.0, 1.0));
+    // clouds
+    float x = layerX(fc.x, t, 0.004, n, pix) + 0.5;
+    float cell = floor(x / 90.0), hc = hash13(vec3(cell, 1.0, 41.0));
+    vec2 a = vec2(x - cell * 90.0 - 45.0 - (hc - 0.5) * 30.0, y - (50.0 + 40.0 * fract(hc * 7.0)));
+    float cl = min(min(length(a - vec2(-13.0, 0.0)) - 9.0, length(a - vec2(0.0, 4.0)) - 13.0), length(a - vec2(14.0, -1.0)) - 8.0);
+    if (hc > 0.2 && cl < 0.0 && a.y > -6.0) col = a.y > -1.0 ? rgb8(255.0, 255.0, 255.0) : rgb8(200.0, 215.0, 245.0);
+    // mountains: lit on the left, shaded on the right, snow on the high peaks
+    x = layerX(fc.x, t, 0.009, n, pix) + 0.5;
+    float mc = floor(x / 52.0), mf = x - mc * 52.0;
+    float peak = 18.0 + 30.0 * hash13(vec3(mc, 2.0, 41.0));
+    float mh = -38.0 + peak * (1.0 - abs(mf - 26.0) / 26.0);
+    if (y < mh) col = (peak > 34.0 && y > peak - 47.0) ? rgb8(235.0, 240.0, 255.0) : mf < 26.0 ? rgb8(120.0, 128.0, 200.0) : rgb8(96.0, 102.0, 170.0);
+    // hills, in stripes
+    x = layerX(fc.x, t, 0.018, n, pix) + 0.5;
+    float hh = -52.0 + 9.0 * sin(x * 0.045) + 5.0 * sin(x * 0.11 + 1.3);
+    if (y < hh) col = y > hh - 2.0 ? rgb8(120.0, 205.0, 95.0) : mod(floor(y / 3.0), 2.0) < 0.5 ? rgb8(62.0, 150.0, 72.0) : rgb8(52.0, 134.0, 64.0);
+    // trees
+    x = layerX(fc.x, t, 0.032, n, pix) + 0.5;
+    float tc = floor(x / 26.0), ht = hash13(vec3(tc, 3.0, 41.0));
+    if (ht > 0.2)
+    {
+        float cy = -66.0 + 6.0 * fract(ht * 7.0), r = 8.0 + 4.0 * fract(ht * 13.0);
+        vec2 d = vec2(x - tc * 26.0 - 13.0 - (ht - 0.5) * 8.0, y - cy);
+        if (abs(d.x) < 1.5 && d.y < 0.0) col = rgb8(110.0, 70.0, 36.0);
+        if (length(d) < r) col = -0.6 * d.x + 0.8 * d.y > 0.35 * r ? rgb8(88.0, 170.0, 70.0) : rgb8(34.0, 110.0, 48.0);
+    }
+    // grass and earth
+    x = layerX(fc.x, t, 0.05, n, pix) + 0.5;
+    float g = -84.0 + (hash13(vec3(floor(x), 4.0, 41.0)) > 0.6 ? 1.0 : 0.0);
+    if (y < g)
+    {
+        col = y > g - 4.0 ? rgb8(96.0, 196.0, 64.0) : rgb8(150.0, 98.0, 52.0);
+        if (y < g - 4.0 && hash13(vec3(floor(x), floor(y), 42.0)) > 0.93) col = rgb8(112.0, 70.0, 38.0);
+    }
+    return 0.45 * col;
+}
+
+// Night city (10): a skyline at night in three layers moving at their own speeds, windows lighting
+// up and going dark, a red light blinking on an antenna, a moon. Drawn at 224 lines.
+vec3 city(vec2 fc, float t, float pix)
+{
+    float n = pixSize(224.0, pix);
+    float yi = floor(fc.y / n), y = yi + 0.5, sx = floor(fc.x / n);
+    vec3 col = mix(rgb8(64.0, 36.0, 96.0), rgb8(6.0, 8.0, 34.0), clamp(floor((y + 40.0) / 19.0) / 7.0, 0.0, 1.0));
+    float hs = hash13(vec3(sx, yi, 51.0));
+    if (y > 10.0 && hs > 0.996) col = rgb8(200.0, 200.0, 255.0) * (0.7 + 0.3 * sin(t * 2.0 + hs * 900.0));
+    vec2 m = vec2(sx + 0.5 - 118.0, y - 66.0);                  // the moon, right of the monitor
+    if (length(m) < 12.0)
+        col = (length(m - vec2(-3.0, 3.0)) < 3.5 || length(m - vec2(4.0, -4.0)) < 2.5) ? rgb8(215.0, 205.0, 175.0) : rgb8(245.0, 238.0, 205.0);
+    // far buildings, with a few dim windows
+    float x = layerX(fc.x, t, 0.006, n, pix);
+    float b = floor(x / 22.0), lx = x - b * 22.0;
+    float top = floor(-20.0 + 55.0 * hash13(vec3(b, 2.0, 52.0)));
+    if (lx < floor(13.0 + 8.0 * hash13(vec3(b, 1.0, 52.0))) && yi < top)
+    {
+        col = rgb8(34.0, 32.0, 70.0);
+        if (mod(lx, 3.0) == 1.0 && mod(top - yi, 3.0) == 2.0 && hash13(vec3(b * 31.0 + lx, yi, 53.0)) > 0.8) col = rgb8(130.0, 120.0, 80.0);
+    }
+    // nearer buildings: windows that light up and go dark
+    x = layerX(fc.x, t, 0.014, n, pix);
+    b = floor(x / 32.0); lx = x - b * 32.0;
+    float w = floor(20.0 + 11.0 * hash13(vec3(b, 1.0, 54.0)));
+    top = floor(-40.0 + 60.0 * hash13(vec3(b, 2.0, 54.0)));
+    if (lx < w && yi < top)
+    {
+        col = rgb8(18.0, 18.0, 40.0);
+        float wy = top - yi;
+        if (mod(lx, 4.0) >= 1.0 && mod(lx, 4.0) <= 2.0 && lx < w - 1.0 && mod(wy, 5.0) >= 2.0 && mod(wy, 5.0) <= 3.0)
+        {
+            vec3 id = vec3(b * 17.0 + floor(lx / 4.0), floor(wy / 5.0), 55.0);
+            float h = hash13(id);
+            if (hash13(id + floor(t / (8.0 + 20.0 * h) + h)) > 0.55)
+                col = 0.7 * (fract(h * 11.0) > 0.25 ? rgb8(255.0, 214.0, 130.0) : rgb8(150.0, 205.0, 255.0));
+        }
+    }
+    // rooftops in front, an antenna with a red light
+    x = layerX(fc.x, t, 0.03, n, pix);
+    b = floor(x / 44.0); lx = x - b * 44.0;
+    float hb = hash13(vec3(b, 1.0, 56.0));
+    top = floor(-78.0 + 22.0 * hb);
+    if (yi < top) col = rgb8(8.0, 8.0, 16.0);
+    if (hb > 0.5 && lx == 22.0 && yi >= top && yi < top + 12.0) col = rgb8(40.0, 40.0, 52.0);
+    if (hb > 0.5 && lx == 22.0 && yi == top + 12.0 && fract(t * 0.8 + hb * 7.0) < 0.5) col = rgb8(255.0, 40.0, 30.0);
+    return 0.6 * col;
+}
+
+// Arcade carpet (11): neon shapes on black, like the carpets of 90s arcades and bowling alleys,
+// glowing as under black light, drifting slowly.
+float sdStar5(vec2 p, float r, float rf)
+{
+    const vec2 k1 = vec2(0.809016994, -0.587785252), k2 = vec2(-0.809016994, -0.587785252);
+    p.x = abs(p.x);
+    p -= 2.0 * max(dot(k1, p), 0.0) * k1;
+    p -= 2.0 * max(dot(k2, p), 0.0) * k2;
+    p.x = abs(p.x);
+    p.y -= r;
+    vec2 ba = rf * vec2(-k1.y, k1.x) - vec2(0.0, 1.0);
+    float h = clamp(dot(p, ba) / dot(ba, ba), 0.0, r);
+    return length(p - ba * h) * sign(p.y * ba.x - p.x * ba.y);
+}
+float sdTriangle(vec2 p, float r)
+{
+    const float k = 1.7320508;
+    p.x = abs(p.x) - r;
+    p.y = p.y + r / k;
+    if (p.x + k * p.y > 0.0) p = vec2(p.x - k * p.y, -k * p.x - p.y) / 2.0;
+    p.x -= clamp(p.x, -2.0 * r, 0.0);
+    return -length(p) * sign(p.y);
+}
+vec3 carpet(vec2 s, float t, float pix)
+{
+    const float C = 0.14;                                     // the pattern's cell, in screen heights
+    const vec3 NEON[6] = vec3[6](vec3(1.0, 0.1, 0.6), vec3(0.1, 0.9, 1.0), vec3(1.0, 0.9, 0.1),
+                                 vec3(0.45, 1.0, 0.1), vec3(1.0, 0.45, 0.05), vec3(0.65, 0.25, 1.0));
+    vec2 qd = s + floor(t * vec2(0.012, 0.007) / pix) * pix;   // drifting, in whole screen pixels
+    vec2 q = qd;
+    q.x += 0.5 * C * mod(floor(q.y / C), 2.0);
+    vec2 id = floor(q / C), f = q / C - id - 0.5;
+    float pc = pix / C;
+    float h1 = hash13(vec3(id, 21.0)), h2 = hash13(vec3(id, 22.0)), h3 = hash13(vec3(id, 23.0));
+    float ca = cos(h2 * TAU), sa = sin(h2 * TAU);
+    vec2 pq = mat2(ca, sa, -sa, ca) * (f - (vec2(h3, fract(h3 * 7.0)) - 0.5) * 0.12);
+    int kind = int(h1 * 6.0);
+    float d, fill = 0.0;
+    if (kind == 0)
+    {
+        float pl = length(pq) - 0.12;                          // a planet with a ring
+        d = min(abs(pl), abs(length(pq * vec2(1.0, 3.2)) - 0.25) / 2.2);
+        fill = step(pl, 0.0);
+    }
+    else if (kind == 1)
+    {
+        float st = sdStar5(pq, 0.2, 0.45);                     // a star
+        d = abs(st);
+        fill = step(st, 0.0);
+    }
+    else if (kind == 2)
+    {
+        float x = clamp(pq.x, -0.26, 0.26);                    // a squiggle
+        vec2 e = pq - vec2(x, 0.06 * sin(x * 24.0));
+        d = abs(pq.x) < 0.26 ? abs(e.y) / sqrt(1.0 + 2.07 * cos(x * 24.0) * cos(x * 24.0)) : length(e);
+    }
+    else if (kind == 3)
+        d = abs(sdTriangle(pq, 0.17));                        // a triangle
+    else if (kind == 4)
+    {
+        d = min(abs(length(pq) - 0.17), max(length(pq) - 0.04, 0.0));   // a ring with a dot
+        fill = step(length(pq), 0.04);
+    }
+    else
+    {
+        d = min(min(length(pq - vec2(-0.14, 0.05)), length(pq - vec2(0.12, 0.1))), length(pq - vec2(0.02, -0.13))) - 0.045;
+        fill = step(d, 0.0);                                   // three dots
+        d = abs(d);
+    }
+    vec3 neon = NEON[int(fract(h1 * 13.0) * 6.0)];
+    float fib = hash13(vec3(floor(qd / (2.0 * pix)), 30.0));  // the carpet's fibres
+    vec3 col = vec3(0.006, 0.004, 0.012) * (0.6 + 0.8 * fib);
+    float win = smoothstep(0.5, 0.38, max(abs(f.x), abs(f.y)));   // the glow ends inside the cell
+    col += neon * (0.55 * smoothstep(0.018 + pc, 0.018 - pc, d) + 0.18 * win * exp(-d / 0.04) + 0.1 * fill) * (0.8 + 0.4 * fib);
+    // specks of colour in the pile
+    float hsp = hash13(vec3(floor(qd / 0.012), 24.0));
+    if (hsp > 0.985) col += NEON[int(fract(hsp * 31.0) * 6.0)] * 0.25 * smoothstep(0.35, 0.2, length(fract(qd / 0.012) - 0.5));
+    return col;
+}
+
+// Around the tube 2-11: the scene behind the monitor. hs: half the screen's size in screen heights.
+vec3 scene(int k, vec2 s, vec2 fc, vec2 hs, float t, float pix)
+{
+    if (k == 2) return space(s, t, pix);
+    if (k == 3) return synthwave(s, t, pix);
+    if (k == 4) return tiles(fc, t, pix);
+    if (k == 5) return bounceLines(s, hs, t, pix);
+    if (k == 6) return plasma(fc, t, pix);
+    if (k == 7) return copper(fc, hs, t, pix);
+    if (k == 8) return tunnel(fc, t, pix);
+    if (k == 9) return hills(fc, t, pix);
+    if (k == 10) return city(fc, t, pix);
+    return carpet(s, t, pix);
+}
+
+// The colour of the light a scene casts on the casing (Room light sets how much).
+vec3 sceneLight(int k, float t)
+{
+    if (k == 2) return vec3(0.96, 0.98, 1.0);                 // space: white, like sunlight
+    if (k == 3) return vec3(1.0, 0.72, 0.95);                 // synthwave: pink, like its sun
+    if (k == 4) return tilesLight(t);
+    if (k == 5) return vec3(0.85, 0.9, 1.0);
+    if (k == 6) return vec3(0.95, 0.88, 1.0);
+    if (k == 7) return vec3(1.0, 0.85, 0.9);
+    if (k == 8) return vec3(0.75, 0.82, 1.0);
+    if (k == 9) return vec3(1.0, 0.98, 0.92);
+    if (k == 10) return vec3(0.72, 0.76, 1.0);
+    return vec3(0.82, 0.6, 1.0);                              // carpet: black light
+}
+
 // What is around the tube (Around the tube), drawn where the glass ends. Linear light, like the
 // picture. c: tube position (-1..1, after curvature); dist, qq: how far outside the tube edge, in
 // the same units; tc: position on the tube before curvature (0..1); tubePx: tube size in pixels.
@@ -666,8 +1090,9 @@ vec3 backdrop(vec2 c, float dist, vec2 qq, vec2 tc, vec2 tubePx)
     float mmpp = tube.y / tubePx.y;                               // mm per screen pixel
     float aa = mmpp;                                              // one screen pixel
     vec2 p = (tc - 0.5) * tubePx * mmpp;                          // mm from the tube centre
-    bool inSpace = LR_BACKDROP > 1.5;                     // a scene (space, synthwave), not a room
-    bool synth = LR_BACKDROP > 2.5;
+    int scn = int(LR_BACKDROP + 0.5);                      // 1 a room, 2 and up a scene
+    bool inScene = scn >= 2;
+    float t = float(LR_FrameCount % 1000000u) / 60.0 * LR_SCENE_SPEED;   // the scenes' clock
 
     // The casing, measured on photos of real monitors.
     // Amiga monitor (Commodore M1438S): warm off-white, a thick flat front, a 12.5 mm tunnel with
@@ -688,12 +1113,12 @@ vec3 backdrop(vec2 c, float dist, vec2 qq, vec2 tc, vec2 tubePx)
     vec3 albedo = amiga ? vec3(0.60, 0.56, 0.44) : pc ? vec3(0.66, 0.57, 0.33) : vec3(0.07, 0.07, 0.075);
 
     // the light: the room's (Room light: 1 a dim room with warm lamps, 20 daylight, whiter and
-    // more even), brightest near the monitor. In space as much light as Room light gives, white
-    // like sunlight and even, so the monitor shows in front of the stars; in the synthwave scene
-    // pink, like its sun.
+    // more even), brightest near the monitor. In a scene as much light as Room light gives, even,
+    // in the scene's colour (white in space, pink in the synthwave scene, like its sun), so the
+    // monitor shows in front of it.
     float day = smoothstep(1.0, 20.0, LR_ROOM);
-    float near = mix(1.0 / (1.0 + dot(p, p) / (260.0 * 260.0)), 1.0, inSpace ? 1.0 : 0.6 * day);
-    vec3 light = (synth ? vec3(1.0, 0.72, 0.95) : inSpace ? vec3(0.96, 0.98, 1.0) : mix(vec3(1.0, 0.93, 0.82), vec3(1.0), day))
+    float near = mix(1.0 / (1.0 + dot(p, p) / (260.0 * 260.0)), 1.0, inScene ? 1.0 : 0.6 * day);
+    vec3 light = (inScene ? sceneLight(scn, t) : mix(vec3(1.0, 0.93, 0.82), vec3(1.0), day))
                * (0.0167 * LR_ROOM * near);
 
     vec2 inner = 0.5 * tube;
@@ -872,11 +1297,10 @@ vec3 backdrop(vec2 c, float dist, vec2 qq, vec2 tc, vec2 tubePx)
 
     vec3 casing = plastic(alb, n, vec3(p, 0.0), light, occ, gloss) + alb * pic;
     vec2 sc = (vTexCoord - 0.5) * LR_OutputSize.xy * LR_OutputSize.w;   // screen heights
-    float t = float(LR_FrameCount % 1000000u) / 60.0;
-    vec3 behind = synth ? synthwave(sc, t, LR_OutputSize.w)
-                : inSpace ? space(sc, t, LR_OutputSize.w)
+    vec2 fc = floor(vTexCoord * LR_OutputSize.xy) - floor(0.5 * LR_OutputSize.xy);   // screen pixel
+    vec3 behind = inScene ? scene(scn, sc, fc, 0.5 * LR_OutputSize.xy * LR_OutputSize.w, t, LR_OutputSize.w)
                 : vec3(0.20, 0.195, 0.18) * light;               // the wall, further from the light
-    if (synth)           // the casing's edge, turned away from the viewer, catches the scene's light
+    if (scn == 3)        // the casing's edge, turned away from the viewer, catches the sunset's light
         casing += behind * 0.2 * smoothstep(-sh - 1.0, 0.0, s);
     behind = mix(behind, stripCol, strip);
     return mix(behind, casing, 1.0 - smoothstep(-aa, aa, s)) + lamp;
@@ -1029,7 +1453,7 @@ void lr_main()
     FragColor = vec4(col, 1.0);
 }
 
-flat in vec4 lrParams[6];
+flat in vec4 lrParams[7];
 
 void main()
 {
@@ -1057,6 +1481,7 @@ void main()
     LR_BACKDROP = lrParams[5].y;
     LR_ROOM = lrParams[5].z;
     LR_SPILL = lrParams[5].w;
+    LR_SCENE_SPEED = lrParams[6].x;
     lr_main();
 }
 #endif
