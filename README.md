@@ -81,6 +81,27 @@ and the bricks turn orange-red through the US TV decoder.
 
 ![Standard decoder and US TV decoder](docs/tv-colour-us-vs-pal.jpg)
 
+## TV show (broadcast)
+
+The **TV show (broadcast)** preset shows a game the way it looked on a TV programme about games. The picture went
+from the console through the studio, the transmitter and a roof antenna to the same living-room TV. On the way
+the gaps between the lines were filled, so the picture is smoother and cleaner than on the composite cable at home.
+How it works: [TV show](shaders/lola-retro/README.md#tv-show).
+
+It suits PlayStation games best. The jagged polygon edges and the blocky textures soften, as they did on TV.
+
+![PlayStation: raw pixels and TV show](docs/tv-show-ps1.jpg)
+
+**Crash Bandicoot, Klonoa and Need for Speed III (PlayStation)** at 2x internal resolution (640x480), which makes
+the polygon edges less jagged. For a 480-line frame set **Console timing** to 4 (PlayStation); in auto mode it is
+read as an interlaced picture.
+
+It works on the older consoles too. The pixels lose their hard edges and dithering blends into smooth shades.
+
+![NES and SNES: raw pixels and TV show](docs/tv-show-nes-snes.jpg)
+
+**Bionic Commando (NES) and Super Mario All-Stars (SNES)** at their native resolution.
+
 ## PC monitor, in millimetres
 
 A PC monitor was not a TV. It ran at 31 kHz, drew 320×200 games twice (400 lines), and its beam and dot mask were
@@ -167,7 +188,7 @@ sharper than any real tube and easy on the eyes for long work on the desktop:
 
 Also included: **Studio Monitor (RGB)** for the PVM look, **CRT Projector** for 24 kHz arcade games, four
 sharper PC monitors (see [PC monitor, in millimetres](#pc-monitor-in-millimetres)), and **TV show (broadcast)**, a
-test: games as you saw them on a TV programme about games (see [TV show](shaders/lola-retro/README.md#tv-show)).
+test: games as you saw them on a TV programme about games (see [TV show (broadcast)](#tv-show-broadcast)).
 Which preset and settings to use per system: [RECOMMENDED-CORES.md](shaders/lola-retro/RECOMMENDED-CORES.md).
 
 ## What is simulated
