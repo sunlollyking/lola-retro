@@ -165,8 +165,9 @@ sharper than any real tube and easy on the eyes for long work on the desktop:
 | ![](docs/trinitron-s-video.jpg) **Trinitron (S-Video)**<br>PS2, GameCube, N64. | ![](docs/old-tv-rf.jpg) **Old TV (RF)**<br>Antenna cable, snow and ghosting. |
 | ![](docs/pc-monitor-vga.jpg) **PC Monitor (VGA)**<br>DOS and Windows 9x games, Dreamcast VGA. | ![](docs/amiga-1084s.jpg) **Amiga 1084S**<br>Amiga and 15 kHz arcade. |
 
-Also included: **Studio Monitor (RGB)** for the PVM look, **CRT Projector** for 24 kHz arcade games, and four
-sharper PC monitors (see [PC monitor, in millimetres](#pc-monitor-in-millimetres)).
+Also included: **Studio Monitor (RGB)** for the PVM look, **CRT Projector** for 24 kHz arcade games, four
+sharper PC monitors (see [PC monitor, in millimetres](#pc-monitor-in-millimetres)), and **TV show (broadcast)**, a
+test: games as you saw them on a TV programme about games (see [TV show](shaders/lola-retro/README.md#tv-show)).
 Which preset and settings to use per system: [RECOMMENDED-CORES.md](shaders/lola-retro/RECOMMENDED-CORES.md).
 
 ## What is simulated
@@ -234,7 +235,7 @@ Measured on synthetic patterns:
 
 | Folder | Contents |
 |---|---|
-| `shaders/lola-retro/` | The RetroArch shader pack (slang): 12 presets, each in a `curved/` and a `flat/` version, plus the same for HDR displays in `hdr/`. Details in its [README](shaders/lola-retro/README.md). |
+| `shaders/lola-retro/` | The RetroArch shader pack (slang): 13 presets, each in a `curved/` and a `flat/` version, plus the same for HDR displays in `hdr/`. Details in its [README](shaders/lola-retro/README.md). |
 | `amiberry/lola-retro/` | The Amiga 1084S preset converted to GLSL for Amiberry. Details in its [README](amiberry/lola-retro/README.md). |
 | `86box/lola-retro/` | The PC monitor presets converted to GLSL for 86Box. Details in its [README](86box/lola-retro/README.md). |
 | `web/lola-retro.html` | The original WebGL version. Open it in a browser, try test scenes or drop in your own screenshots. |
