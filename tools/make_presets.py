@@ -10,6 +10,7 @@ passes write HDR10 (crt-hdr.slang, present-hdr.slang).
 
 Usage: python3 tools/make_presets.py
 """
+import re
 from pathlib import Path
 
 PACK = Path(__file__).resolve().parent.parent / "shaders" / "lola-retro"
@@ -96,6 +97,9 @@ PRESETS = {
     "consumer-tv-composite": dict(),
     # The same TV fed RGB through SCART (common in Europe)
     "consumer-tv-scart-rgb": dict(LR_CABLE=3),
+    # The same TV showing a game on a TV programme: the console in a studio, the picture
+    # interlaced by the studio, on Betacam SP tape, through the transmitter and a roof antenna
+    "tv-show-broadcast": dict(LR_CABLE=4, LR_NORM=2, LR_NOISE=0.06, LR_TAPE=2, LR_GHOST=0.03),
     # Sony Trinitron on S-Video: aperture grille, flat vertically, cool white, Japanese P22 phosphors
     "trinitron-s-video": dict(
         LR_CABLE=2, LR_SHARP=0.3, LR_SAT=1.15, LR_SIG_LO=0.18, LR_SIG_HI=0.4, LR_HFOCUS=0.4,
@@ -173,25 +177,95 @@ HDR = dict(LR_NITS_WHITE=200, LR_NITS_PEAK=400)
 
 
 def hdr_passes(passes):
+    last = int(re.search(r"^shaders = (\d+)", passes, flags=re.M).group(1)) - 1
     p = passes.replace("../shaders/", "../../shaders/")
     p = p.replace("/crt.slang", "/crt-hdr.slang").replace("/present.slang", "/present-hdr.slang")
-    p = p.replace("scale_type6 = viewport\nscale6 = 1.0\n", "")
-    assert "crt-hdr.slang" in p and "present-hdr.slang" in p and "scale_type6" not in p
+    p = p.replace(f"scale_type{last} = viewport\nscale{last} = 1.0\n", "")
+    assert "crt-hdr.slang" in p and "present-hdr.slang" in p and f"scale_type{last}" not in p
     return p
 
 
+# The TV show preset has one more pass, after the beam pass: show-lines.slang makes one beam row
+# per line of the programme (577 rows high, see SHOW_LINES_ROWS in common.inc), so the CRT pass
+# reads one row per line instead of interpolating at every screen pixel. It takes over the
+# LR_Beam alias; the CRT and present passes move one place down.
+SHOW_LINES_PASS = """shader5 = ../shaders/show-lines.slang
+alias5 = LR_Beam
+filter_linear5 = false
+wrap_mode5 = clamp_to_edge
+scale_type_x5 = absolute
+scale_x5 = 8192
+scale_type_y5 = absolute
+scale_y5 = 577
+float_framebuffer5 = true
+
+"""
+
+
+def with_show_lines(passes):
+    p = passes.replace("shaders = 7", "shaders = 8").replace("alias4 = LR_Beam\n", "")
+    for old, new in ((6, 7), (5, 6)):
+        p = re.sub(rf"^([a-z_]+){old} = ", rf"\g<1>{new} = ", p, flags=re.M)
+    p = p.replace("shader6 = ../shaders/crt.slang", SHOW_LINES_PASS + "shader6 = ../shaders/crt.slang")
+    assert "shaders = 8" in p and "alias5 = LR_Beam" in p and "shader7 = ../shaders/present.slang" in p
+    return p
+
+
+# The TV presets run the encoder and decoder at a fixed 1280 samples per line (ENC_SAMPLES in
+# common.inc: 4 per pixel of a 320-wide console), so a core running at a higher internal
+# resolution costs no more than a native one. The PC and Amiga presets keep 4 samples per frame
+# pixel (their beam pass reads every pixel exactly); they never get upscaled frames.
+def with_fixed_samples(passes):
+    old = "scale_type_x0 = source\nscale_x0 = 4.0\n"
+    assert old in passes
+    return passes.replace(old, "scale_type_x0 = absolute\nscale_x0 = 1280\n")
+
+
+# Presets with their own pass chain
+PRESET_PASSES = {"tv-show-broadcast": with_fixed_samples(with_show_lines(PASSES))}
+for _name in ("consumer-tv-composite", "consumer-tv-scart-rgb", "trinitron-s-video", "studio-monitor-rgb",
+              "old-tv-rf", "crt-projector"):
+    PRESET_PASSES[_name] = with_fixed_samples(PASSES)
+
+
+# Every RetroArch preset starts with the native pass (native.slang): for a core running at a
+# higher internal resolution it averages the rows of each console line once, so the encoder
+# reads one row instead of k at every tap (its cost grew with the square of the resolution).
+# PASSES itself stays without it: the Amiberry and 86Box versions (make_glsl.py) never get
+# upscaled frames.
+NATIVE_PASS = """shader0 = ../shaders/native.slang
+filter_linear0 = false
+wrap_mode0 = clamp_to_edge
+scale_type0 = source
+scale0 = 1.0
+float_framebuffer0 = true
+
+"""
+
+
+def with_native_pass(passes):
+    n = int(re.search(r"^shaders = (\d+)", passes, flags=re.M).group(1))
+    p = re.sub(r"^([a-z_]+)(\d+) = ", lambda m: f"{m.group(1)}{int(m.group(2)) + 1} = ", passes, flags=re.M)
+    p = p.replace(f"shaders = {n}", f"shaders = {n + 1}").replace("shader1 = ../shaders/encode.slang",
+                                                                    NATIVE_PASS + "shader1 = ../shaders/encode.slang")
+    assert f"shaders = {n + 1}" in p and "shader0 = ../shaders/native.slang" in p and f"shader{n} = " in p
+    return p
+
 VARIANTS = {
-    "curved": ({}, PASSES),
-    "flat": (FLAT, PASSES),
-    "hdr/curved": (HDR, hdr_passes(PASSES)),
-    "hdr/flat": ({**FLAT, **HDR}, hdr_passes(PASSES)),
+    "curved": ({}, None),
+    "flat": (FLAT, None),
+    "hdr/curved": (HDR, hdr_passes),
+    "hdr/flat": ({**FLAT, **HDR}, hdr_passes),
 }
 
 
 def main():
-    for folder, (variant, passes) in VARIANTS.items():
+    for folder, (variant, change) in VARIANTS.items():
         (PACK / folder).mkdir(parents=True, exist_ok=True)
         for name, over in PRESETS.items():
+            passes = with_native_pass(PRESET_PASSES.get(name, PASSES))
+            if change:
+                passes = change(passes)
             values = {**BASE, **over, **variant}
             lines = [f"# Lola Retro - {name} ({folder})", "# Generated by tools/make_presets.py", "",
                      passes.rstrip(), ""]

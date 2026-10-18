@@ -21,7 +21,7 @@ On an HDR display, use the same presets from `lola-retro/hdr/curved` instead, se
 
 ## Curved or flat
 
-Every folder has the same 12 presets.
+Every folder has the same 13 presets.
 
 | Folder | Screen |
 |---|---|
@@ -38,6 +38,7 @@ Every folder has the same 12 presets.
 | `trinitron-s-video` | PS2, GameCube, N64 and other late-90s consoles. | Sony Trinitron on S-Video. Aperture grille with the two damper wires, cool white. |
 | `studio-monitor-rgb` | The sharpest picture with strong scanlines (the PVM/BVM look). | Broadcast/studio monitor on RGB, calibrated 6500 K white. |
 | `old-tv-rf` | Nostalgia for the antenna cable. Noisy on purpose. | Old TV on the antenna input. RF snow, ghosting, soft focus, round tube. |
+| `tv-show-broadcast` | Games as you saw them on a TV programme about games (test). | The console in a TV studio, broadcast in PAL and received with a roof antenna on the same living-room TV. The studio made a standard interlaced picture of the game, so the dark gaps between the lines are gone. See [TV show](#tv-show). |
 | `crt-projector` | 24 kHz arcade games such as Daytona USA (Sega Model 2). | Arcade CRT projector (three tubes on a flat screen). No mask, colour fringes, soft. |
 | `pc-monitor-vga` | DOS and Windows 9x games (320×200 up to 1024×768), Dreamcast on the VGA cable. | A typical mid-90s 15-inch PC monitor, described in millimetres (see [PC monitor](#pc-monitor)). 320×200 is drawn twice (400 lines), fine dot mask, a thin black border. |
 | `pc-monitor-vga-good`, `-premium`, `-premium-plus` | The same, on a better 15-inch monitor; sharper Windows desktops at 800×600 and 1024×768. | Finer dot mask and a smaller, better focused beam (see [Better PC monitors](#better-pc-monitors)). |
@@ -76,7 +77,8 @@ The composite simulation needs the console's real pixel grid:
 **Internal resolution.** Frames with more than 576 lines are read as an upscaled 240-line mode (3× and up).
 At 2× an upscaled PS1 frame looks like 480i, so set Console timing 4 by hand. 480-line consoles
 (PS2, GameCube, Dreamcast) upscaled: set Console timing 5, then the frame is read as upscaled 480i.
-Higher internal resolutions cost more GPU time in the encoder and decoder.
+In the TV presets a higher internal resolution costs about as much GPU time as native: the encoder and
+decoder always work at 1280 samples per line (see [Performance](#performance)).
 
 ## Parameters
 
@@ -85,15 +87,17 @@ Every preset only sets parameters, so you can tweak any preset in **Quick Menu �
 | Parameter | Meaning |
 |---|---|
 | Console timing | Pixel clock and colour-subcarrier rhythm of the console. 0 = auto (see below). |
-| TV standard | 0 auto (by line count), 1 NTSC, 2 PAL. Set it by hand for PAL consoles in 60 Hz mode (PAL60, common on PS2 and Dreamcast): the line count says NTSC but the colour is PAL. It also switches the colour decoder and the phosphors. |
-| Cable | 0 RF, 1 Composite, 2 S-Video, 3 RGB. |
-| Comb filter | Better TVs separated colour with a comb filter. Only works when the console flips the subcarrier phase every line (PlayStation, Amiga). |
+| TV standard | 0 auto (by line count), 1 NTSC, 2 PAL. Set it by hand for PAL consoles in 60 Hz mode (PAL60, common on PS2 and Dreamcast): the line count says NTSC but the colour is PAL. It also switches the colour decoder and the phosphors. On a TV show (Cable 4) it is the standard of the programme: `tv-show-broadcast` sets 2, a European programme, and a game in the other standard goes through the studio's standards converter (see [TV show](#tv-show)). |
+| Cable | 0 RF, 1 Composite, 2 S-Video, 3 RGB, 4 TV show: the game as seen on a TV programme, from a studio through the antenna (see [TV show](#tv-show)). |
+| Comb filter | Better TVs separated colour with a comb filter. Only works when the console flips the subcarrier phase every line (PlayStation, Amiga). On a TV show (Cable 4) the broadcast's own NTSC timing lets it work for every console. |
 | Luma trap in the console | How much of the fine luma detail the console's encoder filtered out before mixing in colour. Lower it for a stronger rainbow on fine stripes (Sonic's waterfall), raise it for a cleaner picture. Real consoles differed a lot here: 0 is like an early Mega Drive Model 1 (strong rainbow), 0.75 (default) a typical console, 1 a later model with a better encoder. |
 | Dither blend on RGB and S-Video | Off by default. Modern processing, not something a real TV did (similar to the notch filter of the RetroTINK 4K Pro): 1-pixel dither stripes blend into the colour or transparency the artists meant, without composite's rainbow and blur. Lines one pixel thin get slightly softer. |
 | Sharpness, Colour, Tint, Brightness, Contrast | The TV's own knobs. Tint only exists on NTSC sets. |
 | Colour decoder | 0 auto, 1 standard, 2 US TV, 3 Japanese TV. American and Japanese TVs decoded colour on shifted axes with extra red gain ("red push"): yellows lean orange, reds are stronger, skin looks warmer. Auto uses the US TV decoder (Sony CXA2025AS) for NTSC on composite, RF and S-Video, and the standard one for PAL and RGB. |
-| RF noise | Snow on the antenna input. |
+| RF noise | Snow on the antenna input (RF and TV show). |
 | No flicker | On by default. Freezes dot crawl and draws both interlaced fields every frame. Turn it off for the real moving dot crawl and 480i field flicker. |
+| TV show: tape copies | Cable 4 only. How many Betacam SP copies the game footage went through before it was broadcast (recorded, then edited onto the master tape: 2). Each copy softens luma and colour a little more. 0 is a live programme. |
+| TV show: antenna ghost | Cable 4 only. A faint copy of the picture shifted to the right, from a reflection off a building or a hill on the way to the roof antenna. |
 | Beam width in dark areas / on white | The beam spot grows with brightness, in both directions: bright lines merge and bright detail rounds off, dark lines show gaps and dark detail stays sharp. TVs; monitors in mm (PC monitors, the 1084S) use the spot sizes in mm below. |
 | Horizontal focus | Horizontal spot size relative to the vertical one; 0.5 = a round spot. Not used on monitors in mm (their spot is round). |
 | Tube gamma | 2.4 is typical. |
@@ -157,6 +161,47 @@ modes → PlayStation, 320×200 or 640×400 → VGA (NTSC Amiga on the 1084S pre
 frames (360, 720 or 1440 wide with 287, 574, 242 or 484 lines) → Amiga, 336–400 lines → arcade 24 kHz,
 more than 300 lines → interlaced, more than 576 lines → upscaled (see Internal resolution). Set the id by hand when the guess is wrong (for example a Mega Drive game
 in 240-line PAL mode).
+
+## TV show
+
+`tv-show-broadcast` (Cable 4) shows a game the way it looked on a TV programme about games in the
+90s: the same living-room TV as `consumer-tv-composite`, but the game reaches it from a TV studio,
+through the transmitter and a roof antenna. On TV games looked smoother, brighter and cleaner than
+on the RF or composite cable at home. Most of that is the chain, which the preset simulates:
+
+- **No gaps between the lines.** A console cannot be locked to the studio's clock, so its picture
+  went through a frame synchronizer, which writes out a standard interlaced picture. Each 240p/288p
+  frame becomes one field and the next one lands half a line lower, so every console line is drawn
+  twice and the dark gaps between the lines are filled. At living-room distance the 576-line raster
+  of a broadcast is near the limit of the eye, while the 288-line one of a console at home is not.
+  This is the biggest difference. With **No flicker** off, a thin horizontal line jumps up and down
+  by half a line at 25 Hz, as on the real TV.
+- **A clean source.** The preset assumes the studio took the console's RGB, as professional video
+  did, instead of the RF or composite cable most homes used (how each programme connected its
+  consoles is not documented), so there is no console encoder in the chain. The studio's
+  Betacam SP tape (**TV show: tape copies**, Sony BVW-75P: luma 5.5 MHz, colour 1.5 MHz at -1.5 dB)
+  and the station's PAL encoder (U and V 1.3 MHz) soften the picture a little. The broadcast is
+  composite too, so dithering still melts into smooth shades and fine stripes still show a little
+  rainbow, about as much as on the composite cable at home.
+- **The transmitter.** A PAL B/G transmitter runs out of carrier a little above peak white (about
+  114-120% of the picture signal), so the brightest saturated yellows and cyans (up to 133% in PAL)
+  could not go out as they were. How stations handled it is not documented; the preset clips them
+  softly a little below that, at 110%, so they come out slightly darker and paler. 75% colours pass untouched.
+- **The antenna.** A little snow (**RF noise**: 0.06 is good reception, about 47 dB weighted,
+  between "perceptible" and "imperceptible" on the ITU five-grade scale) and a faint ghost
+  (**TV show: antenna ghost**, 3% at 1.2 µs). Unlike a console's RF modulator, the broadcast has
+  stable sync, so the lines do not jitter.
+- **TV standard.** The preset is a European (PAL) programme. A game in the other standard (an NTSC
+  game, 240 lines) went through the studio's standards converter, which scaled it to the PAL raster,
+  so it fills the screen; a PAL game with 256 lines keeps its black borders. Set **TV standard** to
+  0 for a programme in the game's own standard (an American programme for NTSC games).
+
+The rest was not in the signal: the footage was picked from the best moments, often from
+pre-release versions or pre-rendered trailers, and seeing a game move at all was rare.
+
+The preset has one pass more than the others (`show-lines`): it works out the beam of every line of
+the programme once, so the CRT pass draws them as fast as any 480i or 576i picture. Cable 4 also works
+in the other presets, but slower, because there the standards converter is worked out at every pixel.
 
 ## PC monitor
 
@@ -251,8 +296,13 @@ the gaps between the phosphors go dark like on a real tube and the picture stays
 
 ## Performance
 
-The chain has seven passes and the encoder and decoder do real signal filtering, so it needs a reasonably
-modern GPU. Integrated graphics from the last few years should be fine at 1080p.
+The chain has eight passes (`tv-show-broadcast` nine) and the encoder and decoder do real signal
+filtering, so it needs a reasonably modern GPU. Integrated graphics from the last few years should be fine at 1080p.
+The first pass (`native`) averages the rows of each console line of an upscaled frame once, and in the TV
+presets the encoder and decoder work at a fixed 1280 samples per line (about 27 MHz, 4 per pixel of a
+320-wide console), so a PS1 core at 4× or 8× internal resolution costs about as much as at 1×. (Before,
+the encoder's work grew with the square of the internal resolution: 16 times as much at 4×.) The PC and
+Amiga presets keep 4 samples per frame pixel, because their beam reads every pixel exactly.
 The beam pass works out each source line once on an 8192-pixel-wide texture, so the GPU has to support
 textures that wide (every desktop GPU of the last decade does).
 

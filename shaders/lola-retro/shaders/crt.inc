@@ -98,6 +98,20 @@ vec4 beamAt(float i, float x, float lines)
 #endif
 }
 
+// TV show: the beam row at position p. A whole number is that row; between two console lines
+// (a standards converter scaling NTSC to PAL or back, when the preset has no show-lines pass)
+// the converter's vertical filter interpolates them, here a Catmull-Rom cubic over four lines.
+vec4 showBeam(float p, float x, float lines)
+{
+    float g = floor(p), f = p - g;
+    if (f < 1e-3) return beamAt(g, x, lines);
+    vec4 a = beamAt(g - 1.0, x, lines), b = beamAt(g, x, lines);
+    vec4 c = beamAt(g + 1.0, x, lines), d = beamAt(g + 2.0, x, lines);
+    vec4 r = b + 0.5 * f * (c - a) + f * f * (a - 2.5 * b + 2.0 * c - 0.5 * d)
+           + f * f * f * (1.5 * (b - c) + 0.5 * (d - a));
+    return max(r, 0.0);
+}
+
 // Rear-projection screen: lenticular sheet with thin black stripes, no RGB pattern
 float lenticular(float x)
 {
@@ -1934,6 +1948,12 @@ void main()
         // position along the source line: a 15 kHz monitor in mm shows the whole active line,
         // so a source shorter than the line leaves side borders
         float xs = (ua.x - 0.5) / vShare + 0.5;
+        // TV show: the studio's frame synchronizer made a standard interlaced picture out of
+        // the console's 240p/288p frames, so every console line is drawn in both fields, half
+        // a line apart, and the dark gaps between the lines are filled
+        bool show = isShow(global.LR_CABLE) && scan < 0.5;
+        bool prog = interlace < 0.5;                       // the console's own picture: 240p/288p
+        if (show) interlace = 1.0;
         float dbl = (vga && srcH <= 300.0) ? 2.0 : 1.0;
         float BH = srcH * dbl;
         float visLines = scan > 0.5 ? BH : (pal > 0.5 ? 288.0 : 240.0) * (interlace > 0.5 ? 2.0 : 1.0);
@@ -1941,6 +1961,29 @@ void main()
         float stepL = il ? 2.0 : 1.0;
         float offL = il ? float(params.FrameCount % 2u) : 0.0;
         float sgk = (interlace > 0.5 && global.LR_STEADY > 0.5) ? 2.0 : 1.0;
+
+        // TV show: raster line i shows programme line floor(i / rps) (rps: 2 for a 240p/288p
+        // console, whose line is in both fields). A game in the other TV standard (an NTSC game
+        // on a PAL programme, or the other way round) went through the studio's standards
+        // converter, which scaled the console's picture to the programme's (see showLines).
+        // The tv-show-broadcast preset's extra pass already made one beam row per programme
+        // line; without it (Cable 4 in another preset) the conversion is done here, per pixel:
+        // beam row = programme line * scv + sco.
+        vec4 smap = vec4(1.0, 1.0, 0.0, 0.0);
+        float rps = 1.0, scv = 1.0, sco = 0.0, beamLines = srcH;
+        if (show)
+        {
+            smap = showLines(pal, prog ? 0.0 : 1.0, srcH);
+            rps = smap.x;
+            if (textureSize(LR_Beam, 0).y == int(SHOW_LINES_ROWS))
+                beamLines = smap.w;
+            else
+            {
+                scv = smap.y;
+                sco = smap.z;
+            }
+            BH = visLines;                                          // borders come from the console's frame
+        }
 
         float Lf = ua.y * visLines - (visLines - BH) * 0.5;
         float u = (Lf - offL - 0.5) / stepL;
@@ -1959,11 +2002,24 @@ void main()
         // every line within 3.5 spot widths: the lines left out are at least kn + 1 away
         // (4 lines for 240p TV, more for wide spots: merged fields, 1024x768 on a PC monitor)
         int kn = int(clamp(ceil(3.5 * sig.y - 1.0), 1.0, 6.0));
+        float lastRow = -1e6;                                // TV show: the programme line read last
+        vec4 bb = vec4(0.0);
         for (int k = -kn; k <= kn + 1; k++)
         {
             float j = j0 + float(k);
             float i = j * stepL + offL;
-            vec4 bb = beamAt(floor(i / dbl) * rpl + ph, xs, srcH * rpl + ph);
+            if (show)
+            {
+                // both raster lines of a programme line (merged fields) use the same beam: read it once
+                float r = floor(i / rps);
+                if (r != lastRow)
+                {
+                    bb = showBeam(r * scv + sco, xs, beamLines);
+                    lastRow = r;
+                }
+            }
+            else
+                bb = beamAt(floor(i / dbl) * rpl + ph, xs, srcH * rpl + ph);
             vec3 b = bb.rgb;
             vec3 lc = b * b;                                      // linear brightness
             // beam height: TV from the local brightness per gun; PC from the spot that made the light
@@ -2000,7 +2056,7 @@ void main()
         col *= vWhite;
 
         // halation: light diffused in the glass (energy-conserving)
-        float gy = Lf / BH;
+        float gy = show ? ((Lf / rps - 0.5) * smap.y + smap.z + 0.5) / srcH : Lf / BH;
         float gin = smoothstep(-0.03, 0.03, gy) * smoothstep(1.03, 0.97, gy) * smoothstep(-0.03, 0.03, xs) * smoothstep(1.03, 0.97, xs);
         col = mix(col, textureLod(LR_Glow, vec2(xs, gy), 0.0).rgb * vWhite, global.LR_GLOW * gin);
 

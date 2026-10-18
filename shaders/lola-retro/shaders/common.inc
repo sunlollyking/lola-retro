@@ -17,7 +17,7 @@ layout(push_constant) uniform Push
 #pragma parameter LR_CONSOLE "Console timing (0 auto, see README)" 0.0 0.0 9.0 1.0
 #pragma parameter LR_NORM "TV standard (0 auto, 1 NTSC, 2 PAL)" 0.0 0.0 2.0 1.0
 #pragma parameter LR_HDR_SIG "--- Signal ---" 0.0 0.0 0.0 1.0
-#pragma parameter LR_CABLE "Cable (0 RF, 1 Composite, 2 S-Video, 3 RGB)" 1.0 0.0 3.0 1.0
+#pragma parameter LR_CABLE "Cable (0 RF, 1 Composite, 2 S-Video, 3 RGB, 4 TV show)" 1.0 0.0 4.0 1.0
 #pragma parameter LR_COMB "Comb filter (NTSC composite only)" 0.0 0.0 1.0 1.0
 #pragma parameter LR_YTRAP "Luma trap in the console (less rainbow)" 0.0 0.0 1.0 0.05
 #pragma parameter LR_DBLEND "Dither blend on RGB and S-Video (modern, off on real TVs)" 0.0 0.0 1.0 0.05
@@ -29,6 +29,9 @@ layout(push_constant) uniform Push
 #pragma parameter LR_CONTRAST "Contrast" 1.05 0.6 1.4 0.01
 #pragma parameter LR_NOISE "RF noise" 0.0 0.0 0.3 0.005
 #pragma parameter LR_STEADY "No flicker (frozen dot crawl, merged fields)" 1.0 0.0 1.0 1.0
+#pragma parameter LR_HDR_SHOW "--- TV show (cable 4) ---" 0.0 0.0 0.0 1.0
+#pragma parameter LR_TAPE "TV show: tape copies (Betacam SP)" 2.0 0.0 4.0 1.0
+#pragma parameter LR_GHOST "TV show: antenna ghost" 0.03 0.0 0.2 0.005
 #pragma parameter LR_HDR_BEAM "--- Beam ---" 0.0 0.0 0.0 1.0
 #pragma parameter LR_SIG_LO "Beam width in dark areas" 0.2 0.08 0.4 0.005
 #pragma parameter LR_SIG_HI "Beam width on white" 0.44 0.2 0.7 0.005
@@ -84,6 +87,9 @@ layout(std140, set = 0, binding = 0) uniform UBO
     float LR_CONTRAST;
     float LR_NOISE;
     float LR_STEADY;
+    float LR_HDR_SHOW;
+    float LR_TAPE;
+    float LR_GHOST;
     float LR_HDR_BEAM;
     float LR_SIG_LO;
     float LR_SIG_HI;
@@ -141,6 +147,60 @@ float dbSign(int k) { return (abs(k) & 1) == 1 ? -1.0 : 1.0; }
 // RF: the echo (multipath ghost) added by the antenna path
 const float RF_ECHO = 0.12;      // strength
 const float RF_ECHO_US = 0.8;    // delay in microseconds
+
+// TV show (cable 4): the game seen on a TV programme. The console's RGB goes into the studio,
+// where a frame synchronizer turns its 240p/288p frames into a standard interlaced picture
+// (each console frame becomes one field, the next one lands half a line lower; the CRT pass
+// draws every console line in both fields), onto Betacam SP tape (LR_TAPE copies), through
+// the station's colour encoder and the transmitter, and from a roof antenna into an ordinary
+// TV, which decodes it like composite. Bandwidths in MHz at -3 dB.
+// Sony BVW-75P: Y 5.5 MHz -3 dB, colour 1.5 MHz -1.5 dB (about 2.1 MHz at -3 dB);
+// ITU-R BT.470: PAL U and V less than 3 dB down at 1.3 MHz. The transmitter's 5 MHz limit
+// (PAL B/G) is sharper than anything the TV's composite decoder passes, so it changes nothing.
+const float SHOW_TAPE_Y = 5.5;   // Betacam SP luma, one copy
+const float SHOW_TAPE_C = 2.1;   // Betacam SP colour difference signals, one copy
+const float SHOW_ENC_C = 1.3;    // the station's colour encoder (U and V)
+const float SHOW_GHOST_US = 1.2; // delay of the antenna ghost: a reflection about 360 m longer
+
+bool isShow(float cable) { return cable > 3.5; }
+
+// Echo on the antenna path: x = strength, y = delay in microseconds
+vec2 rfEcho(float cable)
+{
+    if (cable < 0.5) return vec2(RF_ECHO, RF_ECHO_US);
+    if (isShow(cable)) return vec2(global.LR_GHOST, SHOW_GHOST_US);
+    return vec2(0.0, 1.0);
+}
+
+// TV show: how the programme's lines map to the console's. x: raster lines per console line
+// (2 for a 240p/288p console, whose line is drawn in both fields), y: console lines per
+// programme line (1 unless the studio's standards converter scaled the picture to the other
+// TV standard), z: the console line of programme line 0 (a shorter frame sits in the middle),
+// w: the programme's lines (one field for a 240p/288p console, the whole frame for an
+// interlaced one). lines: the console's native lines.
+vec4 showLines(float pal, float interlace, float lines)
+{
+    bool prog = interlace < 0.5;
+    float field = pal > 0.5 ? 288.0 : 240.0;
+    float plines = prog ? field : 2.0 * field;
+    // the console's own standard by the same rule as TV standard auto (getTiming)
+    float own = ((prog ? lines : lines * 0.5) > 240.5 ? 288.0 : 240.0) * (prog ? 1.0 : 2.0);
+    float scv = own / plines;
+    return vec4(prog ? 2.0 : 1.0, scv, 0.5 * scv - 0.5 - floor(0.5 * (own - lines)), plines);
+}
+
+// The TV presets run the encoder and decoder at a fixed 1280 samples per line (about 27 MHz,
+// 4 per pixel of a 320-wide console), whatever the frame's width: the signal needs no more,
+// and an upscaled frame (internal resolution) then costs no more than a native one. A frame
+// wider than that is averaged down to it in the native pass. (The PC and Amiga presets keep
+// 4 samples per frame pixel: their beam reads every pixel exactly.)
+const float ENC_SAMPLES = 1280.0;
+
+// The tv-show-broadcast preset has one more pass (show-lines.slang) that makes one beam row
+// per programme line, so the CRT pass does not interpolate at every screen pixel. Its output
+// is this many rows high: more than any programme has, and a height the beam pass of the other
+// presets never has, so the CRT pass can tell which rows it gets.
+const float SHOW_LINES_ROWS = 577.0;
 
 float hash13(vec3 p3)
 {
@@ -257,6 +317,9 @@ Timing getTiming(vec2 orig, uint frameCount)
     if (t.scan > 0.5 && t.scan < 1.5 && orig.x > 720.0) t.pclk = 78.75 * orig.x * orig.y / (1024.0 * 768.0);
     t.hres = amiga ? cls : orig.x / a.z;
     t.fsc = t.pal > 0.5 ? 4.433619 : 3.579545;
+    // TV show: the station's encoder makes the subcarrier of a standard interlaced broadcast,
+    // so its rhythm is the standard's (the PlayStation 2 row), not the console's
+    if (isShow(global.LR_CABLE)) { b = vec4(0.5, 0.75, 0.75, 0.875); c = 0.0; }
     t.lineFrac = mix(b.x, b.y, t.pal);
     t.fieldStep = mix(b.z, b.w, t.pal);
     // 24 is a multiple of every field cycle above (1, 2, 3, 4, 8), so the phase never drifts
@@ -349,11 +412,11 @@ vec3 gaussCdf(vec3 z)
 
 // Chroma decoder: 1 = by the standard. American and Japanese TVs demodulated R-Y and G-Y
 // on shifted axes with their own gains ("red push", warmer skin tones). PAL TVs, broadcast
-// monitors and RGB inputs use the standard axes.
+// monitors and RGB inputs use the standard axes. A TV show reaches the TV as composite.
 float decoderType(Timing t, float cable)
 {
     if (global.LR_DEMOD > 0.5) return global.LR_DEMOD;
-    return (t.pal < 0.5 && cable < 2.5) ? 2.0 : 1.0;
+    return (t.pal < 0.5 && (cable < 2.5 || isShow(cable))) ? 2.0 : 1.0;
 }
 
 // R, G, B from Y and the demodulated U, V (U = 0.492 (B-Y), V = 0.877 (R-Y)).

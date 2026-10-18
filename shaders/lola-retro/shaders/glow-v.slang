@@ -7,13 +7,14 @@
 layout(location = 0) in vec4 Position;
 layout(location = 1) in vec2 TexCoord;
 layout(location = 0) out vec2 vTexCoord;
-layout(location = 1) flat out float vUnit;    // frame rows per console line (Amiga doubled or interlaced: 2)
+layout(location = 1) flat out float vUnit;    // frame rows per console line (Amiga doubled or interlaced: 2; upscaled: k)
 
 void main()
 {
     gl_Position = global.MVP * Position;
     vTexCoord = TexCoord;
-    vUnit = consoleUnit(getTiming(params.OriginalSize.xy, params.FrameCount)).y;
+    Timing T = getTiming(params.OriginalSize.xy, params.FrameCount);
+    vUnit = consoleUnit(T).y * T.scale;
 }
 
 #pragma stage fragment

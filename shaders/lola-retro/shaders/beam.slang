@@ -54,7 +54,7 @@ void main()
     float jitter = global.LR_CABLE < 0.5 ? 0.5 + global.LR_NOISE * 4.0 : 0.0;
     float seed = float(params.FrameCount % 997u);
     float jit = jitter > 0.0 ? (hash13(vec3(i, seed, 5.0)) - 0.5) * jitter * params.OriginalSize.z : 0.0;
-    vec2 tc = vec2(x + jit, (i * vScale + 0.5) * params.OriginalSize.w);   // first row of the line
+    vec2 tc = vec2(x + jit, (i + 0.5) * params.OriginalSize.w);   // the decoder's row of line i (row i)
 
     bool pc = isPC(vScan);
     bool mm = inMM(vScan);

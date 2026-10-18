@@ -26,10 +26,11 @@ layout(location = 0) out vec4 FragColor;
 layout(set = 0, binding = 2) uniform sampler2D Source;    // encoded signal
 layout(set = 0, binding = 3) uniform sampler2D Original;  // used directly for RGB
 
-vec2 sig(float s, float y)
+// Encoded signal at sample s of row r (row r holds native line r, see the encoder)
+vec2 sig(float s, float r)
 {
-    if (y < 0.0) return vec2(0.0);
-    return textureLod(Source, vec2((s + 0.5) * params.SourceSize.z, (y + 0.5) * params.SourceSize.w), 0.0).rg;
+    if (r < 0.0) return vec2(0.0);
+    return textureLod(Source, vec2((s + 0.5) * params.SourceSize.z, (r + 0.5) * params.SourceSize.w), 0.0).rg;
 }
 
 // Original pixel at x position xs on the native line that starts at row y (k rows averaged)
@@ -52,20 +53,23 @@ void main()
     float SW = params.SourceSize.x;
     float fs = T.pclk * SW / params.OriginalSize.x;
     float n = floor(vTexCoord.x * SW);
-    float y = floor(vTexCoord.y * params.SourceSize.y);
-    float st = (T.interlace > 0.5 ? 2.0 : 1.0) * T.scale;   // previous line of the same field
+    // row r holds native line r, as in the encoder: an upscaled frame only uses the top 1/k
+    float r = floor(vTexCoord.y * params.SourceSize.y);
+    float y = r * T.scale;                                  // the line's first row in the frame
+    float st = (T.interlace > 0.5 ? 2.0 : 1.0) * T.scale;   // previous line of the same field (frame rows)
+    float sr = st / T.scale;                                // the same in rows of this pass
     float cable = global.LR_CABLE;
+    bool show = isShow(cable);                   // TV show: the antenna brings composite
     float Y;
     vec2 uv;
 
-    // upscaled frame: only the first row of each native line is decoded
-    if (mod(y, T.scale) > 0.5)
+    if (y >= params.OriginalSize.y)
     {
         FragColor = vec4(0.0);
         return;
     }
 
-    if (cable > 2.5)
+    if (cable > 2.5 && !show)
     {
         // RGB: no NTSC/PAL at all, only the video amplifier bandwidth: ~6.5 MHz in a TV,
         // ~85 MHz in a 15-inch PC monitor (spec sheets of the 90s: 65-120 MHz)
@@ -109,7 +113,7 @@ void main()
     else
     {
         bool pal = T.pal > 0.5;
-        bool sv = cable > 1.5;
+        bool sv = cable > 1.5 && !show;
         bool comb = global.LR_COMB > 0.5 && !sv && !pal && cable > 0.5 && abs(T.lineFrac - 0.5) < 0.05;
 
         float fcY, fcC, notch;
@@ -140,8 +144,8 @@ void main()
             float w1 = exp(c1 * u * u);
             float w2 = exp(c2 * u * u);
             float sp = n + u * mY;
-            float s0 = sig(sp, y).x;
-            if (comb) s0 = 0.5 * (s0 + sig(sp, y - st).x);
+            float s0 = sig(sp, r).x;
+            if (comb) s0 = 0.5 * (s0 + sig(sp, r - sr).x);
             a1 += w1 * s0; a2 += w2 * s0; w1s += w1; w2s += w2;
         }
         Y = (1.0 + sh) * a1 / w1s - sh * a2 / w2s;
@@ -160,6 +164,12 @@ void main()
             float ea = -TAU * T.fsc * RF_ECHO_US;
             tint += atan(RF_ECHO * sin(ea), 1.0 + RF_ECHO * cos(ea));
         }
+        else if (show && global.LR_GHOST > 0.0)
+        {
+            // TV show: the same for the antenna ghost of the broadcast
+            float ea = -TAU * T.fsc * SHOW_GHOST_US;
+            tint += atan(global.LR_GHOST * sin(ea), 1.0 + global.LR_GHOST * cos(ea));
+        }
         float ph0 = phaseAt(tn, y, T) + tint;      // subcarrier phase at the centre tap
         float da = TAU * T.fsc * mC / fs;
         vec2 rp = vec2(cos(da), sin(da));
@@ -175,13 +185,13 @@ void main()
             float u = float(k);
             float w = exp(cw * u * u);
             float sp = n + u * mC;
-            vec2 v0 = sig(sp, y);
+            vec2 v0 = sig(sp, r);
             float s0 = sv ? v0.y : v0.x;
-            if (comb) s0 = 0.5 * (v0.x - sig(sp, y - st).x);
+            if (comb) s0 = 0.5 * (v0.x - sig(sp, r - sr).x);
             acc += w * s0 * e.yx;
             if (pal)
             {
-                vec2 vp = sig(sp, y - st);
+                vec2 vp = sig(sp, r - sr);
                 accp += w * (sv ? vp.y : vp.x) * e.yx;
             }
             wcs += w;
@@ -211,6 +221,13 @@ void main()
             float ea = -TAU * T.fsc * RF_ECHO_US;
             Y /= 1.0 + RF_ECHO;
             uv /= length(vec2(1.0 + RF_ECHO * cos(ea), RF_ECHO * sin(ea)));
+        }
+        else if (show && global.LR_GHOST > 0.0)
+        {
+            // TV show: the same for the antenna ghost of the broadcast
+            float ea = -TAU * T.fsc * SHOW_GHOST_US;
+            Y /= 1.0 + global.LR_GHOST;
+            uv /= length(vec2(1.0 + global.LR_GHOST * cos(ea), global.LR_GHOST * sin(ea)));
         }
     }
 

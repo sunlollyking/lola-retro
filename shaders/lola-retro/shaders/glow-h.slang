@@ -29,13 +29,15 @@ layout(set = 0, binding = 2) uniform sampler2D Source;
 
 void main()
 {
-    float dx = params.OutputSize.z * global.LR_GLOW_SIZE * vUnit;   // tap spacing sets the radius
+    // tap spacing sets the radius: half a console pixel per unit of Glass glow size, measured
+    // on the frame, so it is the same at any internal resolution and decoder width
+    float dx = 2.0 * global.LR_GLOW_SIZE * vUnit * vScale * params.OriginalSize.z;
     vec2 tc = vTexCoord;
     if (vScale > 1.5)
     {
-        // upscaled frame: only the first row of each native line is decoded
+        // upscaled frame: the decoder put native line l in row l, in the top 1/k of its output
         float lines = params.SourceSize.y / vScale;
-        tc.y = (floor(tc.y * lines) * vScale + 0.5) * params.SourceSize.w;
+        tc.y = (floor(tc.y * lines) + 0.5) * params.SourceSize.w;
     }
     vec3 acc = vec3(0.0);
     float ws = 0.0;

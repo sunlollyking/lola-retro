@@ -2,7 +2,7 @@
 // Lola Retro - pass 1: console video encoder.
 // RGB -> YUV, chroma band-limited and QAM-modulated onto the colour subcarrier.
 // Output: R = composite (or luma for S-Video), G = chroma (S-Video only).
-// The output is 4 samples per source pixel.
+// The output is 4 samples per source pixel, one row per native line (see main).
 
 #include "common.inc"
 
@@ -23,27 +23,48 @@ layout(location = 0) out vec4 FragColor;
 layout(set = 0, binding = 2) uniform sampler2D Source;
 
 // Source pixel at x position xs on the native line that starts at row y.
-// An upscaled frame has k rows per native line; they are averaged.
+// An upscaled frame has k rows per native line: the native pass (native.slang, before this
+// one) has already averaged them into the line's first row, so one read is enough.
+// (The Amiberry and 86Box versions have no native pass; their frames are never upscaled.)
 vec3 srcPix(float xs, float y, float k)
 {
     if (xs < 0.0 || xs >= params.SourceSize.x) return vec3(0.0);
-    float u = (floor(xs) + 0.5) * params.SourceSize.z;
-    vec3 c = vec3(0.0);
-    for (float r = 0.0; r < k; r += 1.0)
-        c += textureLod(Source, vec2(u, (y + r + 0.5) * params.SourceSize.w), 0.0).rgb;
-    return c / k;
+    return textureLod(Source, vec2((floor(xs) + 0.5) * params.SourceSize.z, (y + 0.5) * params.SourceSize.w), 0.0).rgb;
 }
 
 // Luma and modulated chroma at sample position n (in samples).
 // trap > 0: the encoder's luma trap takes that share of the luma near the colour
 // subcarrier (about +-0.5 MHz) out before mixing, so fine stripes leak less into
 // the colour (less rainbow). The band is narrow, so plain brightness is not touched.
-vec2 enc(float n, float y, float fs, Timing T, float trap, float blend)
+// show: TV show, the console's RGB went through the studio and onto tape before the
+// station's encoder (see SHOW_* in common.inc)
+vec2 enc(float n, float y, float fs, Timing T, float trap, float blend, bool show)
 {
     float ppx = T.pclk / fs;                 // source pixels per sample
     float xs = (n + 0.5) * ppx;
     vec3 c = srcPix(xs, y, T.scale);
     float Y = dot(c, vec3(0.299, 0.587, 0.114));
+    float copies = show ? global.LR_TAPE : 0.0;
+
+    if (copies > 0.0)
+    {
+        // every tape copy rounds the luma a little more (Gaussians add up in variance). The
+        // console's pixels are flat steps, so each one's share is the Gaussian's integral over it;
+        // the Gaussian is narrower than a pixel, so only two to four pixels are read.
+        float sp = 0.1325 / SHOW_TAPE_Y * sqrt(copies) * T.pclk;   // sigma in frame pixels
+        float j0 = floor(xs - 3.0 * sp), j1 = floor(xs + 3.0 * sp);
+        float ay = 0.0, wy = 0.0;
+        for (int k = 0; k < 16; k++)
+        {
+            float j = j0 + float(k);
+            if (j > j1) break;
+            vec3 z = gaussCdf(vec3(j - xs, j + 1.0 - xs, 0.0) / sp);
+            float w = z.y - z.x;
+            ay += w * dot(srcPix(j + 0.5, y, T.scale), vec3(0.299, 0.587, 0.114));
+            wy += w;
+        }
+        Y = ay / wy;
+    }
 
     if (blend > 0.0)
     {
@@ -62,8 +83,10 @@ vec2 enc(float n, float y, float fs, Timing T, float trap, float blend)
     }
     float ph = phaseAt(n / fs, y, T);
 
-    // the encoder limits chroma to about 1.5 MHz before modulation
-    float sigUs = 0.1325 / 1.5;
+    // the encoder limits chroma to about 1.5 MHz before modulation; on a TV show the tape
+    // copies and the station's encoder (1.3 MHz) did it
+    float sigUs = show ? 0.1325 * sqrt(copies / (SHOW_TAPE_C * SHOW_TAPE_C) + 1.0 / (SHOW_ENC_C * SHOW_ENC_C))
+                       : 0.1325 / 1.5;
     vec2 uv = vec2(0.0);
     float ws = 0.0;
     for (int k = -8; k <= 8; k++)
@@ -102,37 +125,74 @@ vec2 enc(float n, float y, float fs, Timing T, float trap, float blend)
     return vec2(Y, uv.x * sin(ph) + vSign(y, T) * uv.y * cos(ph));
 }
 
+// TV show: the transmitter's white clipper. With negative modulation the carrier runs out a
+// little above peak white (PAL B/G: white at 10-15% of the carrier, so at about 114-120% of the
+// picture signal; NTSC at about 120 IRE), so the composite signal is clipped a little below
+// that, with a margin: at 110% (PAL) and 115% (NTSC). Only the brightest saturated yellows,
+// cyans and greens (up to 133% in PAL) reach it: they come out a little darker and paler.
+// A soft knee, like the clipper's diodes.
+float whiteClip(float v, bool pal)
+{
+    float knee = 0.06;
+    float k = (pal ? 1.10 : 1.15) - knee;
+    return v < k ? v : k + knee * tanh((v - k) / knee);
+}
+
 void main()
 {
     Timing T = getTiming(params.OriginalSize.xy, params.FrameCount);
     float SW = params.OutputSize.x;
     float fs = T.pclk * SW / params.SourceSize.x;     // sample rate (MHz)
     float n = floor(vTexCoord.x * SW);
-    float y = floor(vTexCoord.y * params.SourceSize.y);
+    // Row r holds native line r. An upscaled frame has k rows per line, so only the top 1/k of
+    // this pass is used: the rest stays black in one block, which a GPU skips cheaply (with the
+    // used rows spread between unused ones, it worked through all of them).
+    float row = floor(vTexCoord.y * params.SourceSize.y);
+    float y = row * T.scale;                           // the line's first row in the frame
     float cable = global.LR_CABLE;
 
     // RGB: no encoding, the decoder reads the original frame.
-    // Upscaled frame: only the first row of each native line carries the signal.
-    if (cable > 2.5 || mod(y, T.scale) > 0.5)
+    bool show = isShow(cable);
+    if ((cable > 2.5 && !show) || y >= params.SourceSize.y)
     {
         FragColor = vec4(0.0);
         return;
     }
 
-    float trap = cable < 1.5 ? global.LR_YTRAP : 0.0;   // S-Video keeps luma apart, no trap needed
-    float blend = cable > 1.5 ? global.LR_DBLEND : 0.0; // composite and RF blend dither by themselves
-    vec2 a = enc(n, y, fs, T, trap, blend);
+    // S-Video keeps luma apart, no trap needed; on a TV show the console's encoder is not used
+    float trap = (cable < 1.5 && !show) ? global.LR_YTRAP : 0.0;
+    float blend = (cable > 1.5 && !show) ? global.LR_DBLEND : 0.0; // composite and RF blend dither by themselves
+    vec2 a = enc(n, y, fs, T, trap, blend, show);
     vec2 r;
     if (cable < 0.5)
     {
         // RF: composite plus an echo and snow
         float comp = a.x + a.y;
-        vec2 g = enc(n - RF_ECHO_US * fs, y, fs, T, trap, 0.0);
+        vec2 g = enc(n - RF_ECHO_US * fs, y, fs, T, trap, 0.0, false);
         comp += RF_ECHO * (g.x + g.y);
         float seed = float(params.FrameCount % 997u);
         comp += (hash13(vec3(n, y, seed)) - 0.5) * global.LR_NOISE;
         comp += (hash13(vec3(floor(n / 7.0), y, seed + 3.0)) - 0.5) * global.LR_NOISE * 0.8;
         comp += sin(nativeLine(y, T) * 0.045 + seed * 0.37) * global.LR_NOISE * 0.12;
+        r = vec2(comp, 0.0);
+    }
+    else if (show)
+    {
+        // TV show: the broadcast as it comes down the roof antenna, with a faint ghost
+        // (a reflection from a building or a hill) and a little snow
+        bool pal = T.pal > 0.5;
+        float comp = whiteClip(a.x + a.y, pal);
+        vec2 e = rfEcho(cable);
+        if (e.x > 0.0)
+        {
+            vec2 g = enc(n - e.y * fs, y, fs, T, 0.0, 0.0, true);
+            comp += e.x * whiteClip(g.x + g.y, pal);
+        }
+        // white noise, one value per sample: with more samples per microsecond (a faster pixel
+        // clock, a higher internal resolution) each gets more, so the picture's band always holds
+        // the same amount (calibrated at 26.6 MHz, a 320-wide PlayStation frame)
+        float seed = float(params.FrameCount % 997u);
+        comp += (hash13(vec3(n, y, seed)) - 0.5) * global.LR_NOISE * sqrt(fs / 26.6);
         r = vec2(comp, 0.0);
     }
     else if (cable < 1.5)
