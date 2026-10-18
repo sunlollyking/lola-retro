@@ -883,9 +883,9 @@ vec3 synthwave(vec2 s, vec2 hs, float t, float pix)
     if (abs(s.x) > px - 0.2 && s.y < 0.38)
     {
         float sg = sign(s.x);
-        vec2 pp = vec2(sg * s.x - px, s.y - (hz - 0.36));
-        float pd = palmTree(pp, 0.56, 0.08, 0.004 * sin(t * 0.6 + sg));
-        pd = min(pd, palmTree(pp - vec2(0.12, 0.03), 0.4, 0.1, 0.004 * sin(t * 0.5 + 2.0 + sg)));
+        vec2 pp = vec2(sg * s.x - px, s.y + 0.56);                  // the feet, below the bottom of the screen
+        float pd = palmTree(pp, 0.64, 0.08, 0.004 * sin(t * 0.6 + sg));
+        pd = min(pd, palmTree(pp - vec2(0.12, 0.0), 0.51, 0.1, 0.004 * sin(t * 0.5 + 2.0 + sg)));
         col = mix(col, vec3(0.004, 0.001, 0.01), 1.0 - smoothstep(-pix, pix, pd));
         col += vec3(1.0, 0.15, 0.55) * 0.08 * exp(-abs(pd) / max(0.0015, pix)) * smoothstep(-pix, 0.0, pd);
     }

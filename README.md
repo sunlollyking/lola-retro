@@ -144,9 +144,15 @@ landscape, a city at night and an arcade carpet. They all move; **Scene speed** 
 The list is in [Scenes](shaders/lola-retro/README.md#scenes), all the settings in
 [Parameters](shaders/lola-retro/README.md#parameters).
 
-![The Amiga monitor in space and the TV in the synthwave scene](docs/around-the-tube-scenes.jpg)
+| | |
+|---|---|
+| ![2 Space](docs/scene-02-space.jpg) **2 Space** | ![3 Synthwave](docs/scene-03-synthwave.jpg) **3 Synthwave** |
+| ![4 Tiles](docs/scene-04-tiles.jpg) **4 Tiles** | ![5 Bouncing lines](docs/scene-05-lines.jpg) **5 Bouncing lines** |
+| ![6 Underwater](docs/scene-06-underwater.jpg) **6 Underwater** | ![7 Copper bars](docs/scene-07-copper.jpg) **7 Copper bars** |
+| ![8 Amiga demo](docs/scene-08-amiga-demo.jpg) **8 Amiga demo** | ![9 Hills](docs/scene-09-hills.jpg) **9 Hills** |
+| ![10 Night city](docs/scene-10-city.jpg) **10 Night city** | ![11 Arcade carpet](docs/scene-11-carpet.jpg) **11 Arcade carpet** |
 
-<sub>Around the tube 2 and 3, Room light 3.</sub>
+<sub>Around the tube 2 to 11, Room light 3.</sub>
 
 ## Amiberry
 
