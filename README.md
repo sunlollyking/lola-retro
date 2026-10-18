@@ -26,6 +26,10 @@ little rainbow, just as it did on a living-room TV. On RGB you see the stripes t
 | [![Sonic the Hedgehog](https://img.youtube.com/vi/z7zlLLQVhZQ/mqdefault.jpg)](https://www.youtube.com/watch?v=z7zlLLQVhZQ) | **[Sonic the Hedgehog on Mega Drive: RGB vs composite](https://www.youtube.com/watch?v=z7zlLLQVhZQ)**<br>The waterfall: stripes on RGB, blended and translucent on composite. |
 | [![Cannon Fodder](https://img.youtube.com/vi/lyLQ_6vd3tI/mqdefault.jpg)](https://www.youtube.com/watch?v=lyLQ_6vd3tI) | **[Cannon Fodder in Amiberry](https://www.youtube.com/watch?v=lyLQ_6vd3tI)**<br>Amiga 1084S preset in Amiberry. |
 | [![Super Stardust](https://img.youtube.com/vi/DgMnenye7sw/mqdefault.jpg)](https://www.youtube.com/watch?v=DgMnenye7sw) | **[Super Stardust (AGA) in Amiberry](https://www.youtube.com/watch?v=DgMnenye7sw)**<br>Amiga 1084S preset in Amiberry. |
+| [![Quake II](https://img.youtube.com/vi/BrCiiD1ZSj4/mqdefault.jpg)](https://www.youtube.com/watch?v=BrCiiD1ZSj4) | **[Quake II in 86Box](https://www.youtube.com/watch?v=BrCiiD1ZSj4)**<br>Windows 98 in 86Box. |
+| [![Ignition](https://img.youtube.com/vi/xu_d-SCrHds/mqdefault.jpg)](https://www.youtube.com/watch?v=xu_d-SCrHds) | **[Ignition in 86Box](https://www.youtube.com/watch?v=xu_d-SCrHds)**<br>Windows 98 in 86Box. |
+| [![Commander Keen 4](https://img.youtube.com/vi/DtX0MeD9JRU/mqdefault.jpg)](https://www.youtube.com/watch?v=DtX0MeD9JRU) | **[Commander Keen 4 in 86Box](https://www.youtube.com/watch?v=DtX0MeD9JRU)**<br>Windows 98 in 86Box. |
+| [![Prince of Persia](https://img.youtube.com/vi/GueduP2tdMc/mqdefault.jpg)](https://www.youtube.com/watch?v=GueduP2tdMc) | **[Prince of Persia in 86Box](https://www.youtube.com/watch?v=GueduP2tdMc)**<br>Windows 98 in 86Box. |
 
 ## Quick start (RetroArch)
 
