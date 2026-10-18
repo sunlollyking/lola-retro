@@ -21,8 +21,10 @@ const float LR_CABLE = 3.0;
 const float LR_COMB = 0.0;
 const float LR_CONSOLE = 6.0;
 const float LR_DEMOD = 0.0;
+const float LR_GHOST = 0.03;
 const float LR_MON_MM = 1.0;
 const float LR_SHARP = 0.1;
+const float LR_TAPE = 2.0;
 const float LR_TINT = 0.0;
 
 // adjustable values, read from the first pass's output in main()
@@ -35,6 +37,7 @@ float LR_CONTRAST;
 float LR_STEADY;
 float LR_PHOS;
 float LR_OVERSCAN;
+float LR_OVERSCAN_V;
 float LR_MON_SIZE;
 float LR_MON_CORNER;
 
@@ -68,6 +71,60 @@ float dbSign(int k) { return (abs(k) & 1) == 1 ? -1.0 : 1.0; }
 // RF: the echo (multipath ghost) added by the antenna path
 const float RF_ECHO = 0.12;      // strength
 const float RF_ECHO_US = 0.8;    // delay in microseconds
+
+// TV show (cable 4): the game seen on a TV programme. The console's RGB goes into the studio,
+// where a frame synchronizer turns its 240p/288p frames into a standard interlaced picture
+// (each console frame becomes one field, the next one lands half a line lower; the CRT pass
+// draws every console line in both fields), onto Betacam SP tape (LR_TAPE copies), through
+// the station's colour encoder and the transmitter, and from a roof antenna into an ordinary
+// TV, which decodes it like composite. Bandwidths in MHz at -3 dB.
+// Sony BVW-75P: Y 5.5 MHz -3 dB, colour 1.5 MHz -1.5 dB (about 2.1 MHz at -3 dB);
+// ITU-R BT.470: PAL U and V less than 3 dB down at 1.3 MHz. The transmitter's 5 MHz limit
+// (PAL B/G) is sharper than anything the TV's composite decoder passes, so it changes nothing.
+const float SHOW_TAPE_Y = 5.5;   // Betacam SP luma, one copy
+const float SHOW_TAPE_C = 2.1;   // Betacam SP colour difference signals, one copy
+const float SHOW_ENC_C = 1.3;    // the station's colour encoder (U and V)
+const float SHOW_GHOST_US = 1.2; // delay of the antenna ghost: a reflection about 360 m longer
+
+bool isShow(float cable) { return cable > 3.5; }
+
+// Echo on the antenna path: x = strength, y = delay in microseconds
+vec2 rfEcho(float cable)
+{
+    if (cable < 0.5) return vec2(RF_ECHO, RF_ECHO_US);
+    if (isShow(cable)) return vec2(LR_GHOST, SHOW_GHOST_US);
+    return vec2(0.0, 1.0);
+}
+
+// TV show: how the programme's lines map to the console's. x: raster lines per console line
+// (2 for a 240p/288p console, whose line is drawn in both fields), y: console lines per
+// programme line (1 unless the studio's standards converter scaled the picture to the other
+// TV standard), z: the console line of programme line 0 (a shorter frame sits in the middle),
+// w: the programme's lines (one field for a 240p/288p console, the whole frame for an
+// interlaced one). lines: the console's native lines.
+vec4 showLines(float pal, float interlace, float lines)
+{
+    bool prog = interlace < 0.5;
+    float field = pal > 0.5 ? 288.0 : 240.0;
+    float plines = prog ? field : 2.0 * field;
+    // the console's own standard by the same rule as TV standard auto (getTiming)
+    float own = ((prog ? lines : lines * 0.5) > 240.5 ? 288.0 : 240.0) * (prog ? 1.0 : 2.0);
+    float scv = own / plines;
+    return vec4(prog ? 2.0 : 1.0, scv, 0.5 * scv - 0.5 - floor(0.5 * (own - lines)), plines);
+}
+
+// The TV presets run the encoder and decoder at a fixed 1280 samples per line (about 27 MHz,
+// 4 per pixel of a 320-wide console), whatever the frame's width: the signal needs no more,
+// and an upscaled frame (internal resolution) then costs no more than a native one. A frame
+// wider than that is averaged down to it in the native pass. (The PC and Amiga presets keep
+// 4 samples per frame pixel: their beam reads every pixel exactly.)
+const float ENC_SAMPLES = 1280.0;
+
+// The tv-show-broadcast preset has one more pass (show-lines.slang) that makes one beam row
+// per programme line, so the CRT pass does not interpolate at every screen pixel. Its output
+// is this many rows high: more than any programme has, and a height the beam pass of the other
+// presets never has, so the CRT pass can tell which rows it gets.
+const float SHOW_LINES_ROWS = 577.0;
 
 float hash13(vec3 p3)
 {
@@ -184,6 +241,9 @@ Timing getTiming(vec2 orig, uint frameCount)
     if (t.scan > 0.5 && t.scan < 1.5 && orig.x > 720.0) t.pclk = 78.75 * orig.x * orig.y / (1024.0 * 768.0);
     t.hres = amiga ? cls : orig.x / a.z;
     t.fsc = t.pal > 0.5 ? 4.433619 : 3.579545;
+    // TV show: the station's encoder makes the subcarrier of a standard interlaced broadcast,
+    // so its rhythm is the standard's (the PlayStation 2 row), not the console's
+    if (isShow(LR_CABLE)) { b = vec4(0.5, 0.75, 0.75, 0.875); c = 0.0; }
     t.lineFrac = mix(b.x, b.y, t.pal);
     t.fieldStep = mix(b.z, b.w, t.pal);
     // 24 is a multiple of every field cycle above (1, 2, 3, 4, 8), so the phase never drifts
@@ -243,9 +303,14 @@ vec2 monTubeMM()
     return vec2(0.8 * d, 0.6 * d);
 }
 
+// The share of the scan that shows on the tube, across and down: less than 1 when overscan is
+// positive (the picture runs past the edges), more when it is negative (a black border).
+// Overscan sets both; Overscan height is added to it for the height alone.
+vec2 monShown() { return vec2(1.0 - LR_OVERSCAN, 1.0 - LR_OVERSCAN - LR_OVERSCAN_V); }
+
 // The full scan (active line x active lines) in mm: smaller than the tube face when
 // overscan is negative (black border), larger when it is positive
-vec2 monScanMM() { return monTubeMM() / (1.0 - LR_OVERSCAN); }
+vec2 monScanMM() { return monTubeMM() / monShown(); }
 
 // The spot grows toward the corners (deflection defocus); c is the position on the tube, -1..1
 float monCornerGrowth(vec2 c) { return 1.0 + (LR_MON_CORNER - 1.0) * 0.5 * dot(c, c); }
@@ -276,11 +341,11 @@ vec3 gaussCdf(vec3 z)
 
 // Chroma decoder: 1 = by the standard. American and Japanese TVs demodulated R-Y and G-Y
 // on shifted axes with their own gains ("red push", warmer skin tones). PAL TVs, broadcast
-// monitors and RGB inputs use the standard axes.
+// monitors and RGB inputs use the standard axes. A TV show reaches the TV as composite.
 float decoderType(Timing t, float cable)
 {
     if (LR_DEMOD > 0.5) return LR_DEMOD;
-    return (t.pal < 0.5 && cable < 2.5) ? 2.0 : 1.0;
+    return (t.pal < 0.5 && (cable < 2.5 || isShow(cable))) ? 2.0 : 1.0;
 }
 
 // R, G, B from Y and the demodulated U, V (U = 0.492 (B-Y), V = 0.877 (R-Y)).
@@ -352,10 +417,11 @@ out vec4 FragColor;
 uniform sampler2D Source;    // encoded signal
 uniform sampler2D Original;  // used directly for RGB
 
-vec2 sig(float s, float y)
+// Encoded signal at sample s of row r (row r holds native line r, see the encoder)
+vec2 sig(float s, float r)
 {
-    if (y < 0.0) return vec2(0.0);
-    return textureLod(Source, vec2((s + 0.5) * LR_SourceSize.z, (y + 0.5) * LR_SourceSize.w), 0.0).rg;
+    if (r < 0.0) return vec2(0.0);
+    return textureLod(Source, vec2((s + 0.5) * LR_SourceSize.z, (r + 0.5) * LR_SourceSize.w), 0.0).rg;
 }
 
 // Original pixel at x position xs on the native line that starts at row y (k rows averaged)
@@ -378,20 +444,23 @@ void lr_main()
     float SW = LR_SourceSize.x;
     float fs = T.pclk * SW / LR_OriginalSize.x;
     float n = floor(vTexCoord.x * SW);
-    float y = floor(vTexCoord.y * LR_SourceSize.y);
-    float st = (T.interlace > 0.5 ? 2.0 : 1.0) * T.scale;   // previous line of the same field
+    // row r holds native line r, as in the encoder: an upscaled frame only uses the top 1/k
+    float r = floor(vTexCoord.y * LR_SourceSize.y);
+    float y = r * T.scale;                                  // the line's first row in the frame
+    float st = (T.interlace > 0.5 ? 2.0 : 1.0) * T.scale;   // previous line of the same field (frame rows)
+    float sr = st / T.scale;                                // the same in rows of this pass
     float cable = LR_CABLE;
+    bool show = isShow(cable);                   // TV show: the antenna brings composite
     float Y;
     vec2 uv;
 
-    // upscaled frame: only the first row of each native line is decoded
-    if (mod(y, T.scale) > 0.5)
+    if (y >= LR_OriginalSize.y)
     {
         FragColor = vec4(0.0);
         return;
     }
 
-    if (cable > 2.5)
+    if (cable > 2.5 && !show)
     {
         // RGB: no NTSC/PAL at all, only the video amplifier bandwidth: ~6.5 MHz in a TV,
         // ~85 MHz in a 15-inch PC monitor (spec sheets of the 90s: 65-120 MHz)
@@ -435,7 +504,7 @@ void lr_main()
     else
     {
         bool pal = T.pal > 0.5;
-        bool sv = cable > 1.5;
+        bool sv = cable > 1.5 && !show;
         bool comb = LR_COMB > 0.5 && !sv && !pal && cable > 0.5 && abs(T.lineFrac - 0.5) < 0.05;
 
         float fcY, fcC, notch;
@@ -466,8 +535,8 @@ void lr_main()
             float w1 = exp(c1 * u * u);
             float w2 = exp(c2 * u * u);
             float sp = n + u * mY;
-            float s0 = sig(sp, y).x;
-            if (comb) s0 = 0.5 * (s0 + sig(sp, y - st).x);
+            float s0 = sig(sp, r).x;
+            if (comb) s0 = 0.5 * (s0 + sig(sp, r - sr).x);
             a1 += w1 * s0; a2 += w2 * s0; w1s += w1; w2s += w2;
         }
         Y = (1.0 + sh) * a1 / w1s - sh * a2 / w2s;
@@ -486,6 +555,12 @@ void lr_main()
             float ea = -TAU * T.fsc * RF_ECHO_US;
             tint += atan(RF_ECHO * sin(ea), 1.0 + RF_ECHO * cos(ea));
         }
+        else if (show && LR_GHOST > 0.0)
+        {
+            // TV show: the same for the antenna ghost of the broadcast
+            float ea = -TAU * T.fsc * SHOW_GHOST_US;
+            tint += atan(LR_GHOST * sin(ea), 1.0 + LR_GHOST * cos(ea));
+        }
         float ph0 = phaseAt(tn, y, T) + tint;      // subcarrier phase at the centre tap
         float da = TAU * T.fsc * mC / fs;
         vec2 rp = vec2(cos(da), sin(da));
@@ -501,13 +576,13 @@ void lr_main()
             float u = float(k);
             float w = exp(cw * u * u);
             float sp = n + u * mC;
-            vec2 v0 = sig(sp, y);
+            vec2 v0 = sig(sp, r);
             float s0 = sv ? v0.y : v0.x;
-            if (comb) s0 = 0.5 * (v0.x - sig(sp, y - st).x);
+            if (comb) s0 = 0.5 * (v0.x - sig(sp, r - sr).x);
             acc += w * s0 * e.yx;
             if (pal)
             {
-                vec2 vp = sig(sp, y - st);
+                vec2 vp = sig(sp, r - sr);
                 accp += w * (sv ? vp.y : vp.x) * e.yx;
             }
             wcs += w;
@@ -537,6 +612,13 @@ void lr_main()
             float ea = -TAU * T.fsc * RF_ECHO_US;
             Y /= 1.0 + RF_ECHO;
             uv /= length(vec2(1.0 + RF_ECHO * cos(ea), RF_ECHO * sin(ea)));
+        }
+        else if (show && LR_GHOST > 0.0)
+        {
+            // TV show: the same for the antenna ghost of the broadcast
+            float ea = -TAU * T.fsc * SHOW_GHOST_US;
+            Y /= 1.0 + LR_GHOST;
+            uv /= length(vec2(1.0 + LR_GHOST * cos(ea), LR_GHOST * sin(ea)));
         }
     }
 

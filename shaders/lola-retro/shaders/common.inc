@@ -53,6 +53,7 @@ layout(push_constant) uniform Push
 #pragma parameter LR_GLOW_SIZE "Glass glow size" 0.5 0.2 1.5 0.05
 #pragma parameter LR_VIGNETTE "Darker edges" 0.3 0.0 0.7 0.01
 #pragma parameter LR_OVERSCAN "Overscan (negative adds a black border)" 0.05 -0.08 0.12 0.005
+#pragma parameter LR_OVERSCAN_V "Overscan height (added to Overscan, height only)" 0.0 -0.1 0.12 0.005
 #pragma parameter LR_AMBIENT "Room reflection on the glass" 0.002 0.0 0.03 0.001
 #pragma parameter LR_HDR_MON "--- Monitor in millimetres (PC monitors, Amiga 1084S) ---" 0.0 0.0 0.0 1.0
 #pragma parameter LR_MON_MM "15 kHz monitor in mm (PC monitors always)" 0.0 0.0 1.0 1.0
@@ -111,6 +112,7 @@ layout(std140, set = 0, binding = 0) uniform UBO
     float LR_GLOW_SIZE;
     float LR_VIGNETTE;
     float LR_OVERSCAN;
+    float LR_OVERSCAN_V;
     float LR_AMBIENT;
     float LR_HDR_MON;
     float LR_MON_MM;
@@ -379,9 +381,14 @@ vec2 monTubeMM()
     return vec2(0.8 * d, 0.6 * d);
 }
 
+// The share of the scan that shows on the tube, across and down: less than 1 when overscan is
+// positive (the picture runs past the edges), more when it is negative (a black border).
+// Overscan sets both; Overscan height is added to it for the height alone.
+vec2 monShown() { return vec2(1.0 - global.LR_OVERSCAN, 1.0 - global.LR_OVERSCAN - global.LR_OVERSCAN_V); }
+
 // The full scan (active line x active lines) in mm: smaller than the tube face when
 // overscan is negative (black border), larger when it is positive
-vec2 monScanMM() { return monTubeMM() / (1.0 - global.LR_OVERSCAN); }
+vec2 monScanMM() { return monTubeMM() / monShown(); }
 
 // The spot grows toward the corners (deflection defocus); c is the position on the tube, -1..1
 float monCornerGrowth(vec2 c) { return 1.0 + (global.LR_MON_CORNER - 1.0) * 0.5 * dot(c, c); }

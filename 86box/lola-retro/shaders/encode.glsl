@@ -24,6 +24,7 @@
 #pragma parameter LR_GLOW_SIZE "Glass glow size" 0.5 0.2 1.5 0.05
 #pragma parameter LR_VIGNETTE "Darker edges" 0.15 0 0.7 0.01
 #pragma parameter LR_OVERSCAN "Overscan (negative adds a black border)" -0.015 -0.08 0.12 0.005
+#pragma parameter LR_OVERSCAN_V "Overscan height (added to Overscan, height only)" 0 -0.1 0.12 0.005
 #pragma parameter LR_AMBIENT "Room reflection on the glass" 0.003 0 0.03 0.001
 #pragma parameter LR_MON_SIZE "Monitor size (inches)" 15 10 21 1
 #pragma parameter LR_MON_PITCH "Dot pitch (mm)" 0.28 0.2 0.7 0.01
@@ -50,10 +51,12 @@ uniform int FrameCount;
 const float LR_CABLE = 3.0;
 const float LR_CONSOLE = 7.0;
 const float LR_DEMOD = 0.0;
+const float LR_GHOST = 0.03;
 const float LR_MON_MM = 0.0;
 const float LR_NOISE = 0.0;
 const float LR_NORM = 0.0;
 const float LR_STEADY = 1.0;
+const float LR_TAPE = 2.0;
 const float LR_YTRAP = 0.75;
 
 uniform float LR_DBLEND;
@@ -73,6 +76,7 @@ uniform float LR_GLOW;
 uniform float LR_GLOW_SIZE;
 uniform float LR_VIGNETTE;
 uniform float LR_OVERSCAN;
+uniform float LR_OVERSCAN_V;
 uniform float LR_AMBIENT;
 uniform float LR_MON_SIZE;
 uniform float LR_MON_PITCH;
@@ -89,7 +93,7 @@ uniform float LR_SCENE_SPEED;
 // Lola Retro - pass 1: console video encoder.
 // RGB -> YUV, chroma band-limited and QAM-modulated onto the colour subcarrier.
 // Output: R = composite (or luma for S-Video), G = chroma (S-Video only).
-// The output is 4 samples per source pixel.
+// The output is 4 samples per source pixel, one row per native line (see main).
 
 // Lola Retro - shared parameters, uniforms and helpers for every pass.
 //
@@ -113,6 +117,60 @@ float dbSign(int k) { return (abs(k) & 1) == 1 ? -1.0 : 1.0; }
 // RF: the echo (multipath ghost) added by the antenna path
 const float RF_ECHO = 0.12;      // strength
 const float RF_ECHO_US = 0.8;    // delay in microseconds
+
+// TV show (cable 4): the game seen on a TV programme. The console's RGB goes into the studio,
+// where a frame synchronizer turns its 240p/288p frames into a standard interlaced picture
+// (each console frame becomes one field, the next one lands half a line lower; the CRT pass
+// draws every console line in both fields), onto Betacam SP tape (LR_TAPE copies), through
+// the station's colour encoder and the transmitter, and from a roof antenna into an ordinary
+// TV, which decodes it like composite. Bandwidths in MHz at -3 dB.
+// Sony BVW-75P: Y 5.5 MHz -3 dB, colour 1.5 MHz -1.5 dB (about 2.1 MHz at -3 dB);
+// ITU-R BT.470: PAL U and V less than 3 dB down at 1.3 MHz. The transmitter's 5 MHz limit
+// (PAL B/G) is sharper than anything the TV's composite decoder passes, so it changes nothing.
+const float SHOW_TAPE_Y = 5.5;   // Betacam SP luma, one copy
+const float SHOW_TAPE_C = 2.1;   // Betacam SP colour difference signals, one copy
+const float SHOW_ENC_C = 1.3;    // the station's colour encoder (U and V)
+const float SHOW_GHOST_US = 1.2; // delay of the antenna ghost: a reflection about 360 m longer
+
+bool isShow(float cable) { return cable > 3.5; }
+
+// Echo on the antenna path: x = strength, y = delay in microseconds
+vec2 rfEcho(float cable)
+{
+    if (cable < 0.5) return vec2(RF_ECHO, RF_ECHO_US);
+    if (isShow(cable)) return vec2(LR_GHOST, SHOW_GHOST_US);
+    return vec2(0.0, 1.0);
+}
+
+// TV show: how the programme's lines map to the console's. x: raster lines per console line
+// (2 for a 240p/288p console, whose line is drawn in both fields), y: console lines per
+// programme line (1 unless the studio's standards converter scaled the picture to the other
+// TV standard), z: the console line of programme line 0 (a shorter frame sits in the middle),
+// w: the programme's lines (one field for a 240p/288p console, the whole frame for an
+// interlaced one). lines: the console's native lines.
+vec4 showLines(float pal, float interlace, float lines)
+{
+    bool prog = interlace < 0.5;
+    float field = pal > 0.5 ? 288.0 : 240.0;
+    float plines = prog ? field : 2.0 * field;
+    // the console's own standard by the same rule as TV standard auto (getTiming)
+    float own = ((prog ? lines : lines * 0.5) > 240.5 ? 288.0 : 240.0) * (prog ? 1.0 : 2.0);
+    float scv = own / plines;
+    return vec4(prog ? 2.0 : 1.0, scv, 0.5 * scv - 0.5 - floor(0.5 * (own - lines)), plines);
+}
+
+// The TV presets run the encoder and decoder at a fixed 1280 samples per line (about 27 MHz,
+// 4 per pixel of a 320-wide console), whatever the frame's width: the signal needs no more,
+// and an upscaled frame (internal resolution) then costs no more than a native one. A frame
+// wider than that is averaged down to it in the native pass. (The PC and Amiga presets keep
+// 4 samples per frame pixel: their beam reads every pixel exactly.)
+const float ENC_SAMPLES = 1280.0;
+
+// The tv-show-broadcast preset has one more pass (show-lines.slang) that makes one beam row
+// per programme line, so the CRT pass does not interpolate at every screen pixel. Its output
+// is this many rows high: more than any programme has, and a height the beam pass of the other
+// presets never has, so the CRT pass can tell which rows it gets.
+const float SHOW_LINES_ROWS = 577.0;
 
 float hash13(vec3 p3)
 {
@@ -229,6 +287,9 @@ Timing getTiming(vec2 orig, uint frameCount)
     if (t.scan > 0.5 && t.scan < 1.5 && orig.x > 720.0) t.pclk = 78.75 * orig.x * orig.y / (1024.0 * 768.0);
     t.hres = amiga ? cls : orig.x / a.z;
     t.fsc = t.pal > 0.5 ? 4.433619 : 3.579545;
+    // TV show: the station's encoder makes the subcarrier of a standard interlaced broadcast,
+    // so its rhythm is the standard's (the PlayStation 2 row), not the console's
+    if (isShow(LR_CABLE)) { b = vec4(0.5, 0.75, 0.75, 0.875); c = 0.0; }
     t.lineFrac = mix(b.x, b.y, t.pal);
     t.fieldStep = mix(b.z, b.w, t.pal);
     // 24 is a multiple of every field cycle above (1, 2, 3, 4, 8), so the phase never drifts
@@ -288,9 +349,14 @@ vec2 monTubeMM()
     return vec2(0.8 * d, 0.6 * d);
 }
 
+// The share of the scan that shows on the tube, across and down: less than 1 when overscan is
+// positive (the picture runs past the edges), more when it is negative (a black border).
+// Overscan sets both; Overscan height is added to it for the height alone.
+vec2 monShown() { return vec2(1.0 - LR_OVERSCAN, 1.0 - LR_OVERSCAN - LR_OVERSCAN_V); }
+
 // The full scan (active line x active lines) in mm: smaller than the tube face when
 // overscan is negative (black border), larger when it is positive
-vec2 monScanMM() { return monTubeMM() / (1.0 - LR_OVERSCAN); }
+vec2 monScanMM() { return monTubeMM() / monShown(); }
 
 // The spot grows toward the corners (deflection defocus); c is the position on the tube, -1..1
 float monCornerGrowth(vec2 c) { return 1.0 + (LR_MON_CORNER - 1.0) * 0.5 * dot(c, c); }
@@ -321,11 +387,11 @@ vec3 gaussCdf(vec3 z)
 
 // Chroma decoder: 1 = by the standard. American and Japanese TVs demodulated R-Y and G-Y
 // on shifted axes with their own gains ("red push", warmer skin tones). PAL TVs, broadcast
-// monitors and RGB inputs use the standard axes.
+// monitors and RGB inputs use the standard axes. A TV show reaches the TV as composite.
 float decoderType(Timing t, float cable)
 {
     if (LR_DEMOD > 0.5) return LR_DEMOD;
-    return (t.pal < 0.5 && cable < 2.5) ? 2.0 : 1.0;
+    return (t.pal < 0.5 && (cable < 2.5 || isShow(cable))) ? 2.0 : 1.0;
 }
 
 // R, G, B from Y and the demodulated U, V (U = 0.492 (B-Y), V = 0.877 (R-Y)).
@@ -385,7 +451,9 @@ in vec2 vTexCoord;
 out vec4 FragColor;
 
 // Source pixel at x position xs on the native line that starts at row y.
-// An upscaled frame has k rows per native line; they are averaged.
+// An upscaled frame has k rows per native line: the native pass (native.slang, before this
+// one) has already averaged them into the line's first row, so one read is enough.
+// (The Amiberry and 86Box versions have no native pass; their frames are never upscaled.)
 
 // Textures as 86Box binds them. The picture sits in the lower left corner of a power-of-two
 // texture (n texels of it), so every read goes through a helper.
@@ -408,23 +476,42 @@ vec4 lr_fetch_Source(ivec2 p, int lod)
 vec3 srcPix(float xs, float y, float k)
 {
     if (xs < 0.0 || xs >= LR_SourceSize.x) return vec3(0.0);
-    float u = (floor(xs) + 0.5) * LR_SourceSize.z;
-    vec3 c = vec3(0.0);
-    for (float r = 0.0; r < k; r += 1.0)
-        c += lr_tex_Source( vec2(u, (y + r + 0.5) * LR_SourceSize.w), 0.0).rgb;
-    return c / k;
+    return lr_tex_Source( vec2((floor(xs) + 0.5) * LR_SourceSize.z, (y + 0.5) * LR_SourceSize.w), 0.0).rgb;
 }
 
 // Luma and modulated chroma at sample position n (in samples).
 // trap > 0: the encoder's luma trap takes that share of the luma near the colour
 // subcarrier (about +-0.5 MHz) out before mixing, so fine stripes leak less into
 // the colour (less rainbow). The band is narrow, so plain brightness is not touched.
-vec2 enc(float n, float y, float fs, Timing T, float trap, float blend)
+// show: TV show, the console's RGB went through the studio and onto tape before the
+// station's encoder (see SHOW_* in common.inc)
+vec2 enc(float n, float y, float fs, Timing T, float trap, float blend, bool show)
 {
     float ppx = T.pclk / fs;                 // source pixels per sample
     float xs = (n + 0.5) * ppx;
     vec3 c = srcPix(xs, y, T.scale);
     float Y = dot(c, vec3(0.299, 0.587, 0.114));
+    float copies = show ? LR_TAPE : 0.0;
+
+    if (copies > 0.0)
+    {
+        // every tape copy rounds the luma a little more (Gaussians add up in variance). The
+        // console's pixels are flat steps, so each one's share is the Gaussian's integral over it;
+        // the Gaussian is narrower than a pixel, so only two to four pixels are read.
+        float sp = 0.1325 / SHOW_TAPE_Y * sqrt(copies) * T.pclk;   // sigma in frame pixels
+        float j0 = floor(xs - 3.0 * sp), j1 = floor(xs + 3.0 * sp);
+        float ay = 0.0, wy = 0.0;
+        for (int k = 0; k < 16; k++)
+        {
+            float j = j0 + float(k);
+            if (j > j1) break;
+            vec3 z = gaussCdf(vec3(j - xs, j + 1.0 - xs, 0.0) / sp);
+            float w = z.y - z.x;
+            ay += w * dot(srcPix(j + 0.5, y, T.scale), vec3(0.299, 0.587, 0.114));
+            wy += w;
+        }
+        Y = ay / wy;
+    }
 
     if (blend > 0.0)
     {
@@ -443,8 +530,10 @@ vec2 enc(float n, float y, float fs, Timing T, float trap, float blend)
     }
     float ph = phaseAt(n / fs, y, T);
 
-    // the encoder limits chroma to about 1.5 MHz before modulation
-    float sigUs = 0.1325 / 1.5;
+    // the encoder limits chroma to about 1.5 MHz before modulation; on a TV show the tape
+    // copies and the station's encoder (1.3 MHz) did it
+    float sigUs = show ? 0.1325 * sqrt(copies / (SHOW_TAPE_C * SHOW_TAPE_C) + 1.0 / (SHOW_ENC_C * SHOW_ENC_C))
+                       : 0.1325 / 1.5;
     vec2 uv = vec2(0.0);
     float ws = 0.0;
     for (int k = -8; k <= 8; k++)
@@ -483,37 +572,74 @@ vec2 enc(float n, float y, float fs, Timing T, float trap, float blend)
     return vec2(Y, uv.x * sin(ph) + vSign(y, T) * uv.y * cos(ph));
 }
 
+// TV show: the transmitter's white clipper. With negative modulation the carrier runs out a
+// little above peak white (PAL B/G: white at 10-15% of the carrier, so at about 114-120% of the
+// picture signal; NTSC at about 120 IRE), so the composite signal is clipped a little below
+// that, with a margin: at 110% (PAL) and 115% (NTSC). Only the brightest saturated yellows,
+// cyans and greens (up to 133% in PAL) reach it: they come out a little darker and paler.
+// A soft knee, like the clipper's diodes.
+float whiteClip(float v, bool pal)
+{
+    float knee = 0.06;
+    float k = (pal ? 1.10 : 1.15) - knee;
+    return v < k ? v : k + knee * tanh((v - k) / knee);
+}
+
 void lr_main()
 {
     Timing T = getTiming(LR_OriginalSize.xy, LR_FrameCount);
     float SW = LR_OutputSize.x;
     float fs = T.pclk * SW / LR_SourceSize.x;     // sample rate (MHz)
     float n = floor(vTexCoord.x * SW);
-    float y = floor(vTexCoord.y * LR_SourceSize.y);
+    // Row r holds native line r. An upscaled frame has k rows per line, so only the top 1/k of
+    // this pass is used: the rest stays black in one block, which a GPU skips cheaply (with the
+    // used rows spread between unused ones, it worked through all of them).
+    float row = floor(vTexCoord.y * LR_SourceSize.y);
+    float y = row * T.scale;                           // the line's first row in the frame
     float cable = LR_CABLE;
 
     // RGB: no encoding, the decoder reads the original frame.
-    // Upscaled frame: only the first row of each native line carries the signal.
-    if (cable > 2.5 || mod(y, T.scale) > 0.5)
+    bool show = isShow(cable);
+    if ((cable > 2.5 && !show) || y >= LR_SourceSize.y)
     {
         FragColor = vec4(0.0);
         return;
     }
 
-    float trap = cable < 1.5 ? LR_YTRAP : 0.0;   // S-Video keeps luma apart, no trap needed
-    float blend = cable > 1.5 ? LR_DBLEND : 0.0; // composite and RF blend dither by themselves
-    vec2 a = enc(n, y, fs, T, trap, blend);
+    // S-Video keeps luma apart, no trap needed; on a TV show the console's encoder is not used
+    float trap = (cable < 1.5 && !show) ? LR_YTRAP : 0.0;
+    float blend = (cable > 1.5 && !show) ? LR_DBLEND : 0.0; // composite and RF blend dither by themselves
+    vec2 a = enc(n, y, fs, T, trap, blend, show);
     vec2 r;
     if (cable < 0.5)
     {
         // RF: composite plus an echo and snow
         float comp = a.x + a.y;
-        vec2 g = enc(n - RF_ECHO_US * fs, y, fs, T, trap, 0.0);
+        vec2 g = enc(n - RF_ECHO_US * fs, y, fs, T, trap, 0.0, false);
         comp += RF_ECHO * (g.x + g.y);
         float seed = float(LR_FrameCount % 997u);
         comp += (hash13(vec3(n, y, seed)) - 0.5) * LR_NOISE;
         comp += (hash13(vec3(floor(n / 7.0), y, seed + 3.0)) - 0.5) * LR_NOISE * 0.8;
         comp += sin(nativeLine(y, T) * 0.045 + seed * 0.37) * LR_NOISE * 0.12;
+        r = vec2(comp, 0.0);
+    }
+    else if (show)
+    {
+        // TV show: the broadcast as it comes down the roof antenna, with a faint ghost
+        // (a reflection from a building or a hill) and a little snow
+        bool pal = T.pal > 0.5;
+        float comp = whiteClip(a.x + a.y, pal);
+        vec2 e = rfEcho(cable);
+        if (e.x > 0.0)
+        {
+            vec2 g = enc(n - e.y * fs, y, fs, T, 0.0, 0.0, true);
+            comp += e.x * whiteClip(g.x + g.y, pal);
+        }
+        // white noise, one value per sample: with more samples per microsecond (a faster pixel
+        // clock, a higher internal resolution) each gets more, so the picture's band always holds
+        // the same amount (calibrated at 26.6 MHz, a 320-wide PlayStation frame)
+        float seed = float(LR_FrameCount % 997u);
+        comp += (hash13(vec3(n, y, seed)) - 0.5) * LR_NOISE * sqrt(fs / 26.6);
         r = vec2(comp, 0.0);
     }
     else if (cable < 1.5)

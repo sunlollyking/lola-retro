@@ -17,12 +17,15 @@ uniform int FrameCount;
 #define LR_FrameCount uint(FrameCount)
 
 // fixed by the preset
+const float LR_CABLE = 3.0;
 const float LR_CONSOLE = 6.0;
 const float LR_DEMOD = 0.0;
+const float LR_GHOST = 0.03;
 const float LR_MASK_TRIADS = 470.0;
 const float LR_MON_MM = 1.0;
 const float LR_SIG_HI = 0.42;
 const float LR_SIG_LO = 0.2;
+const float LR_TAPE = 2.0;
 
 // adjustable values, read from the first pass's output in main()
 uniform sampler2D LR_Signal;
@@ -39,6 +42,7 @@ float LR_CORNER;
 float LR_GLOW;
 float LR_VIGNETTE;
 float LR_OVERSCAN;
+float LR_OVERSCAN_V;
 float LR_AMBIENT;
 float LR_MON_SIZE;
 float LR_MON_PITCH;
@@ -91,6 +95,60 @@ float dbSign(int k) { return (abs(k) & 1) == 1 ? -1.0 : 1.0; }
 // RF: the echo (multipath ghost) added by the antenna path
 const float RF_ECHO = 0.12;      // strength
 const float RF_ECHO_US = 0.8;    // delay in microseconds
+
+// TV show (cable 4): the game seen on a TV programme. The console's RGB goes into the studio,
+// where a frame synchronizer turns its 240p/288p frames into a standard interlaced picture
+// (each console frame becomes one field, the next one lands half a line lower; the CRT pass
+// draws every console line in both fields), onto Betacam SP tape (LR_TAPE copies), through
+// the station's colour encoder and the transmitter, and from a roof antenna into an ordinary
+// TV, which decodes it like composite. Bandwidths in MHz at -3 dB.
+// Sony BVW-75P: Y 5.5 MHz -3 dB, colour 1.5 MHz -1.5 dB (about 2.1 MHz at -3 dB);
+// ITU-R BT.470: PAL U and V less than 3 dB down at 1.3 MHz. The transmitter's 5 MHz limit
+// (PAL B/G) is sharper than anything the TV's composite decoder passes, so it changes nothing.
+const float SHOW_TAPE_Y = 5.5;   // Betacam SP luma, one copy
+const float SHOW_TAPE_C = 2.1;   // Betacam SP colour difference signals, one copy
+const float SHOW_ENC_C = 1.3;    // the station's colour encoder (U and V)
+const float SHOW_GHOST_US = 1.2; // delay of the antenna ghost: a reflection about 360 m longer
+
+bool isShow(float cable) { return cable > 3.5; }
+
+// Echo on the antenna path: x = strength, y = delay in microseconds
+vec2 rfEcho(float cable)
+{
+    if (cable < 0.5) return vec2(RF_ECHO, RF_ECHO_US);
+    if (isShow(cable)) return vec2(LR_GHOST, SHOW_GHOST_US);
+    return vec2(0.0, 1.0);
+}
+
+// TV show: how the programme's lines map to the console's. x: raster lines per console line
+// (2 for a 240p/288p console, whose line is drawn in both fields), y: console lines per
+// programme line (1 unless the studio's standards converter scaled the picture to the other
+// TV standard), z: the console line of programme line 0 (a shorter frame sits in the middle),
+// w: the programme's lines (one field for a 240p/288p console, the whole frame for an
+// interlaced one). lines: the console's native lines.
+vec4 showLines(float pal, float interlace, float lines)
+{
+    bool prog = interlace < 0.5;
+    float field = pal > 0.5 ? 288.0 : 240.0;
+    float plines = prog ? field : 2.0 * field;
+    // the console's own standard by the same rule as TV standard auto (getTiming)
+    float own = ((prog ? lines : lines * 0.5) > 240.5 ? 288.0 : 240.0) * (prog ? 1.0 : 2.0);
+    float scv = own / plines;
+    return vec4(prog ? 2.0 : 1.0, scv, 0.5 * scv - 0.5 - floor(0.5 * (own - lines)), plines);
+}
+
+// The TV presets run the encoder and decoder at a fixed 1280 samples per line (about 27 MHz,
+// 4 per pixel of a 320-wide console), whatever the frame's width: the signal needs no more,
+// and an upscaled frame (internal resolution) then costs no more than a native one. A frame
+// wider than that is averaged down to it in the native pass. (The PC and Amiga presets keep
+// 4 samples per frame pixel: their beam reads every pixel exactly.)
+const float ENC_SAMPLES = 1280.0;
+
+// The tv-show-broadcast preset has one more pass (show-lines.slang) that makes one beam row
+// per programme line, so the CRT pass does not interpolate at every screen pixel. Its output
+// is this many rows high: more than any programme has, and a height the beam pass of the other
+// presets never has, so the CRT pass can tell which rows it gets.
+const float SHOW_LINES_ROWS = 577.0;
 
 float hash13(vec3 p3)
 {
@@ -207,6 +265,9 @@ Timing getTiming(vec2 orig, uint frameCount)
     if (t.scan > 0.5 && t.scan < 1.5 && orig.x > 720.0) t.pclk = 78.75 * orig.x * orig.y / (1024.0 * 768.0);
     t.hres = amiga ? cls : orig.x / a.z;
     t.fsc = t.pal > 0.5 ? 4.433619 : 3.579545;
+    // TV show: the station's encoder makes the subcarrier of a standard interlaced broadcast,
+    // so its rhythm is the standard's (the PlayStation 2 row), not the console's
+    if (isShow(LR_CABLE)) { b = vec4(0.5, 0.75, 0.75, 0.875); c = 0.0; }
     t.lineFrac = mix(b.x, b.y, t.pal);
     t.fieldStep = mix(b.z, b.w, t.pal);
     // 24 is a multiple of every field cycle above (1, 2, 3, 4, 8), so the phase never drifts
@@ -266,9 +327,14 @@ vec2 monTubeMM()
     return vec2(0.8 * d, 0.6 * d);
 }
 
+// The share of the scan that shows on the tube, across and down: less than 1 when overscan is
+// positive (the picture runs past the edges), more when it is negative (a black border).
+// Overscan sets both; Overscan height is added to it for the height alone.
+vec2 monShown() { return vec2(1.0 - LR_OVERSCAN, 1.0 - LR_OVERSCAN - LR_OVERSCAN_V); }
+
 // The full scan (active line x active lines) in mm: smaller than the tube face when
 // overscan is negative (black border), larger when it is positive
-vec2 monScanMM() { return monTubeMM() / (1.0 - LR_OVERSCAN); }
+vec2 monScanMM() { return monTubeMM() / monShown(); }
 
 // The spot grows toward the corners (deflection defocus); c is the position on the tube, -1..1
 float monCornerGrowth(vec2 c) { return 1.0 + (LR_MON_CORNER - 1.0) * 0.5 * dot(c, c); }
@@ -299,11 +365,11 @@ vec3 gaussCdf(vec3 z)
 
 // Chroma decoder: 1 = by the standard. American and Japanese TVs demodulated R-Y and G-Y
 // on shifted axes with their own gains ("red push", warmer skin tones). PAL TVs, broadcast
-// monitors and RGB inputs use the standard axes.
+// monitors and RGB inputs use the standard axes. A TV show reaches the TV as composite.
 float decoderType(Timing t, float cable)
 {
     if (LR_DEMOD > 0.5) return LR_DEMOD;
-    return (t.pal < 0.5 && cable < 2.5) ? 2.0 : 1.0;
+    return (t.pal < 0.5 && (cable < 2.5 || isShow(cable))) ? 2.0 : 1.0;
 }
 
 // R, G, B from Y and the demodulated U, V (U = 0.492 (B-Y), V = 0.877 (R-Y)).
@@ -396,25 +462,26 @@ void main()
     LR_GLOW = texelFetch(LR_Signal, ivec2(15, 0), 0).b;
     LR_VIGNETTE = texelFetch(LR_Signal, ivec2(17, 0), 0).b;
     LR_OVERSCAN = texelFetch(LR_Signal, ivec2(18, 0), 0).b;
-    LR_AMBIENT = texelFetch(LR_Signal, ivec2(19, 0), 0).b;
-    LR_MON_SIZE = texelFetch(LR_Signal, ivec2(20, 0), 0).b;
-    LR_MON_PITCH = texelFetch(LR_Signal, ivec2(21, 0), 0).b;
-    LR_MON_SPOT_LO = texelFetch(LR_Signal, ivec2(22, 0), 0).b;
-    LR_MON_SPOT_HI = texelFetch(LR_Signal, ivec2(23, 0), 0).b;
-    LR_MON_CORNER = texelFetch(LR_Signal, ivec2(24, 0), 0).b;
-    LR_SCREEN_H = texelFetch(LR_Signal, ivec2(25, 0), 0).b;
-    LR_SCREEN_UNIT = texelFetch(LR_Signal, ivec2(26, 0), 0).b;
-    LR_BACKDROP = texelFetch(LR_Signal, ivec2(27, 0), 0).b;
-    LR_ROOM = texelFetch(LR_Signal, ivec2(28, 0), 0).b;
-    LR_SPILL = texelFetch(LR_Signal, ivec2(29, 0), 0).b;
-    LR_SCENE_SPEED = texelFetch(LR_Signal, ivec2(30, 0), 0).b;
+    LR_OVERSCAN_V = texelFetch(LR_Signal, ivec2(19, 0), 0).b;
+    LR_AMBIENT = texelFetch(LR_Signal, ivec2(20, 0), 0).b;
+    LR_MON_SIZE = texelFetch(LR_Signal, ivec2(21, 0), 0).b;
+    LR_MON_PITCH = texelFetch(LR_Signal, ivec2(22, 0), 0).b;
+    LR_MON_SPOT_LO = texelFetch(LR_Signal, ivec2(23, 0), 0).b;
+    LR_MON_SPOT_HI = texelFetch(LR_Signal, ivec2(24, 0), 0).b;
+    LR_MON_CORNER = texelFetch(LR_Signal, ivec2(25, 0), 0).b;
+    LR_SCREEN_H = texelFetch(LR_Signal, ivec2(26, 0), 0).b;
+    LR_SCREEN_UNIT = texelFetch(LR_Signal, ivec2(27, 0), 0).b;
+    LR_BACKDROP = texelFetch(LR_Signal, ivec2(28, 0), 0).b;
+    LR_ROOM = texelFetch(LR_Signal, ivec2(29, 0), 0).b;
+    LR_SPILL = texelFetch(LR_Signal, ivec2(30, 0), 0).b;
+    LR_SCENE_SPEED = texelFetch(LR_Signal, ivec2(31, 0), 0).b;
     lrParams[0] = vec4(LR_NORM, LR_STEADY, LR_CONV, LR_MASK_TYPE);
     lrParams[1] = vec4(LR_MASK_STR, LR_WHITE, LR_PHOS, LR_CURV_X);
     lrParams[2] = vec4(LR_CURV_Y, LR_CORNER, LR_GLOW, LR_VIGNETTE);
-    lrParams[3] = vec4(LR_OVERSCAN, LR_AMBIENT, LR_MON_SIZE, LR_MON_PITCH);
-    lrParams[4] = vec4(LR_MON_SPOT_LO, LR_MON_SPOT_HI, LR_MON_CORNER, LR_SCREEN_H);
-    lrParams[5] = vec4(LR_SCREEN_UNIT, LR_BACKDROP, LR_ROOM, LR_SPILL);
-    lrParams[6] = vec4(LR_SCENE_SPEED, 0.0, 0.0, 0.0);
+    lrParams[3] = vec4(LR_OVERSCAN, LR_OVERSCAN_V, LR_AMBIENT, LR_MON_SIZE);
+    lrParams[4] = vec4(LR_MON_PITCH, LR_MON_SPOT_LO, LR_MON_SPOT_HI, LR_MON_CORNER);
+    lrParams[5] = vec4(LR_SCREEN_H, LR_SCREEN_UNIT, LR_BACKDROP, LR_ROOM);
+    lrParams[6] = vec4(LR_SPILL, LR_SCENE_SPEED, 0.0, 0.0);
     lr_main();
 }
 
@@ -438,6 +505,20 @@ vec4 beamAt(float i, float x, float lines)
     if (i < 0.0 || i >= lines) return vec4(0.0);
     vec2 bs = vec2(textureSize(LR_Beam, 0));
     return textureLod(LR_Beam, vec2(x + 0.5 / bs.x, (i + 0.5) / bs.y), 0.0);
+}
+
+// TV show: the beam row at position p. A whole number is that row; between two console lines
+// (a standards converter scaling NTSC to PAL or back, when the preset has no show-lines pass)
+// the converter's vertical filter interpolates them, here a Catmull-Rom cubic over four lines.
+vec4 showBeam(float p, float x, float lines)
+{
+    float g = floor(p), f = p - g;
+    if (f < 1e-3) return beamAt(g, x, lines);
+    vec4 a = beamAt(g - 1.0, x, lines), b = beamAt(g, x, lines);
+    vec4 c = beamAt(g + 1.0, x, lines), d = beamAt(g + 2.0, x, lines);
+    vec4 r = b + 0.5 * f * (c - a) + f * f * (a - 2.5 * b + 2.0 * c - 0.5 * d)
+           + f * f * f * (1.5 * (b - c) + 0.5 * (d - a));
+    return max(r, 0.0);
 }
 
 // Rear-projection screen: lenticular sheet with thin black stripes, no RGB pattern
@@ -2175,7 +2256,7 @@ vec3 backdrop(vec2 c, float dist, vec2 qq, vec2 tc, vec2 tubePx)
     float facing = smoothstep(-0.6, 1.2, u) * LR_SPILL;
     if (facing > 0.0)
     {
-        float ov = 1.0 - LR_OVERSCAN;
+        vec2 ov = monShown();
         vec2 edge = clamp(c * 0.5 * ov + 0.5, 0.0, 1.0);          // the tube's edge on the picture
         vec2 nt = boxOut((tc - 0.5) * tube, inner, 15.0);         // outward, in texture orientation
         vec2 inward = -nt / tube * ov, side = vec2(-nt.y, nt.x) / tube * ov;   // per mm
@@ -2238,7 +2319,7 @@ void lr_main()
     if (inside > 0.0)
     {
         vec2 ut = c * 0.5 + 0.5;
-        vec2 ua = (ut - 0.5) * (1.0 - LR_OVERSCAN) + 0.5;
+        vec2 ua = (ut - 0.5) * monShown() + 0.5;
         float srcH = LR_OriginalSize.y / vTiming.w;   // native lines
         float rpl = 1.0, ph = 0.0;                         // beam rows per line, row of line 0
         // Amiga emulators draw every line twice (720x568 for a 256-line game) and weave the
@@ -2262,6 +2343,12 @@ void lr_main()
         // position along the source line: a 15 kHz monitor in mm shows the whole active line,
         // so a source shorter than the line leaves side borders
         float xs = (ua.x - 0.5) / vShare + 0.5;
+        // TV show: the studio's frame synchronizer made a standard interlaced picture out of
+        // the console's 240p/288p frames, so every console line is drawn in both fields, half
+        // a line apart, and the dark gaps between the lines are filled
+        bool show = isShow(LR_CABLE) && scan < 0.5;
+        bool prog = interlace < 0.5;                       // the console's own picture: 240p/288p
+        if (show) interlace = 1.0;
         float dbl = (vga && srcH <= 300.0) ? 2.0 : 1.0;
         float BH = srcH * dbl;
         float visLines = scan > 0.5 ? BH : (pal > 0.5 ? 288.0 : 240.0) * (interlace > 0.5 ? 2.0 : 1.0);
@@ -2269,6 +2356,29 @@ void lr_main()
         float stepL = il ? 2.0 : 1.0;
         float offL = il ? float(LR_FrameCount % 2u) : 0.0;
         float sgk = (interlace > 0.5 && LR_STEADY > 0.5) ? 2.0 : 1.0;
+
+        // TV show: raster line i shows programme line floor(i / rps) (rps: 2 for a 240p/288p
+        // console, whose line is in both fields). A game in the other TV standard (an NTSC game
+        // on a PAL programme, or the other way round) went through the studio's standards
+        // converter, which scaled the console's picture to the programme's (see showLines).
+        // The tv-show-broadcast preset's extra pass already made one beam row per programme
+        // line; without it (Cable 4 in another preset) the conversion is done here, per pixel:
+        // beam row = programme line * scv + sco.
+        vec4 smap = vec4(1.0, 1.0, 0.0, 0.0);
+        float rps = 1.0, scv = 1.0, sco = 0.0, beamLines = srcH;
+        if (show)
+        {
+            smap = showLines(pal, prog ? 0.0 : 1.0, srcH);
+            rps = smap.x;
+            if (textureSize(LR_Beam, 0).y == int(SHOW_LINES_ROWS))
+                beamLines = smap.w;
+            else
+            {
+                scv = smap.y;
+                sco = smap.z;
+            }
+            BH = visLines;                                          // borders come from the console's frame
+        }
 
         float Lf = ua.y * visLines - (visLines - BH) * 0.5;
         float u = (Lf - offL - 0.5) / stepL;
@@ -2287,11 +2397,24 @@ void lr_main()
         // every line within 3.5 spot widths: the lines left out are at least kn + 1 away
         // (4 lines for 240p TV, more for wide spots: merged fields, 1024x768 on a PC monitor)
         int kn = int(clamp(ceil(3.5 * sig.y - 1.0), 1.0, 6.0));
+        float lastRow = -1e6;                                // TV show: the programme line read last
+        vec4 bb = vec4(0.0);
         for (int k = -kn; k <= kn + 1; k++)
         {
             float j = j0 + float(k);
             float i = j * stepL + offL;
-            vec4 bb = beamAt(floor(i / dbl) * rpl + ph, xs, srcH * rpl + ph);
+            if (show)
+            {
+                // both raster lines of a programme line (merged fields) use the same beam: read it once
+                float r = floor(i / rps);
+                if (r != lastRow)
+                {
+                    bb = showBeam(r * scv + sco, xs, beamLines);
+                    lastRow = r;
+                }
+            }
+            else
+                bb = beamAt(floor(i / dbl) * rpl + ph, xs, srcH * rpl + ph);
             vec3 b = bb.rgb;
             vec3 lc = b * b;                                      // linear brightness
             // beam height: TV from the local brightness per gun; PC from the spot that made the light
@@ -2328,7 +2451,7 @@ void lr_main()
         col *= vWhite;
 
         // halation: light diffused in the glass (energy-conserving)
-        float gy = Lf / BH;
+        float gy = show ? ((Lf / rps - 0.5) * smap.y + smap.z + 0.5) / srcH : Lf / BH;
         float gin = smoothstep(-0.03, 0.03, gy) * smoothstep(1.03, 0.97, gy) * smoothstep(-0.03, 0.03, xs) * smoothstep(1.03, 0.97, xs);
         col = mix(col, textureLod(LR_Glow, vec2(xs, gy), 0.0).rgb * vWhite, LR_GLOW * gin);
 
@@ -2365,18 +2488,19 @@ void main()
     LR_GLOW = lrParams[2].z;
     LR_VIGNETTE = lrParams[2].w;
     LR_OVERSCAN = lrParams[3].x;
-    LR_AMBIENT = lrParams[3].y;
-    LR_MON_SIZE = lrParams[3].z;
-    LR_MON_PITCH = lrParams[3].w;
-    LR_MON_SPOT_LO = lrParams[4].x;
-    LR_MON_SPOT_HI = lrParams[4].y;
-    LR_MON_CORNER = lrParams[4].z;
-    LR_SCREEN_H = lrParams[4].w;
-    LR_SCREEN_UNIT = lrParams[5].x;
-    LR_BACKDROP = lrParams[5].y;
-    LR_ROOM = lrParams[5].z;
-    LR_SPILL = lrParams[5].w;
-    LR_SCENE_SPEED = lrParams[6].x;
+    LR_OVERSCAN_V = lrParams[3].y;
+    LR_AMBIENT = lrParams[3].z;
+    LR_MON_SIZE = lrParams[3].w;
+    LR_MON_PITCH = lrParams[4].x;
+    LR_MON_SPOT_LO = lrParams[4].y;
+    LR_MON_SPOT_HI = lrParams[4].z;
+    LR_MON_CORNER = lrParams[4].w;
+    LR_SCREEN_H = lrParams[5].x;
+    LR_SCREEN_UNIT = lrParams[5].y;
+    LR_BACKDROP = lrParams[5].z;
+    LR_ROOM = lrParams[5].w;
+    LR_SPILL = lrParams[6].x;
+    LR_SCENE_SPEED = lrParams[6].y;
     lr_main();
 }
 #endif

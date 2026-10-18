@@ -27,7 +27,8 @@ The defaults are right. What matters:
 | Shader for RTG modes | none | RTG screens are graphics card modes; a 15 kHz monitor could not show them. |
 
 **Overscan** in the shader parameters is the monitor's width and height: 0.1 leaves about 5 mm of black
-around a 320×256 screen, −0.015 is the factory setting with its wide black borders. To see the monitor at its real size on a large display instead, enter your screen's
+around a 320×256 screen, −0.015 is the factory setting with its wide black borders; **Overscan height**
+adds to it for the height alone. To see the monitor at its real size on a large display instead, enter your screen's
 height under **Real size** (in cm, or in inches with unit 1), in full screen. **Around the tube** then
 puts the monitor around it, as large as the real one: in a room (1), or in front of one of ten moving
 scenes (2–11: space, synthwave, tiles, bouncing lines, underwater, copper bars, Amiga demo, hills, night city, arcade
@@ -37,7 +38,7 @@ how strongly the screen lights the walls around the glass (1 as on the real moni
 
 ## Parameters
 
-**Filter → Shader Parameters...** lists 31 of them, each once. They mean the same as in RetroArch
+**Filter → Shader Parameters...** lists 32 of them, each once. They mean the same as in RetroArch
 (see the [shader pack's README](https://github.com/zoran123456/lola-retro/blob/main/shaders/lola-retro/README.md)); **Reset to Shader Defaults** returns to
 the 1084S. Fixed in this version: the cable (RGB), the console timing (Amiga) and the tube described in
 millimetres.

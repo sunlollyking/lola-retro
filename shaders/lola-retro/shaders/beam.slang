@@ -60,8 +60,8 @@ void main()
     bool mm = inMM(vScan);
     // position on the tube face, -1..1: the picture is smaller than the tube with a black border,
     // and on a 15 kHz monitor in mm the source covers only part of the active line
-    float cx = (x - 0.5) * 2.0 * vShare.x / (1.0 - global.LR_OVERSCAN);
-    float cy = ((i + 0.5) * vScale * params.OriginalSize.w - 0.5) * 2.0 * vShare.y / (1.0 - global.LR_OVERSCAN);
+    float cx = (x - 0.5) * 2.0 * vShare.x / monShown().x;
+    float cy = ((i + 0.5) * vScale * params.OriginalSize.w - 0.5) * 2.0 * vShare.y / monShown().y;
     // tube in mm: sigma of a 1 mm spot (FWHM), in units of the source line's width
     float mmUnit = FWHM_TO_SIGMA * monCornerGrowth(vec2(cx, cy)) / (monScanMM().x * vShare.x);
 

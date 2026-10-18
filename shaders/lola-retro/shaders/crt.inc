@@ -1850,7 +1850,7 @@ vec3 backdrop(vec2 c, float dist, vec2 qq, vec2 tc, vec2 tubePx)
     float facing = smoothstep(-0.6, 1.2, u) * global.LR_SPILL;
     if (facing > 0.0)
     {
-        float ov = 1.0 - global.LR_OVERSCAN;
+        vec2 ov = monShown();
         vec2 edge = clamp(c * 0.5 * ov + 0.5, 0.0, 1.0);          // the tube's edge on the picture
         vec2 nt = boxOut((tc - 0.5) * tube, inner, 15.0);         // outward, in texture orientation
         vec2 inward = -nt / tube * ov, side = vec2(-nt.y, nt.x) / tube * ov;   // per mm
@@ -1922,7 +1922,7 @@ void main()
     if (inside > 0.0)
     {
         vec2 ut = c * 0.5 + 0.5;
-        vec2 ua = (ut - 0.5) * (1.0 - global.LR_OVERSCAN) + 0.5;
+        vec2 ua = (ut - 0.5) * monShown() + 0.5;
         float srcH = params.OriginalSize.y / vTiming.w;   // native lines
         float rpl = 1.0, ph = 0.0;                         // beam rows per line, row of line 0
 #ifdef LR_FIELDS
