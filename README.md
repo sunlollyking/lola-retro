@@ -11,6 +11,14 @@ On an LCD you only see the raw pixels. Lola Retro brings the rest back.
 
 Named after Lola, my retriever. Retro because it is retro.
 
+![Raw pixels, a real Sony Trinitron on composite, and Lola Retro](docs/dracula-vs-real-crt.jpg)
+
+<sub>Dracula from Castlevania: Symphony of the Night (PlayStation), the same frame in every picture. From left: the raw
+pixels; a photo of a real Sony KV-13M51 Trinitron on composite, by [CRTpixels](https://x.com/CRTpixels/status/1408451743214616587);
+Lola Retro with the Trinitron preset switched to composite, and with the consumer TV composite preset. The dithering in
+the hair melts into soft shading, the red eyes bleed and the background keeps its stripes, as on the real set. The photo
+was taken up close, so its lines and contrast look a little stronger.</sub>
+
 ![Sonic on composite and RGB](docs/sonic-composite-vs-rgb.jpg)
 
 <sub>Same frame, same tube, different cable. On composite the striped background blends into soft colour with a
