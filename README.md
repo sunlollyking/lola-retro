@@ -217,7 +217,7 @@ Which preset and settings to use per system: [RECOMMENDED-CORES.md](shaders/lola
   look as they did on that monitor, and NTSC Amiga games show stronger lines than PAL ones.
 - **Colour of the TV.** US and Japanese TVs demodulate with "red push" (axes and gains from the Sony CXA2025AS
   datasheet), PAL TVs by the standard; phosphors are SMPTE-C, EBU or Japanese P22 instead of sRGB.
-- **Glass.** Curvature, halation, white point (6500–9300 K), vignette, room reflection, misconvergence, afterglow
+- **Glass.** Curvature (the glass bulges, the raster on it stays nearly rectangular, as the deflection was corrected), halation, white point (6500–9300 K), vignette, room reflection, misconvergence, afterglow
   (RetroArch only: Amiberry and 86Box have no feedback textures).
 - **Around the tube.** The monitor or TV at its real size, its casing measured on real ones and lit by the room
   and by the picture. Or, just for fun, one of ten moving scenes.

@@ -50,7 +50,7 @@ AMIGA_PARAMS = [
     "LR_NORM", "LR_DBLEND", "LR_SAT", "LR_BRIGHT", "LR_CONTRAST", "LR_STEADY",
     "LR_GAMMA", "LR_CONV",
     "LR_MASK_TYPE", "LR_MASK_STR", "LR_WHITE", "LR_PHOS",
-    "LR_CURV_X", "LR_CURV_Y", "LR_CORNER", "LR_GLOW", "LR_GLOW_SIZE", "LR_VIGNETTE", "LR_OVERSCAN", "LR_OVERSCAN_V", "LR_AMBIENT",
+    "LR_CURV_X", "LR_CURV_Y", "LR_BEND", "LR_CORNER", "LR_GLOW", "LR_GLOW_SIZE", "LR_VIGNETTE", "LR_OVERSCAN", "LR_OVERSCAN_V", "LR_LIN_X", "LR_LIN_Y", "LR_AMBIENT",
     "LR_MON_SIZE", "LR_MON_PITCH", "LR_MON_SPOT_LO", "LR_MON_SPOT_HI", "LR_MON_CORNER",
     "LR_SCREEN_H", "LR_SCREEN_UNIT", "LR_BACKDROP", "LR_ROOM", "LR_SPILL", "LR_SCENE_SPEED",
 ]
@@ -58,7 +58,7 @@ PC_PARAMS = [
     "LR_DBLEND", "LR_SAT", "LR_BRIGHT", "LR_CONTRAST",
     "LR_GAMMA", "LR_CONV",
     "LR_MASK_TYPE", "LR_MASK_STR", "LR_WHITE", "LR_PHOS",
-    "LR_CURV_X", "LR_CURV_Y", "LR_CORNER", "LR_GLOW", "LR_GLOW_SIZE", "LR_VIGNETTE", "LR_OVERSCAN", "LR_OVERSCAN_V", "LR_AMBIENT",
+    "LR_CURV_X", "LR_CURV_Y", "LR_BEND", "LR_CORNER", "LR_GLOW", "LR_GLOW_SIZE", "LR_VIGNETTE", "LR_OVERSCAN", "LR_OVERSCAN_V", "LR_LIN_X", "LR_LIN_Y", "LR_AMBIENT",
     "LR_MON_SIZE", "LR_MON_PITCH", "LR_MON_SPOT_LO", "LR_MON_SPOT_HI", "LR_MON_CORNER",
     "LR_SCREEN_H", "LR_SCREEN_UNIT", "LR_BACKDROP", "LR_ROOM", "LR_SPILL", "LR_SCENE_SPEED",
 ]
@@ -121,6 +121,13 @@ TARGETS = {
                   "pc-monitor-vga-extreme": "PC monitor (VGA), extreme (sharper than a real tube)"},
     ),
 }
+
+# The ports only run RGB: the encode pass then writes nothing, which the Amiberry port relies on
+# (it passes its parameters on in the blue channel of that pass, where composite and S-Video
+# keep a frame of No flicker's subcarrier cycle).
+for _t in TARGETS.values():
+    _cable = _t["fixed"].get("LR_CABLE", PRESETS[_t["preset"]].get("LR_CABLE", BASE["LR_CABLE"]))
+    assert _cable > 2.5 and "LR_CABLE" not in _t["params"], _t["preset"]
 
 TYPES = r"(?:void|bool|int|uint|float|vec2|vec3|vec4|ivec2|mat3|mat4|Timing)"
 

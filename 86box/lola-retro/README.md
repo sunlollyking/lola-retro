@@ -49,7 +49,7 @@ as RetroArch's 320×200.
 
 ## Parameters
 
-**View → Renderer options… → Configure** lists 30 of them, for each preset separately. They mean the same as in RetroArch (see the
+**View → Renderer options… → Configure** lists 33 of them, for each preset separately. They mean the same as in RetroArch (see the
 [shader pack's README](https://github.com/zoran123456/lola-retro/blob/main/shaders/lola-retro/README.md));
 **Reset** returns to the preset. The rest (cable, console timing, the TV controls) is fixed at the preset's values.
 To fill more of the screen, raise the shader's **Overscan** (like turning up the monitor's width and height);

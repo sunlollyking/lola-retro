@@ -1912,7 +1912,16 @@ void main()
         px /= s;
     }
     vec2 c = tc * 2.0 - 1.0;
-    c *= 1.0 + vec2(global.LR_CURV_X, global.LR_CURV_Y) * (c.yx * c.yx);
+    // The glass bulges: seen from the front, its edges bow outwards and the corners are rounded.
+    // The raster on it does not follow the glass: the deflection was corrected so that the
+    // picture looks nearly rectangular from the front (a well adjusted set kept the bow of its
+    // lines to about 1% of the height), and the curved edges of the glass crop its corners.
+    // Raster bend is the share of the glass curvature the picture still follows: 0 a perfectly
+    // corrected raster, 1 a picture bent as much as the glass.
+    vec2 cs = c;                                          // straight position on the screen
+    vec2 curv = vec2(global.LR_CURV_X, global.LR_CURV_Y);
+    c *= 1.0 + curv * (c.yx * c.yx);                      // position on the glass
+    vec2 cr = cs * (1.0 + global.LR_BEND * curv * (cs.yx * cs.yx));   // position in the raster
     float corner = global.LR_CORNER;
     vec2 qq = abs(c) - 1.0 + corner;
     float dist = length(max(qq, 0.0)) + min(max(qq.x, qq.y), 0.0) - corner;
@@ -1921,8 +1930,15 @@ void main()
     vec3 col = vec3(0.0);
     if (inside > 0.0)
     {
-        vec2 ut = c * 0.5 + 0.5;
-        vec2 ua = (ut - 0.5) * monShown() + 0.5;
+        vec2 ut = c * 0.5 + 0.5;                          // on the glass: mask, damper wires
+        vec2 up = cr * 0.5 + 0.5;                         // the picture's place on the tube
+        vec2 ua = (up - 0.5) * monShown() + 0.5;          // ... and in the scan
+        // linearity errors of the deflection: one side of the picture squeezed, the other stretched
+        vec2 lin = vec2(global.LR_LIN_X, global.LR_LIN_Y);
+#ifdef LR_ROWS_UP
+        lin.y = -lin.y;                                   // rows run bottom-up: keep + for the top
+#endif
+        ua += lin * ua * (1.0 - ua);
         float srcH = params.OriginalSize.y / vTiming.w;   // native lines
         float rpl = 1.0, ph = 0.0;                         // beam rows per line, row of line 0
 #ifdef LR_FIELDS
@@ -1956,7 +1972,12 @@ void main()
         if (show) interlace = 1.0;
         float dbl = (vga && srcH <= 300.0) ? 2.0 : 1.0;
         float BH = srcH * dbl;
-        float visLines = scan > 0.5 ? BH : (pal > 0.5 ? 288.0 : 240.0) * (interlace > 0.5 ? 2.0 : 1.0);
+        // the TV's field: 240 or 288 lines (480 or 576 interlaced); a frame with fewer lines leaves a
+        // border, as on the real set. Picture height 1 lets the core's lines fill the height
+        // instead, for cores that crop lines and set the aspect ratio from the lines they keep
+        // (the picture is then a zoom of the same tube: lines and beam keep their look).
+        float visField = scan > 0.5 ? BH : (pal > 0.5 ? 288.0 : 240.0) * (interlace > 0.5 ? 2.0 : 1.0);
+        float visLines = (global.LR_FILL > 0.5 && scan < 0.5 && !show) ? BH : visField;
         bool il = interlace > 0.5 && global.LR_STEADY < 0.5;
         float stepL = il ? 2.0 : 1.0;
         float offL = il ? float(params.FrameCount % 2u) : 0.0;
@@ -1997,7 +2018,7 @@ void main()
         vec2 sig = vec2(global.LR_SIG_LO, max(global.LR_SIG_LO, global.LR_SIG_HI)) * sgk;
         if (mm)
             sig = vec2(global.LR_MON_SPOT_LO, max(global.LR_MON_SPOT_LO, global.LR_MON_SPOT_HI))
-                * (FWHM_TO_SIGMA * monCornerGrowth(c) * visLines / monScanMM().y);
+                * (FWHM_TO_SIGMA * monCornerGrowth(c) * visField / monScanMM().y);
 
         // every line within 3.5 spot widths: the lines left out are at least kn + 1 away
         // (4 lines for 240p TV, more for wide spots: merged fields, 1024x768 on a PC monitor)

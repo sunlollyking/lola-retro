@@ -1,7 +1,9 @@
 #version 450
 // Lola Retro - pass 1: console video encoder.
 // RGB -> YUV, chroma band-limited and QAM-modulated onto the colour subcarrier.
-// Output: R = composite (or luma for S-Video), G = chroma (S-Video only).
+// Output: composite, one frame of the subcarrier cycle per channel (R, G, B); S-Video: R = luma,
+// G, B, A = the chroma of each frame. No flicker uses up to three frames (see steadyFrames),
+// otherwise only R (and G for S-Video's chroma).
 // The output is 4 samples per source pixel, one row per native line (see main).
 
 #include "common.inc"
@@ -32,13 +34,15 @@ vec3 srcPix(float xs, float y, float k)
     return textureLod(Source, vec2((floor(xs) + 0.5) * params.SourceSize.z, (y + 0.5) * params.SourceSize.w), 0.0).rgb;
 }
 
-// Luma and modulated chroma at sample position n (in samples).
+// Luma and the colour difference signals (Y, U, V) at sample position n (in samples), before
+// modulation. Nothing here depends on the frame's subcarrier phase (the luma trap takes out a
+// band around the subcarrier, the same in every frame), so the frames of No flicker share it.
 // trap > 0: the encoder's luma trap takes that share of the luma near the colour
 // subcarrier (about +-0.5 MHz) out before mixing, so fine stripes leak less into
 // the colour (less rainbow). The band is narrow, so plain brightness is not touched.
 // show: TV show, the console's RGB went through the studio and onto tape before the
 // station's encoder (see SHOW_* in common.inc)
-vec2 enc(float n, float y, float fs, Timing T, float trap, float blend, bool show)
+vec3 encYUV(float n, float y, float fs, Timing T, float trap, float blend, bool show)
 {
     float ppx = T.pclk / fs;                 // source pixels per sample
     float xs = (n + 0.5) * ppx;
@@ -122,7 +126,15 @@ vec2 enc(float n, float y, float fs, Timing T, float trap, float blend, bool sho
         Y -= trap * 2.0 * (yb.x * sin(ph) + yb.y * cos(ph)) / wt;
     }
 
-    return vec2(Y, uv.x * sin(ph) + vSign(y, T) * uv.y * cos(ph));
+    return vec3(Y, uv);
+}
+
+// The chroma of sample n: U and V modulated onto the subcarrier, off cycles later in the frame
+// sequence, with the frame's PAL V-switch vsw (see steadyFrames)
+float chromaAt(vec2 uv, float n, float y, float fs, Timing T, float off, float vsw)
+{
+    float ph = phaseAtOff(n / fs, y, T, off);
+    return uv.x * sin(ph) + vSignW(y, T, vsw) * uv.y * cos(ph);
 }
 
 // TV show: the transmitter's white clipper. With negative modulation the carrier runs out a
@@ -162,46 +174,60 @@ void main()
     // S-Video keeps luma apart, no trap needed; on a TV show the console's encoder is not used
     float trap = (cable < 1.5 && !show) ? global.LR_YTRAP : 0.0;
     float blend = (cable > 1.5 && !show) ? global.LR_DBLEND : 0.0; // composite and RF blend dither by themselves
-    vec2 a = enc(n, y, fs, T, trap, blend, show);
-    vec2 r;
+    vec3 a = encYUV(n, y, fs, T, trap, blend, show);
+
+    // No flicker: the signal of up to three frames of the subcarrier cycle, one per channel
+    // (S-Video: luma, then the chroma of each frame); the decoder averages what they show
+    vec3 off, vsw;
+    int nf = steadyFrames(T, off, vsw);
+    vec3 cr = vec3(chromaAt(a.yz, n, y, fs, T, off.x, vsw.x), 0.0, 0.0);
+    if (nf > 1) cr.y = chromaAt(a.yz, n, y, fs, T, off.y, vsw.y);
+    if (nf > 2) cr.z = chromaAt(a.yz, n, y, fs, T, off.z, vsw.z);
+
+    if (cable > 1.5 && !show)
+    {
+        // S-Video: luma and chroma on separate wires
+        FragColor = nf > 1 ? vec4(a.x, cr) : vec4(a.x, cr.x, 0.0, 1.0);
+        return;
+    }
+
+    vec3 comp = a.x + cr;                    // composite of each frame
     if (cable < 0.5)
     {
         // RF: composite plus an echo and snow
-        float comp = a.x + a.y;
-        vec2 g = enc(n - RF_ECHO_US * fs, y, fs, T, trap, 0.0, false);
-        comp += RF_ECHO * (g.x + g.y);
+        vec3 g = encYUV(n - RF_ECHO_US * fs, y, fs, T, trap, 0.0, false);
+        float ne = n - RF_ECHO_US * fs;
+        comp.x += RF_ECHO * (g.x + chromaAt(g.yz, ne, y, fs, T, off.x, vsw.x));
+        if (nf > 1) comp.y += RF_ECHO * (g.x + chromaAt(g.yz, ne, y, fs, T, off.y, vsw.y));
+        if (nf > 2) comp.z += RF_ECHO * (g.x + chromaAt(g.yz, ne, y, fs, T, off.z, vsw.z));
         float seed = float(params.FrameCount % 997u);
         comp += (hash13(vec3(n, y, seed)) - 0.5) * global.LR_NOISE;
         comp += (hash13(vec3(floor(n / 7.0), y, seed + 3.0)) - 0.5) * global.LR_NOISE * 0.8;
         comp += sin(nativeLine(y, T) * 0.045 + seed * 0.37) * global.LR_NOISE * 0.12;
-        r = vec2(comp, 0.0);
     }
     else if (show)
     {
         // TV show: the broadcast as it comes down the roof antenna, with a faint ghost
         // (a reflection from a building or a hill) and a little snow
         bool pal = T.pal > 0.5;
-        float comp = whiteClip(a.x + a.y, pal);
+        comp = vec3(whiteClip(comp.x, pal), whiteClip(comp.y, pal), whiteClip(comp.z, pal));
         vec2 e = rfEcho(cable);
         if (e.x > 0.0)
         {
-            vec2 g = enc(n - e.y * fs, y, fs, T, 0.0, 0.0, true);
-            comp += e.x * whiteClip(g.x + g.y, pal);
+            float ne = n - e.y * fs;
+            vec3 g = encYUV(ne, y, fs, T, 0.0, 0.0, true);
+            comp.x += e.x * whiteClip(g.x + chromaAt(g.yz, ne, y, fs, T, off.x, vsw.x), pal);
+            if (nf > 1) comp.y += e.x * whiteClip(g.x + chromaAt(g.yz, ne, y, fs, T, off.y, vsw.y), pal);
+            if (nf > 2) comp.z += e.x * whiteClip(g.x + chromaAt(g.yz, ne, y, fs, T, off.z, vsw.z), pal);
         }
         // white noise, one value per sample: with more samples per microsecond (a faster pixel
         // clock, a higher internal resolution) each gets more, so the picture's band always holds
         // the same amount (calibrated at 26.6 MHz, a 320-wide PlayStation frame)
         float seed = float(params.FrameCount % 997u);
         comp += (hash13(vec3(n, y, seed)) - 0.5) * global.LR_NOISE * sqrt(fs / 26.6);
-        r = vec2(comp, 0.0);
     }
-    else if (cable < 1.5)
-    {
-        r = vec2(a.x + a.y, 0.0);
-    }
-    else
-    {
-        r = a;   // S-Video: luma and chroma on separate wires
-    }
-    FragColor = vec4(r, 0.0, 1.0);
+    // composite: one frame per channel (the frames beyond nf stay 0)
+    if (nf < 2) comp.y = 0.0;
+    if (nf < 3) comp.z = 0.0;
+    FragColor = vec4(comp, 1.0);
 }

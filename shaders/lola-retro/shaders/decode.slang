@@ -26,11 +26,13 @@ layout(location = 0) out vec4 FragColor;
 layout(set = 0, binding = 2) uniform sampler2D Source;    // encoded signal
 layout(set = 0, binding = 3) uniform sampler2D Original;  // used directly for RGB
 
-// Encoded signal at sample s of row r (row r holds native line r, see the encoder)
-vec2 sig(float s, float r)
+// Encoded signal at sample s of row r (row r holds native line r, see the encoder).
+// Composite: one frame of the subcarrier cycle per channel; S-Video: luma, then the chroma
+// of each frame (No flicker uses up to three frames, see steadyFrames).
+vec4 sig(float s, float r)
 {
-    if (r < 0.0) return vec2(0.0);
-    return textureLod(Source, vec2((s + 0.5) * params.SourceSize.z, (r + 0.5) * params.SourceSize.w), 0.0).rg;
+    if (r < 0.0) return vec4(0.0);
+    return textureLod(Source, vec2((s + 0.5) * params.SourceSize.z, (r + 0.5) * params.SourceSize.w), 0.0);
 }
 
 // Original pixel at x position xs on the native line that starts at row y (k rows averaged)
@@ -124,6 +126,15 @@ void main()
         float tn = n / fs;
         float sh = global.LR_SHARP * 1.4;
 
+        // No flicker: the frames of the subcarrier cycle the eye blends (see steadyFrames).
+        // Luma is filtered from their average (the cross-luma dots cancel there), chroma is
+        // demodulated for each frame against its own subcarrier and then averaged.
+        vec3 off, vsw;
+        int nf = steadyFrames(T, off, vsw);
+        vec3 lw = nf == 3 ? vec3(1.0 / 3.0) : vec3(0.5, 0.5, 0.0);   // weights of the frames (nf > 1)
+        vec2 r1 = vec2(cos(TAU * off.y), sin(TAU * off.y));           // their subcarrier, turned on
+        vec2 r2 = vec2(cos(TAU * off.z), sin(TAU * off.z));
+
         // All taps sit on whole samples. A tap between two samples would read a linear
         // blend of them, and that blend loses part of the subcarrier (colour came out
         // up to 9% weaker). The tap step is a whole number of samples, so the subcarrier
@@ -144,8 +155,13 @@ void main()
             float w1 = exp(c1 * u * u);
             float w2 = exp(c2 * u * u);
             float sp = n + u * mY;
-            float s0 = sig(sp, r).x;
-            if (comb) s0 = 0.5 * (s0 + sig(sp, r - sr).x);
+            vec4 v = sig(sp, r);
+            float s0 = (nf == 1 || sv) ? v.x : dot(v.xyz, lw);
+            if (comb)
+            {
+                vec4 vq = sig(sp, r - sr);
+                s0 = 0.5 * (s0 + (nf == 1 ? vq.x : dot(vq.xyz, lw)));
+            }
             a1 += w1 * s0; a2 += w2 * s0; w1s += w1; w2s += w2;
         }
         Y = (1.0 + sh) * a1 / w1s - sh * a2 / w2s;
@@ -178,6 +194,7 @@ void main()
         a0 -= TAU * floor(a0 / TAU + 0.5);         // keep the angle small for an accurate sin/cos
         vec2 e = vec2(cos(a0), sin(a0));           // (cos, sin) at the first tap
         vec2 acc = vec2(0.0), accp = vec2(0.0);    // sums of w * signal * (sin, cos)
+        vec2 acc1 = vec2(0.0), accp1 = vec2(0.0), acc2 = vec2(0.0), accp2 = vec2(0.0);   // No flicker frames
         float wcs = 0.0;
         int nCi = int(nC);
         for (int k = -nCi; k <= nCi; k++)
@@ -185,34 +202,71 @@ void main()
             float u = float(k);
             float w = exp(cw * u * u);
             float sp = n + u * mC;
-            vec2 v0 = sig(sp, r);
-            float s0 = sv ? v0.y : v0.x;
-            if (comb) s0 = 0.5 * (v0.x - sig(sp, r - sr).x);
+            vec4 v0 = sig(sp, r);
+            vec3 c3 = sv ? v0.yzw : v0.xyz;          // the chroma signal of each frame
+            vec4 vp = (pal || comb) ? sig(sp, r - sr) : vec4(0.0);
+            if (comb) c3 = 0.5 * (v0.xyz - vp.xyz);
+            float s0 = c3.x;
             acc += w * s0 * e.yx;
-            if (pal)
+            if (pal) accp += w * (sv ? vp.y : vp.x) * e.yx;
+            if (nf > 1)
             {
-                vec2 vp = sig(sp, r - sr);
-                accp += w * (sv ? vp.y : vp.x) * e.yx;
+                vec2 e1 = rotate(e, r1);
+                vec3 cp = sv ? vp.yzw : vp.xyz;
+                acc1 += w * c3.y * e1.yx;
+                if (pal) accp1 += w * cp.y * e1.yx;
+                if (nf > 2)
+                {
+                    vec2 e2 = rotate(e, r2);
+                    acc2 += w * c3.z * e2.yx;
+                    if (pal) accp2 += w * cp.z * e2.yx;
+                }
             }
             wcs += w;
             e = rotate(e, rp);
         }
         vec2 cs = 2.0 * vec2(acc.x, vs * acc.y);
         uv = cs / wcs;
+        float hf = (1.0 + sh) * exp(-19.7392 * s1 * s1 * T.fsc * T.fsc) - sh * exp(-19.7392 * s2 * s2 * T.fsc * T.fsc);
+        bool trapY = !sv && !comb && notch > 0.0;
+        // the previous line has its own subcarrier phase: rotate its sums by the difference
+        // (the same for every frame of the cycle)
+        float dl = phaseAt(tn, y - st, T) - (ph0 - tint);
+        vec2 rd = vec2(cos(dl), sin(dl));
 
-        if (!sv && !comb && notch > 0.0)
+        if (nf == 1)
         {
             // trap: take the chroma band back out of luma
-            float hf = (1.0 + sh) * exp(-19.7392 * s1 * s1 * T.fsc * T.fsc) - sh * exp(-19.7392 * s2 * s2 * T.fsc * T.fsc);
-            Y -= notch * hf * (uv.x * e0.y + vs * uv.y * e0.x);
+            if (trapY) Y -= notch * hf * (uv.x * e0.y + vs * uv.y * e0.x);
+            if (pal)
+            {
+                vec2 csp = 2.0 * vec2(accp.x * rd.x + accp.y * rd.y, vsp * (accp.y * rd.x - accp.x * rd.y));
+                uv = 0.5 * (uv + csp / wcs);
+            }
         }
-        if (pal)
+        else
         {
-            // the previous line has its own subcarrier phase: rotate its sums by the difference
-            float dl = phaseAt(tn, y - st, T) - (ph0 - tint);
-            vec2 rd = vec2(cos(dl), sin(dl));
-            vec2 csp = 2.0 * vec2(accp.x * rd.x + accp.y * rd.y, vsp * (accp.y * rd.x - accp.x * rd.y));
-            uv = 0.5 * (uv + csp / wcs);
+            // No flicker: the same for each frame, with its own subcarrier and V-switch, averaged
+            vec2 uvs = vec2(0.0);
+            float trapSum = 0.0;
+            for (int k = 0; k < 3; k++)
+            {
+                if (k >= nf) break;
+                vec2 a = k == 0 ? acc : (k == 1 ? acc1 : acc2);
+                vec2 ap = k == 0 ? accp : (k == 1 ? accp1 : accp2);
+                float vk = vSignW(y, T, vsw[k]), vkp = vSignW(y - st, T, vsw[k]);
+                vec2 ek = k == 0 ? e0 : rotate(e0, k == 1 ? r1 : r2);
+                vec2 u = 2.0 * vec2(a.x, vk * a.y) / wcs;
+                trapSum += u.x * ek.y + vk * u.y * ek.x;
+                if (pal)
+                {
+                    vec2 csp = 2.0 * vec2(ap.x * rd.x + ap.y * rd.y, vkp * (ap.y * rd.x - ap.x * rd.y));
+                    u = 0.5 * (u + csp / wcs);
+                }
+                uvs += u;
+            }
+            if (trapY) Y -= notch * hf * trapSum / float(nf);
+            uv = uvs / float(nf);
         }
         if (cable < 0.5)
         {

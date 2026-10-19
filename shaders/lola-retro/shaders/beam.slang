@@ -24,8 +24,10 @@ void main()
     vScale = T.scale;
     vScan = T.scan;
     float vis = (T.pal > 0.5 ? 288.0 : 240.0) * (T.interlace > 0.5 ? 2.0 : 1.0);
+    // Picture height 1: the core's lines fill the height (not on a TV show), as in the CRT pass
+    bool fill = global.LR_FILL > 0.5 && !isShow(global.LR_CABLE);
     vShare = vec2(activeShare(T, params.OriginalSize.xy),
-                  T.scan < 0.5 ? min(params.OriginalSize.y / T.scale / vis, 1.0) : 1.0);
+                  (T.scan < 0.5 && !fill) ? min(params.OriginalSize.y / T.scale / vis, 1.0) : 1.0);
     vConvW = isAmiga(T) ? 320.0 * T.hres : params.OriginalSize.x;
 }
 

@@ -19,12 +19,15 @@
 #pragma parameter LR_PHOS "Phosphors (0 auto, 1 sRGB, 2 SMPTE-C, 3 EBU, 4 Japanese P22)" 0 0 4 1
 #pragma parameter LR_CURV_X "Curvature horizontal" 0.025 0 0.15 0.005
 #pragma parameter LR_CURV_Y "Curvature vertical" 0.03 0 0.15 0.005
+#pragma parameter LR_BEND "Raster bend (share of the glass curvature the picture follows)" 0.3 0 1 0.05
 #pragma parameter LR_CORNER "Rounded corners" 0.045 0 0.1 0.005
 #pragma parameter LR_GLOW "Glass glow" 0.04 0 0.4 0.01
 #pragma parameter LR_GLOW_SIZE "Glass glow size" 0.5 0.2 1.5 0.05
 #pragma parameter LR_VIGNETTE "Darker edges" 0.15 0 0.7 0.01
-#pragma parameter LR_OVERSCAN "Overscan (negative adds a black border)" -0.015 -0.08 0.12 0.005
+#pragma parameter LR_OVERSCAN "Overscan (negative adds a black border)" -0.035 -0.08 0.12 0.005
 #pragma parameter LR_OVERSCAN_V "Overscan height (added to Overscan, height only)" 0 -0.1 0.12 0.005
+#pragma parameter LR_LIN_X "Linearity error horizontal (+ left squeezed)" 0 -0.15 0.15 0.01
+#pragma parameter LR_LIN_Y "Linearity error vertical (+ top squeezed)" 0 -0.15 0.15 0.01
 #pragma parameter LR_AMBIENT "Room reflection on the glass" 0.003 0 0.03 0.001
 #pragma parameter LR_MON_SIZE "Monitor size (inches)" 15 10 21 1
 #pragma parameter LR_MON_PITCH "Dot pitch (mm)" 0.28 0.2 0.7 0.01
@@ -71,12 +74,15 @@ uniform float LR_WHITE;
 uniform float LR_PHOS;
 uniform float LR_CURV_X;
 uniform float LR_CURV_Y;
+uniform float LR_BEND;
 uniform float LR_CORNER;
 uniform float LR_GLOW;
 uniform float LR_GLOW_SIZE;
 uniform float LR_VIGNETTE;
 uniform float LR_OVERSCAN;
 uniform float LR_OVERSCAN_V;
+uniform float LR_LIN_X;
+uniform float LR_LIN_Y;
 uniform float LR_AMBIENT;
 uniform float LR_MON_SIZE;
 uniform float LR_MON_PITCH;
@@ -92,7 +98,9 @@ uniform float LR_SCENE_SPEED;
 
 // Lola Retro - pass 1: console video encoder.
 // RGB -> YUV, chroma band-limited and QAM-modulated onto the colour subcarrier.
-// Output: R = composite (or luma for S-Video), G = chroma (S-Video only).
+// Output: composite, one frame of the subcarrier cycle per channel (R, G, B); S-Video: R = luma,
+// G, B, A = the chroma of each frame. No flicker uses up to three frames (see steadyFrames),
+// otherwise only R (and G for S-Video's chroma).
 // The output is 4 samples per source pixel, one row per native line (see main).
 
 // Lola Retro - shared parameters, uniforms and helpers for every pass.
@@ -244,6 +252,7 @@ struct Timing
     float fieldStep;   // phase advance per field (cycles)
     float framePhase;  // phase offset of the current field (cycles)
     float vsw;         // PAL V-switch offset for this field
+    float vswStep;     // change of the V-switch offset per field (1 when the line count per field is odd)
     float pal;         // 1 = PAL
     float scan;        // 0 TV raster, 1 VGA line doubling, 2 fill (24 kHz arcade)
     float interlace;   // 1 = 480i/576i source
@@ -296,6 +305,7 @@ Timing getTiming(vec2 orig, uint frameCount)
     float fc = LR_STEADY > 0.5 ? 0.0 : float(frameCount % 24u);
     t.framePhase = fract(fc * t.fieldStep);
     t.vsw = mod(fc * c, 2.0);
+    t.vswStep = c;
     return t;
 }
 
@@ -309,19 +319,64 @@ float nativeLine(float y, Timing t) { return floor(y / t.scale); }
 float physLine(float y, Timing t) { float l = nativeLine(y, t); return t.interlace > 0.5 ? floor(l * 0.5) : l; }
 bool oddField(float y, Timing t) { return t.interlace > 0.5 && mod(nativeLine(y, t), 2.0) > 0.5; }
 
-// Subcarrier phase at time tUs (microseconds from the start of the active line) on line y
-float phaseAt(float tUs, float y, Timing t)
+// Subcarrier phase at time tUs (microseconds from the start of the active line) on line y,
+// off cycles later in the frame sequence (see steadyFrames)
+float phaseAtOff(float tUs, float y, Timing t, float off)
 {
     float fo = oddField(y, t) ? t.fieldStep : 0.0;
-    return TAU * fract(fract(t.fsc * tUs) + fract(t.lineFrac * physLine(y, t)) + fo + t.framePhase);
+    return TAU * fract(fract(t.fsc * tUs) + fract(t.lineFrac * physLine(y, t)) + fo + t.framePhase + off);
 }
+float phaseAt(float tUs, float y, Timing t) { return phaseAtOff(tUs, y, t, 0.0); }
 
-// PAL alternates the sign of V on every line
-float vSign(float y, Timing t)
+// PAL alternates the sign of V on every line; vsw: the V-switch offset of the frame
+float vSignW(float y, Timing t, float vsw)
 {
     if (t.pal < 0.5) return 1.0;
-    float pl = physLine(y, t) + t.vsw + (oddField(y, t) ? 1.0 : 0.0);
+    float pl = physLine(y, t) + vsw + (oddField(y, t) ? 1.0 : 0.0);
     return mod(pl, 2.0) < 0.5 ? 1.0 : -1.0;
+}
+float vSign(float y, Timing t) { return vSignW(y, t, t.vsw); }
+
+// No flicker: the frames the eye blends together.
+// Most consoles shift the colour subcarrier from one frame to the next (a 2-frame cycle on the
+// PlayStation, 3 frames on the NES, up to 8 in PAL), so the cross-colour and the dots along
+// coloured edges move. At 50 or 60 frames a second the eye sees their average, in which they
+// largely cancel. A single frozen frame would show all of them at full strength, more than
+// anyone ever saw. So with No flicker on, the encoder makes the signal for two or three frames
+// of the cycle and the decoder averages what they show: the three frames of a 3-frame cycle,
+// otherwise the first frame and the one half a subcarrier cycle on (every 2, 4 and 8-frame
+// cycle reaches it), which cancels the same artefacts. With No flicker off, one frame: the
+// moving original.
+// Returns the number of frames (1 to 3); off: their phase offsets (cycles), vsw: their PAL
+// V-switch offsets.
+int steadyFrames(Timing t, out vec3 off, out vec3 vsw)
+{
+    off = vec3(0.0);
+    vsw = vec3(t.vsw, 0.0, 0.0);
+    if (LR_STEADY < 0.5) return 1;
+    float s = t.fieldStep;
+    if (abs(s - 1.0 / 3.0) < 0.01 || abs(s - 2.0 / 3.0) < 0.01)
+    {
+        off = vec3(0.0, fract(s), fract(2.0 * s));
+        vsw = vec3(0.0, mod(t.vswStep, 2.0), mod(2.0 * t.vswStep, 2.0));
+        return 3;
+    }
+    for (float k = 1.0; k <= 8.0; k += 1.0)
+    {
+        if (abs(fract(k * s) - 0.5) < 0.01)
+        {
+            off.y = 0.5;
+            vsw.y = mod(k * t.vswStep, 2.0);
+            return 2;
+        }
+    }
+    // no phase change, but a PAL V-switch that flips every frame (odd line count per field)
+    if (t.pal > 0.5 && t.vswStep > 0.5)
+    {
+        vsw.y = 1.0;
+        return 2;
+    }
+    return 1;
 }
 
 // ---------------------------------------------------------------------------
@@ -479,13 +534,15 @@ vec3 srcPix(float xs, float y, float k)
     return lr_tex_Source( vec2((floor(xs) + 0.5) * LR_SourceSize.z, (y + 0.5) * LR_SourceSize.w), 0.0).rgb;
 }
 
-// Luma and modulated chroma at sample position n (in samples).
+// Luma and the colour difference signals (Y, U, V) at sample position n (in samples), before
+// modulation. Nothing here depends on the frame's subcarrier phase (the luma trap takes out a
+// band around the subcarrier, the same in every frame), so the frames of No flicker share it.
 // trap > 0: the encoder's luma trap takes that share of the luma near the colour
 // subcarrier (about +-0.5 MHz) out before mixing, so fine stripes leak less into
 // the colour (less rainbow). The band is narrow, so plain brightness is not touched.
 // show: TV show, the console's RGB went through the studio and onto tape before the
 // station's encoder (see SHOW_* in common.inc)
-vec2 enc(float n, float y, float fs, Timing T, float trap, float blend, bool show)
+vec3 encYUV(float n, float y, float fs, Timing T, float trap, float blend, bool show)
 {
     float ppx = T.pclk / fs;                 // source pixels per sample
     float xs = (n + 0.5) * ppx;
@@ -569,7 +626,15 @@ vec2 enc(float n, float y, float fs, Timing T, float trap, float blend, bool sho
         Y -= trap * 2.0 * (yb.x * sin(ph) + yb.y * cos(ph)) / wt;
     }
 
-    return vec2(Y, uv.x * sin(ph) + vSign(y, T) * uv.y * cos(ph));
+    return vec3(Y, uv);
+}
+
+// The chroma of sample n: U and V modulated onto the subcarrier, off cycles later in the frame
+// sequence, with the frame's PAL V-switch vsw (see steadyFrames)
+float chromaAt(vec2 uv, float n, float y, float fs, Timing T, float off, float vsw)
+{
+    float ph = phaseAtOff(n / fs, y, T, off);
+    return uv.x * sin(ph) + vSignW(y, T, vsw) * uv.y * cos(ph);
 }
 
 // TV show: the transmitter's white clipper. With negative modulation the carrier runs out a
@@ -609,48 +674,62 @@ void lr_main()
     // S-Video keeps luma apart, no trap needed; on a TV show the console's encoder is not used
     float trap = (cable < 1.5 && !show) ? LR_YTRAP : 0.0;
     float blend = (cable > 1.5 && !show) ? LR_DBLEND : 0.0; // composite and RF blend dither by themselves
-    vec2 a = enc(n, y, fs, T, trap, blend, show);
-    vec2 r;
+    vec3 a = encYUV(n, y, fs, T, trap, blend, show);
+
+    // No flicker: the signal of up to three frames of the subcarrier cycle, one per channel
+    // (S-Video: luma, then the chroma of each frame); the decoder averages what they show
+    vec3 off, vsw;
+    int nf = steadyFrames(T, off, vsw);
+    vec3 cr = vec3(chromaAt(a.yz, n, y, fs, T, off.x, vsw.x), 0.0, 0.0);
+    if (nf > 1) cr.y = chromaAt(a.yz, n, y, fs, T, off.y, vsw.y);
+    if (nf > 2) cr.z = chromaAt(a.yz, n, y, fs, T, off.z, vsw.z);
+
+    if (cable > 1.5 && !show)
+    {
+        // S-Video: luma and chroma on separate wires
+        FragColor = nf > 1 ? vec4(a.x, cr) : vec4(a.x, cr.x, 0.0, 1.0);
+        return;
+    }
+
+    vec3 comp = a.x + cr;                    // composite of each frame
     if (cable < 0.5)
     {
         // RF: composite plus an echo and snow
-        float comp = a.x + a.y;
-        vec2 g = enc(n - RF_ECHO_US * fs, y, fs, T, trap, 0.0, false);
-        comp += RF_ECHO * (g.x + g.y);
+        vec3 g = encYUV(n - RF_ECHO_US * fs, y, fs, T, trap, 0.0, false);
+        float ne = n - RF_ECHO_US * fs;
+        comp.x += RF_ECHO * (g.x + chromaAt(g.yz, ne, y, fs, T, off.x, vsw.x));
+        if (nf > 1) comp.y += RF_ECHO * (g.x + chromaAt(g.yz, ne, y, fs, T, off.y, vsw.y));
+        if (nf > 2) comp.z += RF_ECHO * (g.x + chromaAt(g.yz, ne, y, fs, T, off.z, vsw.z));
         float seed = float(LR_FrameCount % 997u);
         comp += (hash13(vec3(n, y, seed)) - 0.5) * LR_NOISE;
         comp += (hash13(vec3(floor(n / 7.0), y, seed + 3.0)) - 0.5) * LR_NOISE * 0.8;
         comp += sin(nativeLine(y, T) * 0.045 + seed * 0.37) * LR_NOISE * 0.12;
-        r = vec2(comp, 0.0);
     }
     else if (show)
     {
         // TV show: the broadcast as it comes down the roof antenna, with a faint ghost
         // (a reflection from a building or a hill) and a little snow
         bool pal = T.pal > 0.5;
-        float comp = whiteClip(a.x + a.y, pal);
+        comp = vec3(whiteClip(comp.x, pal), whiteClip(comp.y, pal), whiteClip(comp.z, pal));
         vec2 e = rfEcho(cable);
         if (e.x > 0.0)
         {
-            vec2 g = enc(n - e.y * fs, y, fs, T, 0.0, 0.0, true);
-            comp += e.x * whiteClip(g.x + g.y, pal);
+            float ne = n - e.y * fs;
+            vec3 g = encYUV(ne, y, fs, T, 0.0, 0.0, true);
+            comp.x += e.x * whiteClip(g.x + chromaAt(g.yz, ne, y, fs, T, off.x, vsw.x), pal);
+            if (nf > 1) comp.y += e.x * whiteClip(g.x + chromaAt(g.yz, ne, y, fs, T, off.y, vsw.y), pal);
+            if (nf > 2) comp.z += e.x * whiteClip(g.x + chromaAt(g.yz, ne, y, fs, T, off.z, vsw.z), pal);
         }
         // white noise, one value per sample: with more samples per microsecond (a faster pixel
         // clock, a higher internal resolution) each gets more, so the picture's band always holds
         // the same amount (calibrated at 26.6 MHz, a 320-wide PlayStation frame)
         float seed = float(LR_FrameCount % 997u);
         comp += (hash13(vec3(n, y, seed)) - 0.5) * LR_NOISE * sqrt(fs / 26.6);
-        r = vec2(comp, 0.0);
     }
-    else if (cable < 1.5)
-    {
-        r = vec2(a.x + a.y, 0.0);
-    }
-    else
-    {
-        r = a;   // S-Video: luma and chroma on separate wires
-    }
-    FragColor = vec4(r, 0.0, 1.0);
+    // composite: one frame per channel (the frames beyond nf stay 0)
+    if (nf < 2) comp.y = 0.0;
+    if (nf < 3) comp.z = 0.0;
+    FragColor = vec4(comp, 1.0);
 }
 
 void main()

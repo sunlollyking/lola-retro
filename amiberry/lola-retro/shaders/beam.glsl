@@ -20,6 +20,7 @@ uniform int FrameCount;
 const float LR_CABLE = 3.0;
 const float LR_CONSOLE = 6.0;
 const float LR_DEMOD = 0.0;
+const float LR_FILL = 0.0;
 const float LR_GHOST = 0.03;
 const float LR_HFOCUS = 0.45;
 const float LR_MON_MM = 1.0;
@@ -197,6 +198,7 @@ struct Timing
     float fieldStep;   // phase advance per field (cycles)
     float framePhase;  // phase offset of the current field (cycles)
     float vsw;         // PAL V-switch offset for this field
+    float vswStep;     // change of the V-switch offset per field (1 when the line count per field is odd)
     float pal;         // 1 = PAL
     float scan;        // 0 TV raster, 1 VGA line doubling, 2 fill (24 kHz arcade)
     float interlace;   // 1 = 480i/576i source
@@ -249,6 +251,7 @@ Timing getTiming(vec2 orig, uint frameCount)
     float fc = LR_STEADY > 0.5 ? 0.0 : float(frameCount % 24u);
     t.framePhase = fract(fc * t.fieldStep);
     t.vsw = mod(fc * c, 2.0);
+    t.vswStep = c;
     return t;
 }
 
@@ -262,19 +265,64 @@ float nativeLine(float y, Timing t) { return floor(y / t.scale); }
 float physLine(float y, Timing t) { float l = nativeLine(y, t); return t.interlace > 0.5 ? floor(l * 0.5) : l; }
 bool oddField(float y, Timing t) { return t.interlace > 0.5 && mod(nativeLine(y, t), 2.0) > 0.5; }
 
-// Subcarrier phase at time tUs (microseconds from the start of the active line) on line y
-float phaseAt(float tUs, float y, Timing t)
+// Subcarrier phase at time tUs (microseconds from the start of the active line) on line y,
+// off cycles later in the frame sequence (see steadyFrames)
+float phaseAtOff(float tUs, float y, Timing t, float off)
 {
     float fo = oddField(y, t) ? t.fieldStep : 0.0;
-    return TAU * fract(fract(t.fsc * tUs) + fract(t.lineFrac * physLine(y, t)) + fo + t.framePhase);
+    return TAU * fract(fract(t.fsc * tUs) + fract(t.lineFrac * physLine(y, t)) + fo + t.framePhase + off);
 }
+float phaseAt(float tUs, float y, Timing t) { return phaseAtOff(tUs, y, t, 0.0); }
 
-// PAL alternates the sign of V on every line
-float vSign(float y, Timing t)
+// PAL alternates the sign of V on every line; vsw: the V-switch offset of the frame
+float vSignW(float y, Timing t, float vsw)
 {
     if (t.pal < 0.5) return 1.0;
-    float pl = physLine(y, t) + t.vsw + (oddField(y, t) ? 1.0 : 0.0);
+    float pl = physLine(y, t) + vsw + (oddField(y, t) ? 1.0 : 0.0);
     return mod(pl, 2.0) < 0.5 ? 1.0 : -1.0;
+}
+float vSign(float y, Timing t) { return vSignW(y, t, t.vsw); }
+
+// No flicker: the frames the eye blends together.
+// Most consoles shift the colour subcarrier from one frame to the next (a 2-frame cycle on the
+// PlayStation, 3 frames on the NES, up to 8 in PAL), so the cross-colour and the dots along
+// coloured edges move. At 50 or 60 frames a second the eye sees their average, in which they
+// largely cancel. A single frozen frame would show all of them at full strength, more than
+// anyone ever saw. So with No flicker on, the encoder makes the signal for two or three frames
+// of the cycle and the decoder averages what they show: the three frames of a 3-frame cycle,
+// otherwise the first frame and the one half a subcarrier cycle on (every 2, 4 and 8-frame
+// cycle reaches it), which cancels the same artefacts. With No flicker off, one frame: the
+// moving original.
+// Returns the number of frames (1 to 3); off: their phase offsets (cycles), vsw: their PAL
+// V-switch offsets.
+int steadyFrames(Timing t, out vec3 off, out vec3 vsw)
+{
+    off = vec3(0.0);
+    vsw = vec3(t.vsw, 0.0, 0.0);
+    if (LR_STEADY < 0.5) return 1;
+    float s = t.fieldStep;
+    if (abs(s - 1.0 / 3.0) < 0.01 || abs(s - 2.0 / 3.0) < 0.01)
+    {
+        off = vec3(0.0, fract(s), fract(2.0 * s));
+        vsw = vec3(0.0, mod(t.vswStep, 2.0), mod(2.0 * t.vswStep, 2.0));
+        return 3;
+    }
+    for (float k = 1.0; k <= 8.0; k += 1.0)
+    {
+        if (abs(fract(k * s) - 0.5) < 0.01)
+        {
+            off.y = 0.5;
+            vsw.y = mod(k * t.vswStep, 2.0);
+            return 2;
+        }
+    }
+    // no phase change, but a PAL V-switch that flips every frame (odd line count per field)
+    if (t.pal > 0.5 && t.vswStep > 0.5)
+    {
+        vsw.y = 1.0;
+        return 2;
+    }
+    return 1;
 }
 
 // ---------------------------------------------------------------------------
@@ -400,8 +448,10 @@ void lr_main()
     vScale = T.scale;
     vScan = T.scan;
     float vis = (T.pal > 0.5 ? 288.0 : 240.0) * (T.interlace > 0.5 ? 2.0 : 1.0);
+    // Picture height 1: the core's lines fill the height (not on a TV show), as in the CRT pass
+    bool fill = LR_FILL > 0.5 && !isShow(LR_CABLE);
     vShare = vec2(activeShare(T, LR_OriginalSize.xy),
-                  T.scan < 0.5 ? min(LR_OriginalSize.y / T.scale / vis, 1.0) : 1.0);
+                  (T.scan < 0.5 && !fill) ? min(LR_OriginalSize.y / T.scale / vis, 1.0) : 1.0);
     vConvW = isAmiga(T) ? 320.0 * T.hres : LR_OriginalSize.x;
 }
 
@@ -414,12 +464,12 @@ void main()
     LR_STEADY = texelFetch(LR_Signal, ivec2(5, 0), 0).b;
     LR_GAMMA = texelFetch(LR_Signal, ivec2(6, 0), 0).b;
     LR_CONV = texelFetch(LR_Signal, ivec2(7, 0), 0).b;
-    LR_OVERSCAN = texelFetch(LR_Signal, ivec2(18, 0), 0).b;
-    LR_OVERSCAN_V = texelFetch(LR_Signal, ivec2(19, 0), 0).b;
-    LR_MON_SIZE = texelFetch(LR_Signal, ivec2(21, 0), 0).b;
-    LR_MON_SPOT_LO = texelFetch(LR_Signal, ivec2(23, 0), 0).b;
-    LR_MON_SPOT_HI = texelFetch(LR_Signal, ivec2(24, 0), 0).b;
-    LR_MON_CORNER = texelFetch(LR_Signal, ivec2(25, 0), 0).b;
+    LR_OVERSCAN = texelFetch(LR_Signal, ivec2(19, 0), 0).b;
+    LR_OVERSCAN_V = texelFetch(LR_Signal, ivec2(20, 0), 0).b;
+    LR_MON_SIZE = texelFetch(LR_Signal, ivec2(24, 0), 0).b;
+    LR_MON_SPOT_LO = texelFetch(LR_Signal, ivec2(26, 0), 0).b;
+    LR_MON_SPOT_HI = texelFetch(LR_Signal, ivec2(27, 0), 0).b;
+    LR_MON_CORNER = texelFetch(LR_Signal, ivec2(28, 0), 0).b;
     lrParams[0] = vec4(LR_NORM, LR_STEADY, LR_GAMMA, LR_CONV);
     lrParams[1] = vec4(LR_OVERSCAN, LR_OVERSCAN_V, LR_MON_SIZE, LR_MON_SPOT_LO);
     lrParams[2] = vec4(LR_MON_SPOT_HI, LR_MON_CORNER, 0.0, 0.0);

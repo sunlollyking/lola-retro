@@ -20,6 +20,7 @@ uniform int FrameCount;
 const float LR_CABLE = 3.0;
 const float LR_CONSOLE = 6.0;
 const float LR_DEMOD = 0.0;
+const float LR_FILL = 0.0;
 const float LR_GHOST = 0.03;
 const float LR_MASK_TRIADS = 470.0;
 const float LR_MON_MM = 1.0;
@@ -38,11 +39,14 @@ float LR_WHITE;
 float LR_PHOS;
 float LR_CURV_X;
 float LR_CURV_Y;
+float LR_BEND;
 float LR_CORNER;
 float LR_GLOW;
 float LR_VIGNETTE;
 float LR_OVERSCAN;
 float LR_OVERSCAN_V;
+float LR_LIN_X;
+float LR_LIN_Y;
 float LR_AMBIENT;
 float LR_MON_SIZE;
 float LR_MON_PITCH;
@@ -222,6 +226,7 @@ struct Timing
     float fieldStep;   // phase advance per field (cycles)
     float framePhase;  // phase offset of the current field (cycles)
     float vsw;         // PAL V-switch offset for this field
+    float vswStep;     // change of the V-switch offset per field (1 when the line count per field is odd)
     float pal;         // 1 = PAL
     float scan;        // 0 TV raster, 1 VGA line doubling, 2 fill (24 kHz arcade)
     float interlace;   // 1 = 480i/576i source
@@ -274,6 +279,7 @@ Timing getTiming(vec2 orig, uint frameCount)
     float fc = LR_STEADY > 0.5 ? 0.0 : float(frameCount % 24u);
     t.framePhase = fract(fc * t.fieldStep);
     t.vsw = mod(fc * c, 2.0);
+    t.vswStep = c;
     return t;
 }
 
@@ -287,19 +293,64 @@ float nativeLine(float y, Timing t) { return floor(y / t.scale); }
 float physLine(float y, Timing t) { float l = nativeLine(y, t); return t.interlace > 0.5 ? floor(l * 0.5) : l; }
 bool oddField(float y, Timing t) { return t.interlace > 0.5 && mod(nativeLine(y, t), 2.0) > 0.5; }
 
-// Subcarrier phase at time tUs (microseconds from the start of the active line) on line y
-float phaseAt(float tUs, float y, Timing t)
+// Subcarrier phase at time tUs (microseconds from the start of the active line) on line y,
+// off cycles later in the frame sequence (see steadyFrames)
+float phaseAtOff(float tUs, float y, Timing t, float off)
 {
     float fo = oddField(y, t) ? t.fieldStep : 0.0;
-    return TAU * fract(fract(t.fsc * tUs) + fract(t.lineFrac * physLine(y, t)) + fo + t.framePhase);
+    return TAU * fract(fract(t.fsc * tUs) + fract(t.lineFrac * physLine(y, t)) + fo + t.framePhase + off);
 }
+float phaseAt(float tUs, float y, Timing t) { return phaseAtOff(tUs, y, t, 0.0); }
 
-// PAL alternates the sign of V on every line
-float vSign(float y, Timing t)
+// PAL alternates the sign of V on every line; vsw: the V-switch offset of the frame
+float vSignW(float y, Timing t, float vsw)
 {
     if (t.pal < 0.5) return 1.0;
-    float pl = physLine(y, t) + t.vsw + (oddField(y, t) ? 1.0 : 0.0);
+    float pl = physLine(y, t) + vsw + (oddField(y, t) ? 1.0 : 0.0);
     return mod(pl, 2.0) < 0.5 ? 1.0 : -1.0;
+}
+float vSign(float y, Timing t) { return vSignW(y, t, t.vsw); }
+
+// No flicker: the frames the eye blends together.
+// Most consoles shift the colour subcarrier from one frame to the next (a 2-frame cycle on the
+// PlayStation, 3 frames on the NES, up to 8 in PAL), so the cross-colour and the dots along
+// coloured edges move. At 50 or 60 frames a second the eye sees their average, in which they
+// largely cancel. A single frozen frame would show all of them at full strength, more than
+// anyone ever saw. So with No flicker on, the encoder makes the signal for two or three frames
+// of the cycle and the decoder averages what they show: the three frames of a 3-frame cycle,
+// otherwise the first frame and the one half a subcarrier cycle on (every 2, 4 and 8-frame
+// cycle reaches it), which cancels the same artefacts. With No flicker off, one frame: the
+// moving original.
+// Returns the number of frames (1 to 3); off: their phase offsets (cycles), vsw: their PAL
+// V-switch offsets.
+int steadyFrames(Timing t, out vec3 off, out vec3 vsw)
+{
+    off = vec3(0.0);
+    vsw = vec3(t.vsw, 0.0, 0.0);
+    if (LR_STEADY < 0.5) return 1;
+    float s = t.fieldStep;
+    if (abs(s - 1.0 / 3.0) < 0.01 || abs(s - 2.0 / 3.0) < 0.01)
+    {
+        off = vec3(0.0, fract(s), fract(2.0 * s));
+        vsw = vec3(0.0, mod(t.vswStep, 2.0), mod(2.0 * t.vswStep, 2.0));
+        return 3;
+    }
+    for (float k = 1.0; k <= 8.0; k += 1.0)
+    {
+        if (abs(fract(k * s) - 0.5) < 0.01)
+        {
+            off.y = 0.5;
+            vsw.y = mod(k * t.vswStep, 2.0);
+            return 2;
+        }
+    }
+    // no phase change, but a PAL V-switch that flips every frame (odd line count per field)
+    if (t.pal > 0.5 && t.vswStep > 0.5)
+    {
+        vsw.y = 1.0;
+        return 2;
+    }
+    return 1;
 }
 
 // ---------------------------------------------------------------------------
@@ -444,7 +495,7 @@ void lr_main()
     if (vPhos > 1.5) vWhite = inverse(phosphorMatrix(vPhos)) * vWhite;
 }
 
-flat out vec4 lrParams[7];
+flat out vec4 lrParams[8];
 
 void main()
 {
@@ -458,30 +509,34 @@ void main()
     LR_PHOS = texelFetch(LR_Signal, ivec2(11, 0), 0).b;
     LR_CURV_X = texelFetch(LR_Signal, ivec2(12, 0), 0).b;
     LR_CURV_Y = texelFetch(LR_Signal, ivec2(13, 0), 0).b;
-    LR_CORNER = texelFetch(LR_Signal, ivec2(14, 0), 0).b;
-    LR_GLOW = texelFetch(LR_Signal, ivec2(15, 0), 0).b;
-    LR_VIGNETTE = texelFetch(LR_Signal, ivec2(17, 0), 0).b;
-    LR_OVERSCAN = texelFetch(LR_Signal, ivec2(18, 0), 0).b;
-    LR_OVERSCAN_V = texelFetch(LR_Signal, ivec2(19, 0), 0).b;
-    LR_AMBIENT = texelFetch(LR_Signal, ivec2(20, 0), 0).b;
-    LR_MON_SIZE = texelFetch(LR_Signal, ivec2(21, 0), 0).b;
-    LR_MON_PITCH = texelFetch(LR_Signal, ivec2(22, 0), 0).b;
-    LR_MON_SPOT_LO = texelFetch(LR_Signal, ivec2(23, 0), 0).b;
-    LR_MON_SPOT_HI = texelFetch(LR_Signal, ivec2(24, 0), 0).b;
-    LR_MON_CORNER = texelFetch(LR_Signal, ivec2(25, 0), 0).b;
-    LR_SCREEN_H = texelFetch(LR_Signal, ivec2(26, 0), 0).b;
-    LR_SCREEN_UNIT = texelFetch(LR_Signal, ivec2(27, 0), 0).b;
-    LR_BACKDROP = texelFetch(LR_Signal, ivec2(28, 0), 0).b;
-    LR_ROOM = texelFetch(LR_Signal, ivec2(29, 0), 0).b;
-    LR_SPILL = texelFetch(LR_Signal, ivec2(30, 0), 0).b;
-    LR_SCENE_SPEED = texelFetch(LR_Signal, ivec2(31, 0), 0).b;
+    LR_BEND = texelFetch(LR_Signal, ivec2(14, 0), 0).b;
+    LR_CORNER = texelFetch(LR_Signal, ivec2(15, 0), 0).b;
+    LR_GLOW = texelFetch(LR_Signal, ivec2(16, 0), 0).b;
+    LR_VIGNETTE = texelFetch(LR_Signal, ivec2(18, 0), 0).b;
+    LR_OVERSCAN = texelFetch(LR_Signal, ivec2(19, 0), 0).b;
+    LR_OVERSCAN_V = texelFetch(LR_Signal, ivec2(20, 0), 0).b;
+    LR_LIN_X = texelFetch(LR_Signal, ivec2(21, 0), 0).b;
+    LR_LIN_Y = texelFetch(LR_Signal, ivec2(22, 0), 0).b;
+    LR_AMBIENT = texelFetch(LR_Signal, ivec2(23, 0), 0).b;
+    LR_MON_SIZE = texelFetch(LR_Signal, ivec2(24, 0), 0).b;
+    LR_MON_PITCH = texelFetch(LR_Signal, ivec2(25, 0), 0).b;
+    LR_MON_SPOT_LO = texelFetch(LR_Signal, ivec2(26, 0), 0).b;
+    LR_MON_SPOT_HI = texelFetch(LR_Signal, ivec2(27, 0), 0).b;
+    LR_MON_CORNER = texelFetch(LR_Signal, ivec2(28, 0), 0).b;
+    LR_SCREEN_H = texelFetch(LR_Signal, ivec2(29, 0), 0).b;
+    LR_SCREEN_UNIT = texelFetch(LR_Signal, ivec2(30, 0), 0).b;
+    LR_BACKDROP = texelFetch(LR_Signal, ivec2(31, 0), 0).b;
+    LR_ROOM = texelFetch(LR_Signal, ivec2(32, 0), 0).b;
+    LR_SPILL = texelFetch(LR_Signal, ivec2(33, 0), 0).b;
+    LR_SCENE_SPEED = texelFetch(LR_Signal, ivec2(34, 0), 0).b;
     lrParams[0] = vec4(LR_NORM, LR_STEADY, LR_CONV, LR_MASK_TYPE);
     lrParams[1] = vec4(LR_MASK_STR, LR_WHITE, LR_PHOS, LR_CURV_X);
-    lrParams[2] = vec4(LR_CURV_Y, LR_CORNER, LR_GLOW, LR_VIGNETTE);
-    lrParams[3] = vec4(LR_OVERSCAN, LR_OVERSCAN_V, LR_AMBIENT, LR_MON_SIZE);
-    lrParams[4] = vec4(LR_MON_PITCH, LR_MON_SPOT_LO, LR_MON_SPOT_HI, LR_MON_CORNER);
-    lrParams[5] = vec4(LR_SCREEN_H, LR_SCREEN_UNIT, LR_BACKDROP, LR_ROOM);
-    lrParams[6] = vec4(LR_SPILL, LR_SCENE_SPEED, 0.0, 0.0);
+    lrParams[2] = vec4(LR_CURV_Y, LR_BEND, LR_CORNER, LR_GLOW);
+    lrParams[3] = vec4(LR_VIGNETTE, LR_OVERSCAN, LR_OVERSCAN_V, LR_LIN_X);
+    lrParams[4] = vec4(LR_LIN_Y, LR_AMBIENT, LR_MON_SIZE, LR_MON_PITCH);
+    lrParams[5] = vec4(LR_MON_SPOT_LO, LR_MON_SPOT_HI, LR_MON_CORNER, LR_SCREEN_H);
+    lrParams[6] = vec4(LR_SCREEN_UNIT, LR_BACKDROP, LR_ROOM, LR_SPILL);
+    lrParams[7] = vec4(LR_SCENE_SPEED, 0.0, 0.0, 0.0);
     lr_main();
 }
 
@@ -2309,7 +2364,16 @@ void lr_main()
         px /= s;
     }
     vec2 c = tc * 2.0 - 1.0;
-    c *= 1.0 + vec2(LR_CURV_X, LR_CURV_Y) * (c.yx * c.yx);
+    // The glass bulges: seen from the front, its edges bow outwards and the corners are rounded.
+    // The raster on it does not follow the glass: the deflection was corrected so that the
+    // picture looks nearly rectangular from the front (a well adjusted set kept the bow of its
+    // lines to about 1% of the height), and the curved edges of the glass crop its corners.
+    // Raster bend is the share of the glass curvature the picture still follows: 0 a perfectly
+    // corrected raster, 1 a picture bent as much as the glass.
+    vec2 cs = c;                                          // straight position on the screen
+    vec2 curv = vec2(LR_CURV_X, LR_CURV_Y);
+    c *= 1.0 + curv * (c.yx * c.yx);                      // position on the glass
+    vec2 cr = cs * (1.0 + LR_BEND * curv * (cs.yx * cs.yx));   // position in the raster
     float corner = LR_CORNER;
     vec2 qq = abs(c) - 1.0 + corner;
     float dist = length(max(qq, 0.0)) + min(max(qq.x, qq.y), 0.0) - corner;
@@ -2318,8 +2382,13 @@ void lr_main()
     vec3 col = vec3(0.0);
     if (inside > 0.0)
     {
-        vec2 ut = c * 0.5 + 0.5;
-        vec2 ua = (ut - 0.5) * monShown() + 0.5;
+        vec2 ut = c * 0.5 + 0.5;                          // on the glass: mask, damper wires
+        vec2 up = cr * 0.5 + 0.5;                         // the picture's place on the tube
+        vec2 ua = (up - 0.5) * monShown() + 0.5;          // ... and in the scan
+        // linearity errors of the deflection: one side of the picture squeezed, the other stretched
+        vec2 lin = vec2(LR_LIN_X, LR_LIN_Y);
+        lin.y = -lin.y;                                   // rows run bottom-up: keep + for the top
+        ua += lin * ua * (1.0 - ua);
         float srcH = LR_OriginalSize.y / vTiming.w;   // native lines
         float rpl = 1.0, ph = 0.0;                         // beam rows per line, row of line 0
         // Amiga emulators draw every line twice (720x568 for a 256-line game) and weave the
@@ -2351,7 +2420,12 @@ void lr_main()
         if (show) interlace = 1.0;
         float dbl = (vga && srcH <= 300.0) ? 2.0 : 1.0;
         float BH = srcH * dbl;
-        float visLines = scan > 0.5 ? BH : (pal > 0.5 ? 288.0 : 240.0) * (interlace > 0.5 ? 2.0 : 1.0);
+        // the TV's field: 240 or 288 lines (480 or 576 interlaced); a frame with fewer lines leaves a
+        // border, as on the real set. Picture height 1 lets the core's lines fill the height
+        // instead, for cores that crop lines and set the aspect ratio from the lines they keep
+        // (the picture is then a zoom of the same tube: lines and beam keep their look).
+        float visField = scan > 0.5 ? BH : (pal > 0.5 ? 288.0 : 240.0) * (interlace > 0.5 ? 2.0 : 1.0);
+        float visLines = (LR_FILL > 0.5 && scan < 0.5 && !show) ? BH : visField;
         bool il = interlace > 0.5 && LR_STEADY < 0.5;
         float stepL = il ? 2.0 : 1.0;
         float offL = il ? float(LR_FrameCount % 2u) : 0.0;
@@ -2392,7 +2466,7 @@ void lr_main()
         vec2 sig = vec2(LR_SIG_LO, max(LR_SIG_LO, LR_SIG_HI)) * sgk;
         if (mm)
             sig = vec2(LR_MON_SPOT_LO, max(LR_MON_SPOT_LO, LR_MON_SPOT_HI))
-                * (FWHM_TO_SIGMA * monCornerGrowth(c) * visLines / monScanMM().y);
+                * (FWHM_TO_SIGMA * monCornerGrowth(c) * visField / monScanMM().y);
 
         // every line within 3.5 spot widths: the lines left out are at least kn + 1 away
         // (4 lines for 240p TV, more for wide spots: merged fields, 1024x768 on a PC monitor)
@@ -2471,7 +2545,7 @@ void lr_main()
     FragColor = vec4(col, 1.0);
 }
 
-flat in vec4 lrParams[7];
+flat in vec4 lrParams[8];
 
 void main()
 {
@@ -2484,23 +2558,26 @@ void main()
     LR_PHOS = lrParams[1].z;
     LR_CURV_X = lrParams[1].w;
     LR_CURV_Y = lrParams[2].x;
-    LR_CORNER = lrParams[2].y;
-    LR_GLOW = lrParams[2].z;
-    LR_VIGNETTE = lrParams[2].w;
-    LR_OVERSCAN = lrParams[3].x;
-    LR_OVERSCAN_V = lrParams[3].y;
-    LR_AMBIENT = lrParams[3].z;
-    LR_MON_SIZE = lrParams[3].w;
-    LR_MON_PITCH = lrParams[4].x;
-    LR_MON_SPOT_LO = lrParams[4].y;
-    LR_MON_SPOT_HI = lrParams[4].z;
-    LR_MON_CORNER = lrParams[4].w;
-    LR_SCREEN_H = lrParams[5].x;
-    LR_SCREEN_UNIT = lrParams[5].y;
-    LR_BACKDROP = lrParams[5].z;
-    LR_ROOM = lrParams[5].w;
-    LR_SPILL = lrParams[6].x;
-    LR_SCENE_SPEED = lrParams[6].y;
+    LR_BEND = lrParams[2].y;
+    LR_CORNER = lrParams[2].z;
+    LR_GLOW = lrParams[2].w;
+    LR_VIGNETTE = lrParams[3].x;
+    LR_OVERSCAN = lrParams[3].y;
+    LR_OVERSCAN_V = lrParams[3].z;
+    LR_LIN_X = lrParams[3].w;
+    LR_LIN_Y = lrParams[4].x;
+    LR_AMBIENT = lrParams[4].y;
+    LR_MON_SIZE = lrParams[4].z;
+    LR_MON_PITCH = lrParams[4].w;
+    LR_MON_SPOT_LO = lrParams[5].x;
+    LR_MON_SPOT_HI = lrParams[5].y;
+    LR_MON_CORNER = lrParams[5].z;
+    LR_SCREEN_H = lrParams[5].w;
+    LR_SCREEN_UNIT = lrParams[6].x;
+    LR_BACKDROP = lrParams[6].y;
+    LR_ROOM = lrParams[6].z;
+    LR_SPILL = lrParams[6].w;
+    LR_SCENE_SPEED = lrParams[7].x;
     lr_main();
 }
 #endif
