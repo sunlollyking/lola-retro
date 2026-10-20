@@ -1,7 +1,9 @@
 # Recommended cores and settings
 
 Lola Retro simulates the signal the console actually sent, so it needs the console's real pixels.
-Three rules cover almost everything:
+The simplest way is a preset from `systems/curved` or `systems/flat`: one per system, with its console
+timing already set (the system presets are listed in the README). The tables below are for the presets by
+device. Three rules cover almost everything:
 
 1. **Internal resolution.** Native (1×) is the reference. Higher internal resolutions work too: the shader reads
    the frame as blocks of one console pixel, so the signal stays right and edges get smoother. 3× and up is
@@ -14,8 +16,8 @@ Three rules cover almost everything:
 
 Every preset exists in `curved/` and `flat/`; the tables below apply to both.
 
-Console timing ids: 1 SNES/NES, 2 Mega Drive H40, 3 Mega Drive H32, 4 PlayStation, 5 PlayStation 2,
-6 Amiga, 7 PC VGA, 8 Arcade 15 kHz, 9 Arcade 24 kHz.
+Console timing ids: 1 SNES/NES, 2 Mega Drive H40, 3 Mega Drive H32 and Master System, 4 PlayStation,
+5 PlayStation 2, 6 Amiga, 7 PC VGA, 8 Arcade 15 kHz, 9 Arcade 24 kHz and PC-98.
 Systems that are not in that list use the id whose timing matches theirs.
 
 ## 8-bit and 16-bit
@@ -24,11 +26,11 @@ Systems that are not in that list use the id whose timing matches theirs.
 |---|---|---|---|---|
 | NES / Famicom | Mesen, FCEUmm, Nestopia | Consumer TV (Composite) | auto (1) | Built-in NTSC filter off. The NES only ever had composite and RF, so those are the authentic look. |
 | SNES / Super Famicom | Snes9x, bsnes | Consumer TV (Composite) or (SCART RGB) | auto (1) | NTSC/blargg filter off, hi-res blending off. 512-wide hi-res frames are handled. |
-| Master System | Genesis Plus GX | Consumer TV (Composite) | **3** | Same subcarrier rhythm as the Mega Drive in 256-wide mode. Auto would pick SNES timing. |
+| Master System | Genesis Plus GX | Consumer TV (Composite) | auto (3) for 256×192; **3** for other frame sizes (borders on) | Same subcarrier rhythm as the Mega Drive in 256-wide mode. |
 | Mega Drive / Genesis | Genesis Plus GX | Consumer TV (Composite) | auto (2 for 320 wide, set 3 for 256-wide games) | Blargg NTSC filter off, borders off. The famous transparent waterfalls need composite. |
 | Mega CD / Sega CD | Genesis Plus GX | Consumer TV (Composite) | auto (2) | Same as Mega Drive. |
 | 32X | PicoDrive | Consumer TV (Composite) | auto (2) | Same as Mega Drive. |
-| PC Engine / TurboGrafx-16, PC Engine CD | Beetle PCE, Beetle PCE Fast | Consumer TV (Composite) | **4** | Its subcarrier rhythm (227½ cycles per line) matches the PlayStation's. |
+| PC Engine / TurboGrafx-16, PC Engine CD | Beetle PCE, Beetle PCE Fast | Consumer TV (Composite) | **4**, and TV standard 1 (NTSC) | Its subcarrier rhythm (227½ cycles per line) matches the PlayStation's. With more than 240 lines shown, auto would read the frame as PAL. |
 | Neo Geo (AES/MVS) | FinalBurn Neo | Consumer TV (SCART RGB), or Amiga 1084S for the arcade look | auto | RGB arcade hardware, so composite timing does not matter. |
 
 ## Arcade
@@ -62,6 +64,7 @@ and the picture is stable. Turn it off to see the fields alternate like on a rea
 | System | Core | Preset | Console timing | Settings |
 |---|---|---|---|---|
 | DOS, Windows 9x | DOSBox Pure | PC Monitor (VGA) | 7 (set by the preset) | Every PC mode on one 15-inch monitor: 320×200 is drawn with VGA line doubling (400 lines), 640×480 up to 1024×768 on the same tube. For a sharper Windows desktop use `pc-monitor-vga-premium`, `-premium-plus` or `-extreme`. For 86Box there is a GLSL version of these presets (`86box/` in the repository). |
+| PC-98 | Neko Project II kai | `systems/pc-98` | 9 (auto for 640×400) | 640×400 at 24 kHz on a Japanese RGB monitor: every line drawn once, no line doubling. A real TV could not show a 24 kHz picture, so use this preset rather than a TV preset. |
 | Amiga | PUAE | Amiga 1084S | auto (6) | PUAE's default output is recognised (720 wide with the overscan border, which shows like on the real monitor), and so are 320×256 / 640×512 (PAL) and 320×200 / 640×400 (NTSC) without border. With other crop settings, set timing 6 by hand. Keep **Line Mode** at Automatic: forced double lines would be read as an interlaced screen. The preset shows the whole picture with a black border, like the real monitor; raise Overscan to fill the screen. For Amiberry there is a GLSL version of this preset (`amiberry/` in the repository). |
 
 ## Not covered

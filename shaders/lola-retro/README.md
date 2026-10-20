@@ -9,22 +9,52 @@ Named after Lola, my retriever. Retro because it is retro.
 ## Quick start
 
 1. Copy this `lola-retro` folder into RetroArch's shader folder (see [Install](#install)).
-2. Start a game, open **Quick Menu → Shaders → Load** and pick **`lola-retro/curved/consumer-tv-composite.slangp`**.
+2. Start a game, open **Quick Menu → Shaders → Load** and pick your system from **`lola-retro/systems/curved/`**
+   (or `systems/flat/` for a flat screen), for example `snes.slangp`.
 
-That is the TV most people had, on the cable that came in the box. Everything else adjusts itself:
-the console is detected from the frame size and the mask adapts to your screen resolution.
+Each system preset is the TV or monitor most people had for that system, on the cable that came in the box,
+with the system's timing already set (see [Systems](#systems)). The mask adapts to your screen resolution.
+To try another TV, cable or monitor, use the presets by device in `curved/` and `flat/` (see [Presets](#presets)).
+They guess the console from the frame size, which works for most games, but systems with the same frame size
+(the NES, SNES, Master System, PC Engine and Mega Drive all have 256-wide modes) can only be told apart by hand.
 3D consoles can run at a higher internal resolution: the shader reads the upscaled frame as blocks of one
 console pixel, so the signal stays right and the extra detail only makes edges smoother.
 A few cases need one setting, see [RECOMMENDED-CORES.md](RECOMMENDED-CORES.md).
 
 On an HDR display, use the same presets from `lola-retro/hdr/curved` instead, see [HDR](#hdr).
 
+## Systems
+
+| Preset (`systems/`) | System | Device | Console timing |
+|---|---|---|---|
+| `nes` | NES / Famicom | Consumer TV (Composite) | 1 |
+| `snes` | SNES / Super Famicom | Consumer TV (Composite) | 1 |
+| `master-system` | Master System (also MSX, ColecoVision) | Consumer TV (Composite) | 3 |
+| `mega-drive-genesis` | Mega Drive / Genesis, Mega CD, 32X | Consumer TV (Composite) | 2 |
+| `pc-engine-turbografx` | PC Engine / TurboGrafx-16, PC Engine CD | Consumer TV (Composite), NTSC | 4 |
+| `playstation` | PlayStation | Consumer TV (Composite) | auto (set 4 at 2× internal resolution) |
+| `saturn` | Sega Saturn | Consumer TV (Composite) | auto (set 4 for 320×224 games) |
+| `nintendo-64` | Nintendo 64 | Consumer TV (Composite) | auto (set 4 at 2× upscaling) |
+| `playstation-2` | PlayStation 2 | Trinitron (S-Video) | 5 |
+| `gamecube` | GameCube | Trinitron (S-Video) | 5 |
+| `dreamcast` | Dreamcast on a TV (for the VGA cable use `dos-pc`) | Consumer TV (Composite) | 5 |
+| `arcade-15khz` | 15 kHz arcade (CPS1/2, Neo Geo MVS, most 80s and 90s boards) | Amiga 1084S | 8 |
+| `amiga` | Amiga | Amiga 1084S | 6 |
+| `dos-pc` | DOS and Windows 9x | PC Monitor (VGA) | 7 |
+| `pc-98` | NEC PC-98 (640×400) | A Japanese 24 kHz RGB monitor: 400 lines without line doubling, fine dot mask | 9 |
+
+PlayStation, Saturn and N64 stay on auto: their native 480i games (Tekken 3, Virtua Fighter 2) and a 2×
+upscaled 240-line game both send 480 lines, and only you know which one it is. With the timing set by hand,
+a 480-line frame is read as 2× upscaled. The presets are the device presets below with one or two values changed, so every parameter still works.
+For a PAL console set **TV standard** to 2 if the auto setting picks NTSC (the frame size cannot always tell).
+
 ## Curved or flat
 
-Every folder has the same 13 presets.
+The device folders have the same 14 presets; `systems/curved` and `systems/flat` have one per system.
 
 | Folder | Screen |
 |---|---|
+| `systems/curved/`, `systems/flat/` | One preset per system, curved or flat (see [Systems](#systems)). |
 | `curved/` | The glass bulges like a real tube, with rounded corners. The picture on it stays nearly rectangular, as on a well adjusted set (see **Raster bend**). |
 | `flat/` | Same presets, flat screen and square corners. Pick this if curvature bothers you. |
 | `hdr/curved/`, `hdr/flat/` | The same presets for HDR displays, see [HDR](#hdr). |
@@ -37,6 +67,7 @@ Every folder has the same 13 presets.
 | `consumer-tv-scart-rgb` | The same games with a clean picture. The European SCART setup. | The same TV fed RGB. Sharp, no composite artefacts, same tube. |
 | `trinitron-s-video` | PS2, GameCube, N64 and other late-90s consoles. | Sony Trinitron on S-Video. Aperture grille with the two damper wires, cool white. |
 | `studio-monitor-rgb` | The sharpest picture with strong scanlines (the PVM/BVM look). | Broadcast/studio monitor on RGB, calibrated 6500 K white. |
+| `studio-monitor-composite` | A clean composite picture that keeps the dot crawl and the blending. | Sony PVM-14L2 on composite, from its spec sheet: 13-inch Trinitron, 0.25 mm aperture grille (600 TV lines), digital comb filter, standard colour decoder, white at D93 (9300 K). The comb filter only works where the subcarrier flips every line (PlayStation, PC Engine); on the Mega Drive, NES and SNES it falls back to the ordinary filter, as an adaptive comb does. The grille is so fine that it only shows at 4K. |
 | `old-tv-rf` | Nostalgia for the antenna cable. Noisy on purpose. | Old TV on the antenna input. RF snow, ghosting, soft focus, round tube. |
 | `tv-show-broadcast` | Games as you saw them on a TV programme about games (test). | The console in a TV studio, broadcast in PAL and received with a roof antenna on the same living-room TV. The studio made a standard interlaced picture of the game, so the dark gaps between the lines are gone. See [TV show](#tv-show). |
 | `crt-projector` | 24 kHz arcade games such as Daytona USA (Sega Model 2). | Arcade CRT projector (three tubes on a flat screen). No mask, colour fringes, soft. |
@@ -51,7 +82,8 @@ The CRT projector already has a flat screen, so its `curved` version only adds r
 
 1. In RetroArch, open **Settings → Directory → Video Shaders** to see where your shader folder is.
 2. Copy this whole `lola-retro` folder into that folder. If an older copy is there, replace it.
-3. Start a game, open **Quick Menu → Shaders → Load**, go into `lola-retro`, then `curved` or `flat`, and pick a preset.
+3. Start a game, open **Quick Menu → Shaders → Load**, go into `lola-retro`, then `systems/curved` or `systems/flat`,
+   and pick your system (or `curved` or `flat` for the presets by device).
 
 The shaders are in the slang format, so the video driver must be **Vulkan, glcore, D3D11, D3D12 or Metal**
 (**Settings → Drivers → Video**). The old `gl` driver does not run slang shaders.
@@ -95,7 +127,7 @@ Every preset only sets parameters, so you can tweak any preset in **Quick Menu �
 | Sharpness, Colour, Tint, Brightness, Contrast | The TV's own knobs. Tint only exists on NTSC sets. |
 | Colour decoder | 0 auto, 1 standard, 2 US TV, 3 Japanese TV. American and Japanese TVs decoded colour on shifted axes with extra red gain ("red push"): yellows lean orange, reds are stronger, skin looks warmer. Auto uses the US TV decoder (Sony CXA2025AS) for NTSC on composite, RF and S-Video, and the standard one for PAL and RGB. |
 | RF noise | Snow on the antenna input (RF and TV show). |
-| No flicker | On by default. Shows a still picture the way the eye saw the moving one: the dots and the cross-colour that crawl from frame to frame are averaged over the frames of their cycle (2 on the PlayStation, 3 on the NES), so they cancel, as the eye blended them at 50 or 60 Hz; both interlaced fields are drawn every frame. Turn it off for the real moving dot crawl and 480i field flicker. |
+| No flicker | On by default. Shows a still picture the way the eye saw the moving one: the dots and the cross-colour that crawl from frame to frame are averaged over the frames of their cycle (2 on the PlayStation), so they cancel, as the eye blended them at 50 or 60 Hz (the NES and SNES only alternate between two positions 2/3 of a cycle apart, so there they halve instead); both interlaced fields are drawn every frame. Turn it off for the real moving dot crawl and 480i field flicker. |
 | TV show: tape copies | Cable 4 only. How many Betacam SP copies the game footage went through before it was broadcast (recorded, then edited onto the master tape: 2). Each copy softens luma and colour a little more. 0 is a live programme. |
 | TV show: antenna ghost | Cable 4 only. A faint copy of the picture shifted to the right, from a reflection off a building or a hill on the way to the roof antenna. |
 | Beam width in dark areas / on white | The beam spot grows with brightness, in both directions: bright lines merge and bright detail rounds off, dark lines show gaps and dark detail stays sharp. TVs; monitors in mm (PC monitors, the 1084S) use the spot sizes in mm below. |
@@ -149,21 +181,25 @@ display. Space, Bouncing lines and Amiga demo take the most GPU time; on a slow 
 
 | Id | Console | Why it matters |
 |---|---|---|
-| 1 | SNES / NES | 227⅓ subcarrier cycles per line: dot crawl moves diagonally. |
+| 1 | SNES / NES | 227⅓ subcarrier cycles per line, so the dots run diagonally. Every other frame is 4 master clocks short (the NES skips a dot, the SNES shortens a line), so the pattern alternates between two positions: the dots jitter rather than crawl. |
 | 2 | Mega Drive H40 (320 wide) | Exactly 228 cycles: still vertical stripes; 1-pixel dithers become rainbow transparency. |
-| 3 | Mega Drive H32 (256 wide) | Same rhythm as H40 at a slower pixel clock. |
+| 3 | Mega Drive H32 (256 wide), Master System | Same rhythm as H40 at a slower pixel clock. The Master System (and MSX, ColecoVision) runs the same 228 cycles per line. |
 | 4 | PlayStation | 227½ cycles: the pattern flips every line and every field, so a comb filter can remove it. |
 | 5 | PlayStation 2 | 480i at 13.5 MHz. |
 | 6 | Amiga | 320×256 PAL / 320×200 NTSC. The width tells lores, hires and superhires apart, and a frame that includes the overscan border (PUAE's default, 720 wide) keeps the right picture size. |
 | 7 | PC VGA | 31 kHz; 200-line modes are drawn twice (400 lines). |
 | 8 | Arcade 15 kHz | Generic 15 kHz RGB. |
-| 9 | Arcade 24 kHz | Medium-res arcade, e.g. Sega Model 2 at 496×384 progressive. |
+| 9 | Arcade 24 kHz, PC-98 | Medium-res arcade (Sega Model 2 at 496×384) and the PC-98's 640×400: 24 kHz, every line drawn once. |
 
-**Auto** guesses from the frame size: 256 wide → SNES, 320×224 → Mega Drive, 320×240 and other 240-line
-modes → PlayStation, 320×200 or 640×400 → VGA (NTSC Amiga on the 1084S preset), 256 or 512 lines and PUAE's default
-frames (360, 720 or 1440 wide with 287, 574, 242 or 484 lines) → Amiga, 336–400 lines → arcade 24 kHz,
+Systems that are not in the list use the id with the same timing: PC Engine, Saturn and Nintendo 64 use 4.
+Some PC Engine games run 262 lines per frame instead of 263; their pattern then stands still instead of
+alternating, which the shader does not model separately.
+
+**Auto** guesses from the frame size: 256×192 → Master System, other 256-wide frames → SNES, 320×224 → Mega Drive, 320×240 and other 240-line
+modes → PlayStation, 320×200 or 640×350 → VGA (320×200 and 640×400 are NTSC Amiga on the 1084S preset), 256 or 512 lines and PUAE's default
+frames (360, 720 or 1440 wide with 287, 574, 242 or 484 lines) → Amiga, 336–400 lines (including 640×400) → 24 kHz (arcade, PC-98),
 more than 300 lines → interlaced, more than 576 lines → upscaled (see Internal resolution). Set the id by hand when the guess is wrong (for example a Mega Drive game
-in 240-line PAL mode).
+in 240-line PAL mode), or use a preset from `systems/`.
 
 ## TV show
 
@@ -308,6 +344,8 @@ the encoder's work grew with the square of the internal resolution: 16 times as 
 Amiga presets keep 4 samples per frame pixel, because their beam reads every pixel exactly.
 The beam pass works out each source line once on an 8192-pixel-wide texture, so the GPU has to support
 textures that wide (every desktop GPU of the last decade does).
+Older integrated graphics will not reach full speed: one user measured about 24 fps with the Amiga preset at
+1080p on Intel Haswell graphics (2013) with Vulkan; on the same GPU the glcore driver showed a broken picture.
 
 ## Tested
 

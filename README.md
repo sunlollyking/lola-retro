@@ -42,7 +42,9 @@ little rainbow, just as it did on a living-room TV. On RGB you see the stripes t
 ## Quick start (RetroArch)
 
 1. Copy `shaders/lola-retro` into RetroArch's shader folder (**Settings → Directory → Video Shaders** shows where it is).
-2. Start a game, open **Quick Menu → Shaders → Load** and pick `lola-retro/curved/consumer-tv-composite.slangp`.
+2. Start a game, open **Quick Menu → Shaders → Load** and pick your system from `lola-retro/systems/curved`
+   (or `systems/flat`), for example `snes.slangp`. Each one is the TV or monitor most people had for that system,
+   with the system's timing set. The presets by device are in `curved` and `flat`.
 3. Video driver must be Vulkan, glcore, D3D11, D3D12 or Metal (the old `gl` driver does not run slang shaders).
 4. HDR display? Use the same presets from `lola-retro/hdr/curved`; setup is in [HDR](shaders/lola-retro/README.md#hdr).
 
@@ -204,7 +206,7 @@ sharper than any real tube and easy on the eyes for long work on the desktop:
 | ![](docs/trinitron-s-video.jpg) **Trinitron (S-Video)**<br>PS2, GameCube, N64. | ![](docs/old-tv-rf.jpg) **Old TV (RF)**<br>Antenna cable, snow and ghosting. |
 | ![](docs/pc-monitor-vga.jpg) **PC Monitor (VGA)**<br>DOS and Windows 9x games, Dreamcast VGA. | ![](docs/amiga-1084s.jpg) **Amiga 1084S**<br>Amiga and 15 kHz arcade. |
 
-Also included: **Studio Monitor (RGB)** for the PVM look, **CRT Projector** for 24 kHz arcade games, four
+Also included: **Studio Monitor (RGB)** for the PVM look, **Studio Monitor (Composite)** for a PVM on composite, **CRT Projector** for 24 kHz arcade games, four
 sharper PC monitors (see [PC monitor, in millimetres](#pc-monitor-in-millimetres)), and **TV show (broadcast)**, a
 test: games as you saw them on a TV programme about games (see [TV show (broadcast)](#tv-show-broadcast)).
 Which preset and settings to use per system: [RECOMMENDED-CORES.md](shaders/lola-retro/RECOMMENDED-CORES.md).
@@ -274,7 +276,7 @@ Measured on synthetic patterns:
 
 | Folder | Contents |
 |---|---|
-| `shaders/lola-retro/` | The RetroArch shader pack (slang): 13 presets, each in a `curved/` and a `flat/` version, plus the same for HDR displays in `hdr/`. Details in its [README](shaders/lola-retro/README.md). |
+| `shaders/lola-retro/` | The RetroArch shader pack (slang): one preset per system in `systems/`, and 14 presets by device, each in a `curved/` and a `flat/` version, plus the same for HDR displays in `hdr/`. Details in its [README](shaders/lola-retro/README.md). |
 | `amiberry/lola-retro/` | The Amiga 1084S preset converted to GLSL for Amiberry. Details in its [README](amiberry/lola-retro/README.md). |
 | `86box/lola-retro/` | The PC monitor presets converted to GLSL for 86Box. Details in its [README](86box/lola-retro/README.md). |
 | `web/lola-retro.html` | The original WebGL version. Open it in a browser, try test scenes or drop in your own screenshots. |
@@ -285,7 +287,7 @@ Measured on synthetic patterns:
 ## Tools
 
 ```
-python3 tools/make_presets.py     # regenerate the curved/, flat/ and hdr/ .slangp files from one table
+python3 tools/make_presets.py     # regenerate the systems/, curved/, flat/ and hdr/ .slangp files from one table
 python3 tools/make_glsl.py        # regenerate the Amiberry and 86Box versions (amiberry/, 86box/) from the slang passes
 python3 tools/check_shaders.py    # compile every pass (slang and GLSL) with glslangValidator
 tools/render-preview.sh PRESET IMAGE OUT.png [glcore|vulkan]   # Linux: render a frame in headless RetroArch

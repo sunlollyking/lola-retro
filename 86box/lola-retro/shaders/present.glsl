@@ -33,7 +33,7 @@ uniform float LR_OVERSCAN_V;
 uniform float LR_MON_SIZE;
 uniform float LR_MON_CORNER;
 
-// Lola Retro - pass 7: linear light -> display, with a little dither against banding.
+// Lola Retro - pass 7: linear light -> display, with a dither against banding.
 
 // Lola Retro - shared parameters, uniforms and helpers for every pass.
 //
@@ -122,14 +122,16 @@ float hash13(vec3 p3)
 // ---------------------------------------------------------------------------
 // Console timing
 // ---------------------------------------------------------------------------
-// Console ids: 1 SNES/NES, 2 Mega Drive H40, 3 Mega Drive H32, 4 PlayStation,
-// 5 PlayStation 2, 6 Amiga, 7 PC VGA, 8 Arcade 15 kHz, 9 Arcade 24 kHz.
+// Console ids: 1 SNES/NES, 2 Mega Drive H40, 3 Mega Drive H32 and Master System, 4 PlayStation,
+// 5 PlayStation 2, 6 Amiga, 7 PC VGA, 8 Arcade 15 kHz, 9 Arcade 24 kHz and PC-98.
+// Other systems use the id with their timing (PC Engine, Saturn, N64: 4).
 
 float autoConsole(vec2 s)
 {
     float w = s.x, h = s.y;
     bool mon15 = LR_MON_MM > 0.5;    // a 15 kHz monitor cannot show 31 kHz VGA
-    if (!mon15 && ((w == 320.0 && h == 200.0) || (w == 640.0 && (h == 350.0 || h == 400.0)))) return 7.0;
+    // 640x400 is left to the 24 kHz rule below: the PC-98's mode (DOS games rarely used it)
+    if (!mon15 && ((w == 320.0 && h == 200.0) || (w == 640.0 && h == 350.0))) return 7.0;
     if (h == 256.0 || h == 512.0 || (w == 640.0 && h == 200.0)) return 6.0;
     if (mon15 && (h == 200.0 || h == 400.0) && (w == 320.0 || w == 640.0)) return 6.0;
     // PUAE's default frames: the whole overscan area, 360, 720 or 1440 wide (PAL 287 or 574 rows, NTSC 242 or 484)
@@ -137,6 +139,8 @@ float autoConsole(vec2 s)
     if (h >= 336.0 && h <= 400.0 && w >= 400.0) return 9.0;
     if (h > 300.0) return 5.0;
     if (w > 420.0) return 4.0;
+    // 192 lines: the Master System (and MSX, ColecoVision), 228 cycles per line like the Mega Drive
+    if (w == 256.0 && h == 192.0) return 3.0;
     if (w <= 300.0) return 1.0;
     if (h >= 232.0) return 4.0;
     return 2.0;
@@ -183,6 +187,7 @@ struct Timing
     float lineFrac;    // subcarrier phase advance per line (cycles)
     float fieldStep;   // phase advance per field (cycles)
     float framePhase;  // phase offset of the current field (cycles)
+    float altStep;     // > 0: the phase only alternates between 0 and this from frame to frame (NES, SNES)
     float vsw;         // PAL V-switch offset for this field
     float vswStep;     // change of the V-switch offset per field (1 when the line count per field is odd)
     float pal;         // 1 = PAL
@@ -235,7 +240,13 @@ Timing getTiming(vec2 orig, uint frameCount)
     t.fieldStep = mix(b.z, b.w, t.pal);
     // 24 is a multiple of every field cycle above (1, 2, 3, 4, 8), so the phase never drifts
     float fc = LR_STEADY > 0.5 ? 0.0 : float(frameCount % 24u);
-    t.framePhase = fract(fc * t.fieldStep);
+    // NES and SNES (NTSC, not interlaced): 1364 master clocks per line, 227 1/3 cycles, so a
+    // 262-line frame moves the phase by 1/3 cycle. But every other frame is 4 clocks short (the
+    // NES skips a dot, the SNES shortens one line), which moves it by 2/3 instead, so the phase
+    // only alternates between two values, 2/3 cycle apart: the dots jitter instead of crawling.
+    // (A 3-frame crawl only happens in the few NES games that blank the start of the frame.)
+    t.altStep = (id < 1.5 && t.pal < 0.5 && t.interlace < 0.5) ? 2.0 / 3.0 : 0.0;
+    t.framePhase = t.altStep > 0.0 ? t.altStep * mod(fc, 2.0) : fract(fc * t.fieldStep);
     t.vsw = mod(fc * c, 2.0);
     t.vswStep = c;
     return t;
@@ -271,14 +282,15 @@ float vSign(float y, Timing t) { return vSignW(y, t, t.vsw); }
 
 // No flicker: the frames the eye blends together.
 // Most consoles shift the colour subcarrier from one frame to the next (a 2-frame cycle on the
-// PlayStation, 3 frames on the NES, up to 8 in PAL), so the cross-colour and the dots along
-// coloured edges move. At 50 or 60 frames a second the eye sees their average, in which they
-// largely cancel. A single frozen frame would show all of them at full strength, more than
-// anyone ever saw. So with No flicker on, the encoder makes the signal for two or three frames
-// of the cycle and the decoder averages what they show: the three frames of a 3-frame cycle,
-// otherwise the first frame and the one half a subcarrier cycle on (every 2, 4 and 8-frame
-// cycle reaches it), which cancels the same artefacts. With No flicker off, one frame: the
-// moving original.
+// PlayStation, up to 8 in PAL), so the cross-colour and the dots along coloured edges move. At
+// 50 or 60 frames a second the eye sees their average, in which they largely cancel. A single
+// frozen frame would show all of them at full strength, more than anyone ever saw. So with No
+// flicker on, the encoder makes the signal for two or three frames of the cycle and the decoder
+// averages what they show: the three frames of a 3-frame cycle, otherwise the first frame and
+// the one half a subcarrier cycle on (every 2, 4 and 8-frame cycle reaches it), which cancels the
+// same artefacts. The NES and SNES alternate between two phases 2/3 cycle apart: their average
+// only halves the artefacts, as on the real console. With No flicker off, one frame: the moving
+// original.
 // Returns the number of frames (1 to 3); off: their phase offsets (cycles), vsw: their PAL
 // V-switch offsets.
 int steadyFrames(Timing t, out vec3 off, out vec3 vsw)
@@ -286,6 +298,11 @@ int steadyFrames(Timing t, out vec3 off, out vec3 vsw)
     off = vec3(0.0);
     vsw = vec3(t.vsw, 0.0, 0.0);
     if (LR_STEADY < 0.5) return 1;
+    if (t.altStep > 0.0)
+    {
+        off.y = t.altStep;
+        return 2;
+    }
     float s = t.fieldStep;
     if (abs(s - 1.0 / 3.0) < 0.01 || abs(s - 2.0 / 3.0) < 0.01)
     {
@@ -402,7 +419,7 @@ float phosphorSet(Timing t)
 {
     if (LR_PHOS > 0.5) return LR_PHOS;
     if (t.scan > 0.5 && t.scan < 1.5) return 1.0;   // PC monitors: sRGB was defined from them
-    if (t.id > 7.5) return 4.0;                       // arcade monitors
+    if (t.id > 7.5) return 4.0;                       // arcade monitors (and the PC-98's Japanese monitors)
     return t.pal > 0.5 ? 3.0 : 2.0;
 }
 
@@ -437,6 +454,12 @@ void main()
 in vec2 vTexCoord;
 out vec4 FragColor;
 
+// Dither to the 8-bit output in linear light: each channel takes the code just below or just
+// above its value, the upper one with the chance that makes their average in linear light the
+// value itself (noise added to the gamma-encoded value would brighten dark gradients a little).
+// The noise is interleaved gradient noise: high frequency, no clumps, the same for the three
+// channels so it adds no colour noise.
+
 // Textures as 86Box binds them. The picture sits in the lower left corner of a power-of-two
 // texture (n texels of it), so every read goes through a helper.
 uniform sampler2D Texture;
@@ -447,13 +470,15 @@ vec4 lr_tex_Source(vec2 uv, float lod)   // nearest, clamp_to_edge
     ivec2 t = ivec2(clamp(floor(uv * n), vec2(0.0), n - 1.0));
     return texelFetch(Texture, t, 0);
 }
-
 void lr_main()
 {
-    vec3 c = pow(max(lr_tex_Source( vTexCoord, 0.0).rgb, 0.0), vec3(1.0 / 2.2));
-    vec2 fc = vTexCoord * LR_OutputSize.xy;
-    c += (hash13(vec3(fc, 1.0)) - 0.5) / 255.0;
-    FragColor = vec4(c, 1.0);
+    vec3 lin = clamp(lr_tex_Source( vTexCoord, 0.0).rgb, 0.0, 1.0);
+    vec3 code = min(floor(pow(lin, vec3(1.0 / 2.2)) * 255.0), 254.0);
+    vec3 lo = pow(code / 255.0, vec3(2.2)), hi = pow((code + 1.0) / 255.0, vec3(2.2));
+    vec3 up = clamp((lin - lo) / (hi - lo), 0.0, 1.0);
+    vec2 fc = floor(vTexCoord * LR_OutputSize.xy);
+    float n = fract(52.9829189 * fract(dot(fc, vec2(0.06711056, 0.00583715))));
+    FragColor = vec4((code + vec3(greaterThan(up, vec3(n)))) / 255.0, 1.0);
 }
 
 void main()
