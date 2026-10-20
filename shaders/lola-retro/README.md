@@ -41,7 +41,7 @@ On an HDR display, use the same presets from `lola-retro/hdr/curved` instead, se
 | `arcade-15khz` | 15 kHz arcade (CPS1/2, Neo Geo MVS, most 80s and 90s boards) | Amiga 1084S | 8 |
 | `amiga` | Amiga | Amiga 1084S | 6 |
 | `dos-pc` | DOS and Windows 9x | PC Monitor (VGA) | 7 |
-| `pc-98` | NEC PC-98 (640×400) | A Japanese 24 kHz RGB monitor: 400 lines without line doubling, fine dot mask | 9 |
+| `pc-98` | NEC PC-98 (640×400) | PC Monitor (VGA): 400 sharp lines on a computer monitor, as on the PC-98's own (for HDR use `hdr/curved/pc-monitor-vga`) | 7 |
 
 PlayStation, Saturn and N64 stay on auto: their native 480i games (Tekken 3, Virtua Fighter 2) and a 2×
 upscaled 240-line game both send 480 lines, and only you know which one it is. With the timing set by hand,
@@ -189,15 +189,16 @@ display. Space, Bouncing lines and Amiga demo take the most GPU time; on a slow 
 | 6 | Amiga | 320×256 PAL / 320×200 NTSC. The width tells lores, hires and superhires apart, and a frame that includes the overscan border (PUAE's default, 720 wide) keeps the right picture size. |
 | 7 | PC VGA | 31 kHz; 200-line modes are drawn twice (400 lines). |
 | 8 | Arcade 15 kHz | Generic 15 kHz RGB. |
-| 9 | Arcade 24 kHz, PC-98 | Medium-res arcade (Sega Model 2 at 496×384) and the PC-98's 640×400: 24 kHz, every line drawn once. |
+| 9 | Arcade 24 kHz | Medium-res arcade, e.g. Sega Model 2 at 496×384 progressive. |
 
-Systems that are not in the list use the id with the same timing: PC Engine, Saturn and Nintendo 64 use 4.
+Systems that are not in the list use the id with the same timing: PC Engine, Saturn and Nintendo 64 use 4, the PC-98 uses 7
+(its 640×400 on a computer monitor is the same picture as VGA's).
 Some PC Engine games run 262 lines per frame instead of 263; their pattern then stands still instead of
 alternating, which the shader does not model separately.
 
 **Auto** guesses from the frame size: 256×192 → Master System, other 256-wide frames → SNES, 320×224 → Mega Drive, 320×240 and other 240-line
-modes → PlayStation, 320×200 or 640×350 → VGA (320×200 and 640×400 are NTSC Amiga on the 1084S preset), 256 or 512 lines and PUAE's default
-frames (360, 720 or 1440 wide with 287, 574, 242 or 484 lines) → Amiga, 336–400 lines (including 640×400) → 24 kHz (arcade, PC-98),
+modes → PlayStation, 320×200, 640×350 or 640×400 → VGA (NTSC Amiga on the 1084S preset), 256 or 512 lines and PUAE's default
+frames (360, 720 or 1440 wide with 287, 574, 242 or 484 lines) → Amiga, 336–400 lines → arcade 24 kHz,
 more than 300 lines → interlaced, more than 576 lines → upscaled (see Internal resolution). Set the id by hand when the guess is wrong (for example a Mega Drive game
 in 240-line PAL mode), or use a preset from `systems/`.
 

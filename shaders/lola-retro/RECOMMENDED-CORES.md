@@ -17,7 +17,7 @@ device. Three rules cover almost everything:
 Every preset exists in `curved/` and `flat/`; the tables below apply to both.
 
 Console timing ids: 1 SNES/NES, 2 Mega Drive H40, 3 Mega Drive H32 and Master System, 4 PlayStation,
-5 PlayStation 2, 6 Amiga, 7 PC VGA, 8 Arcade 15 kHz, 9 Arcade 24 kHz and PC-98.
+5 PlayStation 2, 6 Amiga, 7 PC VGA (and PC-98), 8 Arcade 15 kHz, 9 Arcade 24 kHz.
 Systems that are not in that list use the id whose timing matches theirs.
 
 ## 8-bit and 16-bit
@@ -64,7 +64,7 @@ and the picture is stable. Turn it off to see the fields alternate like on a rea
 | System | Core | Preset | Console timing | Settings |
 |---|---|---|---|---|
 | DOS, Windows 9x | DOSBox Pure | PC Monitor (VGA) | 7 (set by the preset) | Every PC mode on one 15-inch monitor: 320×200 is drawn with VGA line doubling (400 lines), 640×480 up to 1024×768 on the same tube. For a sharper Windows desktop use `pc-monitor-vga-premium`, `-premium-plus` or `-extreme`. For 86Box there is a GLSL version of these presets (`86box/` in the repository). |
-| PC-98 | Neko Project II kai | `systems/pc-98` | 9 (auto for 640×400) | 640×400 at 24 kHz on a Japanese RGB monitor: every line drawn once, no line doubling. A real TV could not show a 24 kHz picture, so use this preset rather than a TV preset. |
+| PC-98 | Neko Project II kai | `systems/pc-98` or PC Monitor (VGA); HDR: `hdr/curved/pc-monitor-vga` | 7 (auto for 640×400) | 640×400 on a computer monitor: 400 sharp lines, the same picture as VGA's 640×400 on a PC monitor. A real TV could not show the PC-98's 24 kHz picture, so use a computer monitor preset rather than a TV preset. |
 | Amiga | PUAE | Amiga 1084S | auto (6) | PUAE's default output is recognised (720 wide with the overscan border, which shows like on the real monitor), and so are 320×256 / 640×512 (PAL) and 320×200 / 640×400 (NTSC) without border. With other crop settings, set timing 6 by hand. Keep **Line Mode** at Automatic: forced double lines would be read as an interlaced screen. The preset shows the whole picture with a black border, like the real monitor; raise Overscan to fill the screen. For Amiberry there is a GLSL version of this preset (`amiberry/` in the repository). |
 
 ## Not covered

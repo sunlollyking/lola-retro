@@ -137,15 +137,15 @@ float hash13(vec3 p3)
 // Console timing
 // ---------------------------------------------------------------------------
 // Console ids: 1 SNES/NES, 2 Mega Drive H40, 3 Mega Drive H32 and Master System, 4 PlayStation,
-// 5 PlayStation 2, 6 Amiga, 7 PC VGA, 8 Arcade 15 kHz, 9 Arcade 24 kHz and PC-98.
+// 5 PlayStation 2, 6 Amiga, 7 PC VGA (also the PC-98's 640x400), 8 Arcade 15 kHz, 9 Arcade 24 kHz.
 // Other systems use the id with their timing (PC Engine, Saturn, N64: 4).
 
 float autoConsole(vec2 s)
 {
     float w = s.x, h = s.y;
     bool mon15 = LR_MON_MM > 0.5;    // a 15 kHz monitor cannot show 31 kHz VGA
-    // 640x400 is left to the 24 kHz rule below: the PC-98's mode (DOS games rarely used it)
-    if (!mon15 && ((w == 320.0 && h == 200.0) || (w == 640.0 && h == 350.0))) return 7.0;
+    // 640x400 is VGA's 400 lines and the PC-98's: on a computer monitor the same picture
+    if (!mon15 && ((w == 320.0 && h == 200.0) || (w == 640.0 && (h == 350.0 || h == 400.0)))) return 7.0;
     if (h == 256.0 || h == 512.0 || (w == 640.0 && h == 200.0)) return 6.0;
     if (mon15 && (h == 200.0 || h == 400.0) && (w == 320.0 || w == 640.0)) return 6.0;
     // PUAE's default frames: the whole overscan area, 360, 720 or 1440 wide (PAL 287 or 574 rows, NTSC 242 or 484)
@@ -433,7 +433,7 @@ float phosphorSet(Timing t)
 {
     if (LR_PHOS > 0.5) return LR_PHOS;
     if (t.scan > 0.5 && t.scan < 1.5) return 1.0;   // PC monitors: sRGB was defined from them
-    if (t.id > 7.5) return 4.0;                       // arcade monitors (and the PC-98's Japanese monitors)
+    if (t.id > 7.5) return 4.0;                       // arcade monitors
     return t.pal > 0.5 ? 3.0 : 2.0;
 }
 

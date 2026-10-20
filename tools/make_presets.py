@@ -175,18 +175,6 @@ for _name, _over in PC_TUBES.items():
     PRESETS[_name] = {**PRESETS["pc-monitor-vga"], **_over}
 
 
-# PC-98: a Japanese 14-inch analog RGB monitor at 24 kHz. Its 400 lines fill the screen without
-# line doubling (Console timing 9, the 24 kHz mode), so the beam is set per line like a TV's, a
-# little finer than on a 15 kHz set. Otherwise the PC monitor: fine dot mask, cool white, a thin
-# black border.
-PRESETS_EXTRA = {
-    "pc-98-monitor": dict(
-        LR_CONSOLE=9, LR_CABLE=3, LR_SHARP=0.0, LR_SAT=1.08, LR_SIG_LO=0.24, LR_SIG_HI=0.46,
-        LR_HFOCUS=0.3, LR_PERSIST=0.03, LR_CONV=0.12, LR_MASK_TYPE=3, LR_MASK_STR=0.45,
-        LR_MASK_TRIADS=600, LR_WHITE=9300, LR_CURV_X=0.025, LR_CURV_Y=0.03, LR_GLOW=0.04,
-        LR_VIGNETTE=0.15, LR_OVERSCAN=-0.035, LR_AMBIENT=0.003),
-}
-
 # systems/: one ready preset per system, so nobody has to find Console timing. Each is the
 # device most people had for that system, with the system's timing set by hand (the automatic
 # guess cannot tell systems with the same frame size apart).
@@ -208,7 +196,10 @@ SYSTEMS = {
     "arcade-15khz": ("amiga-1084s", dict(LR_CONSOLE=8)),
     "amiga": ("amiga-1084s", dict(LR_CONSOLE=6)),
     "dos-pc": ("pc-monitor-vga", dict()),
-    "pc-98": ("pc-98-monitor", dict()),
+    # The PC-98's 640x400 on its computer monitor: the same 400 sharp lines as VGA's 640x400 on a
+    # 15-inch PC monitor (24 or 31 kHz makes no difference to the picture, the line spacing comes
+    # from the picture height), so the PC monitor model, which also gives it an HDR version
+    "pc-98": ("pc-monitor-vga", dict()),
 }
 
 
@@ -323,7 +314,7 @@ def write(folder, name, passes, values):
 def main():
     for folder, variant in (("systems/curved", {}), ("systems/flat", FLAT)):
         for name, (device, over) in SYSTEMS.items():
-            dev = PRESETS[device] if device in PRESETS else PRESETS_EXTRA[device]
+            dev = PRESETS[device]
             passes = with_native_pass(PRESET_PASSES.get(device, PASSES)).replace("../shaders/", "../../shaders/")
             write(folder, name, passes, {**BASE, **dev, **over, **variant})
     for folder, (variant, change) in VARIANTS.items():
