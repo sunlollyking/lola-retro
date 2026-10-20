@@ -111,15 +111,18 @@ PRESETS = {
         LR_HFOCUS=0.3, LR_PERSIST=0.04, LR_CONV=0.05, LR_MASK_TYPE=1, LR_MASK_STR=0.6,
         LR_MASK_TRIADS=450, LR_WHITE=6500, LR_PHOS=3, LR_DEMOD=1, LR_CURV_X=0.02, LR_CURV_Y=0.02, LR_GLOW=0.03,
         LR_VIGNETTE=0.15, LR_OVERSCAN=0.03, LR_AMBIENT=0.0),
-    # Sony PVM-14L2 on composite (issue #6): the studio monitor's sharp beam, a 13-inch Trinitron
-    # with a 0.25 mm aperture grille (198 mm high: about 790 stripe triads per height), its digital
-    # comb filter (it only works where the subcarrier flips every line; on the Mega Drive and
-    # SNES it falls back to the notch filter, as an adaptive comb does), standard decoder axes,
-    # and white at D93 (9300 K), its other preset besides D65. Spec sheet: Sony PVM-L2 series.
+    # Sony PVM-14L2 on composite (issue #6): a 13-inch Trinitron with a 0.25 mm aperture grille
+    # (198 mm high: about 790 stripe triads per height), flat vertically like every Trinitron, with
+    # Sony's Trinitron phosphors (Japanese P22, as in trinitron-s-video), its digital comb filter
+    # (it only works where the subcarrier flips every line; on the Mega Drive and SNES it falls back
+    # to the notch filter, as an adaptive comb does), standard decoder axes, and white at D93
+    # (9300 K), its other preset besides D65. Spec sheet: Sony PVM-L2 series. The beam was set
+    # against photos of a real PVM-14L2 (Sonic 1, MiSTer on composite): at 600 TV lines its spot is
+    # wide enough that the lines merge on mid-tones, unlike a sharper broadcast monitor.
     "studio-monitor-composite": dict(
-        LR_CABLE=1, LR_COMB=1, LR_SHARP=0.0, LR_SAT=1.0, LR_CONTRAST=1.0, LR_SIG_LO=0.14, LR_SIG_HI=0.32,
-        LR_HFOCUS=0.3, LR_PERSIST=0.04, LR_CONV=0.05, LR_MASK_TYPE=1, LR_MASK_STR=0.6,
-        LR_MASK_TRIADS=790, LR_WHITE=9300, LR_DEMOD=1, LR_CURV_X=0.02, LR_CURV_Y=0.02, LR_GLOW=0.03,
+        LR_CABLE=1, LR_COMB=1, LR_SHARP=0.0, LR_SAT=1.0, LR_CONTRAST=1.0, LR_SIG_LO=0.3, LR_SIG_HI=0.38,
+        LR_HFOCUS=0.35, LR_PERSIST=0.04, LR_CONV=0.05, LR_MASK_TYPE=1, LR_MASK_STR=0.6,
+        LR_MASK_TRIADS=790, LR_WHITE=9300, LR_PHOS=4, LR_DEMOD=1, LR_CURV_X=0.02, LR_CURV_Y=0.0, LR_GLOW=0.03,
         LR_VIGNETTE=0.15, LR_OVERSCAN=0.03, LR_AMBIENT=0.0),
     # Old TV on the antenna input: RF snow, ghosting, soft focus, round tube
     "old-tv-rf": dict(
