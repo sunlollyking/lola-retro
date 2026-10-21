@@ -57,4 +57,15 @@ turned into GLSL 4.10 by text substitution), every preset from `git archive HEAD
 compared byte for byte: 86 presets x 13 test frames (the test images, 2x and 3x copies, 640x400, 640x480 and
 1024x768 desktops), at Frames over 300 lines 0 and 1. A one-pass debug shader that includes `common.inc` and
 writes the `Timing` fields checked `getTiming()` for 27 frame sizes x 10 timings x the three values.
-glslangValidator was not available, so the Vulkan/SPIR-V compile and RetroArch itself were not tested.
+glslangValidator was not available here.
+
+Then in RetroArch itself (1.22.2, macOS, 2026-10-22), run from the command line with a temporary config
+(`--config`, so the user's own settings stay untouched), the built-in image viewer showing the test images,
+`--set-shader` for each preset (and `#reference` presets for Frames over 300 lines 1 and 2, Console timing
+7 and 11), `--max-frames=90 --max-frames-ss-path` for a screenshot, and `--verbose --log-file`:
+
+- Metal: every preset (92) and the extra cases compile (RetroArch's own glslang) and run; OpenGL core and
+  Vulkan: a selection of them. The only errors in the logs are MIDI initialisation failures; the HDR presets
+  warn on Vulkan and OpenGL that the last pass's format is replaced by the swapchain's (seen before too).
+- Metal screenshots against the ctypes renderer, same preset, frame and size: 82-102 dB PSNR (TV, PC,
+  1084S and X68000 presets; 448-line frames at Frames over 300 lines 1; 1024x768 at 2).

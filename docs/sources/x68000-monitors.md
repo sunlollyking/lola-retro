@@ -90,6 +90,9 @@ Decided with the author on 2026-10-22, from the notes above and [x68000-video.md
   kana font through the x68000-monitor preset at the same scale: no gaps between the lines in either, and
   the kana soft but readable in both (in the photo the strokes look darker and heavier, which the phone's
   own blur adds to). Not sharp enough to measure the spot, so the 1084S's spot stays.
+- In RetroArch itself (Metal, the built-in image viewer; see high-res-frames.md for how): 240 rows show the
+  15 kHz gaps, 256 rows on Console timing 10 none (31 kHz, every line twice), on timing 11 the gaps again;
+  the screenshots match the ctypes renderer within 83-102 dB PSNR.
 
 ## Not found
 
