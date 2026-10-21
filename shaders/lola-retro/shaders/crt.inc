@@ -2171,7 +2171,7 @@ void main()
 #endif
         float r2 = clamp(dot(c, c) * 0.5, 0.0, 1.0);
         col *= 1.0 - global.LR_VIGNETTE * pow(r2, 1.6);
-        col += global.LR_AMBIENT * global.LR_ROOM * vec3(0.80, 0.92, 0.87);
+        col += 0.01 * global.LR_REFLECT * global.LR_ROOM * vec3(0.80, 0.92, 0.87);   // Room reflection in %
         col *= inside;
     }
     if (global.LR_BACKDROP > 0.5 && inside < 1.0)

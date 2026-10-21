@@ -30,7 +30,7 @@
 #pragma parameter LR_OVERSCAN_V "Overscan height (added to Overscan, height only)" 0 -0.1 0.12 0.005
 #pragma parameter LR_LIN_X "Linearity error horizontal (+ left squeezed)" 0 -0.15 0.15 0.01
 #pragma parameter LR_LIN_Y "Linearity error vertical (+ top squeezed)" 0 -0.15 0.15 0.01
-#pragma parameter LR_AMBIENT "Room reflection on the glass" 0.003 0 0.03 0.001
+#pragma parameter LR_REFLECT "Room reflection on the glass (% of white)" 0.3 0 3 0.1
 #pragma parameter LR_MON_SIZE "Monitor size (inches)" 15 10 21 1
 #pragma parameter LR_MON_PITCH "Dot pitch (mm)" 0.28 0.2 0.7 0.01
 #pragma parameter LR_MON_SPOT_LO "Spot size in dark areas (mm)" 0.3 0.1 1 0.01
@@ -87,7 +87,7 @@ uniform float LR_OVERSCAN;
 uniform float LR_OVERSCAN_V;
 uniform float LR_LIN_X;
 uniform float LR_LIN_Y;
-uniform float LR_AMBIENT;
+uniform float LR_REFLECT;
 uniform float LR_MON_SIZE;
 uniform float LR_MON_PITCH;
 uniform float LR_MON_SPOT_LO;

@@ -33,7 +33,7 @@
 #pragma parameter LR_OVERSCAN_V "Overscan height (added to Overscan, height only)" 0 -0.1 0.12 0.005
 #pragma parameter LR_LIN_X "Linearity error horizontal (+ left squeezed)" 0 -0.15 0.15 0.01
 #pragma parameter LR_LIN_Y "Linearity error vertical (+ top squeezed)" 0 -0.15 0.15 0.01
-#pragma parameter LR_AMBIENT "Room reflection on the glass" 0.002 0 0.03 0.001
+#pragma parameter LR_REFLECT "Room reflection on the glass (% of white)" 0.2 0 3 0.1
 #pragma parameter LR_MON_SIZE "Monitor size (inches)" 14 10 21 1
 #pragma parameter LR_MON_PITCH "Dot pitch (mm)" 0.42 0.2 0.7 0.01
 #pragma parameter LR_MON_SPOT_LO "Spot size in dark areas (mm)" 0.28 0.1 1 0.01
@@ -90,7 +90,7 @@ uniform float LR_OVERSCAN;
 uniform float LR_OVERSCAN_V;
 uniform float LR_LIN_X;
 uniform float LR_LIN_Y;
-uniform float LR_AMBIENT;
+uniform float LR_REFLECT;
 uniform float LR_MON_SIZE;
 uniform float LR_MON_PITCH;
 uniform float LR_MON_SPOT_LO;
@@ -741,7 +741,7 @@ void lr_main()
 // The adjustable values go to the later passes: texel k of the first row, blue channel.
 float lr_param(int k)
 {
-    float p[37] = float[37](LR_NORM, LR_DBLEND, LR_SAT, LR_BRIGHT, LR_CONTRAST, LR_STEADY, LR_GAMMA, LR_CONV, LR_SMOOTH, LR_MASK_TYPE, LR_MASK_STR, LR_MASK_PX, LR_WHITE, LR_PHOS, LR_CURV_X, LR_CURV_Y, LR_BEND, LR_CORNER, LR_GLOW, LR_GLOW_SIZE, LR_VIGNETTE, LR_OVERSCAN, LR_OVERSCAN_V, LR_LIN_X, LR_LIN_Y, LR_AMBIENT, LR_MON_SIZE, LR_MON_PITCH, LR_MON_SPOT_LO, LR_MON_SPOT_HI, LR_MON_CORNER, LR_SCREEN_H, LR_SCREEN_UNIT, LR_BACKDROP, LR_ROOM, LR_SPILL, LR_SCENE_SPEED);
+    float p[37] = float[37](LR_NORM, LR_DBLEND, LR_SAT, LR_BRIGHT, LR_CONTRAST, LR_STEADY, LR_GAMMA, LR_CONV, LR_SMOOTH, LR_MASK_TYPE, LR_MASK_STR, LR_MASK_PX, LR_WHITE, LR_PHOS, LR_CURV_X, LR_CURV_Y, LR_BEND, LR_CORNER, LR_GLOW, LR_GLOW_SIZE, LR_VIGNETTE, LR_OVERSCAN, LR_OVERSCAN_V, LR_LIN_X, LR_LIN_Y, LR_REFLECT, LR_MON_SIZE, LR_MON_PITCH, LR_MON_SPOT_LO, LR_MON_SPOT_HI, LR_MON_CORNER, LR_SCREEN_H, LR_SCREEN_UNIT, LR_BACKDROP, LR_ROOM, LR_SPILL, LR_SCENE_SPEED);
     return p[k];
 }
 

@@ -60,7 +60,7 @@ layout(push_constant) uniform Push
 #pragma parameter LR_FILL "Picture height (0 TV field, 1 the core's lines fill it)" 0.0 0.0 1.0 1.0
 #pragma parameter LR_LIN_X "Linearity error horizontal (+ left squeezed)" 0.0 -0.15 0.15 0.01
 #pragma parameter LR_LIN_Y "Linearity error vertical (+ top squeezed)" 0.0 -0.15 0.15 0.01
-#pragma parameter LR_AMBIENT "Room reflection on the glass" 0.002 0.0 0.03 0.001
+#pragma parameter LR_REFLECT "Room reflection on the glass (% of white)" 0.2 0.0 3.0 0.1
 #pragma parameter LR_HDR_MON "--- Monitor in millimetres (PC monitors, Amiga 1084S) ---" 0.0 0.0 0.0 1.0
 #pragma parameter LR_MON_MM "15 kHz monitor in mm (PC monitors always)" 0.0 0.0 1.0 1.0
 #pragma parameter LR_MON_SIZE "Monitor size (inches)" 15.0 10.0 21.0 1.0
@@ -125,7 +125,7 @@ layout(std140, set = 0, binding = 0) uniform UBO
     float LR_FILL;
     float LR_LIN_X;
     float LR_LIN_Y;
-    float LR_AMBIENT;
+    float LR_REFLECT;
     float LR_HDR_MON;
     float LR_MON_MM;
     float LR_MON_SIZE;

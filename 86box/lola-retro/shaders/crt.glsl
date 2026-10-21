@@ -48,7 +48,7 @@ uniform float LR_OVERSCAN;
 uniform float LR_OVERSCAN_V;
 uniform float LR_LIN_X;
 uniform float LR_LIN_Y;
-uniform float LR_AMBIENT;
+uniform float LR_REFLECT;
 uniform float LR_MON_SIZE;
 uniform float LR_MON_PITCH;
 uniform float LR_MON_SPOT_LO;
@@ -2601,7 +2601,7 @@ void lr_main()
         col = shoulder(col);
         float r2 = clamp(dot(c, c) * 0.5, 0.0, 1.0);
         col *= 1.0 - LR_VIGNETTE * pow(r2, 1.6);
-        col += LR_AMBIENT * LR_ROOM * vec3(0.80, 0.92, 0.87);
+        col += 0.01 * LR_REFLECT * LR_ROOM * vec3(0.80, 0.92, 0.87);   // Room reflection in %
         col *= inside;
     }
     if (LR_BACKDROP > 0.5 && inside < 1.0)

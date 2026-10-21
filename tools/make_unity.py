@@ -418,7 +418,7 @@ FIELDS = {
     "LR_FILL": ("linesFillHeight", bool),
     "LR_LIN_X": ("linearityHorizontal", None),
     "LR_LIN_Y": ("linearityVertical", None),
-    "LR_AMBIENT": ("roomReflection", None),
+    "LR_REFLECT": ("roomReflection", None),
     "LR_MON_MM": ("monitorInMillimetres", bool),
     "LR_MON_SIZE": ("monitorSize", int),
     "LR_MON_PITCH": ("dotPitch", None),

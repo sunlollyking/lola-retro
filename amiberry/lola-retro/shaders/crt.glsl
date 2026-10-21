@@ -49,7 +49,7 @@ float LR_OVERSCAN;
 float LR_OVERSCAN_V;
 float LR_LIN_X;
 float LR_LIN_Y;
-float LR_AMBIENT;
+float LR_REFLECT;
 float LR_MON_SIZE;
 float LR_MON_PITCH;
 float LR_MON_SPOT_LO;
@@ -538,7 +538,7 @@ void main()
     LR_OVERSCAN_V = texelFetch(LR_Signal, ivec2(22, 0), 0).b;
     LR_LIN_X = texelFetch(LR_Signal, ivec2(23, 0), 0).b;
     LR_LIN_Y = texelFetch(LR_Signal, ivec2(24, 0), 0).b;
-    LR_AMBIENT = texelFetch(LR_Signal, ivec2(25, 0), 0).b;
+    LR_REFLECT = texelFetch(LR_Signal, ivec2(25, 0), 0).b;
     LR_MON_SIZE = texelFetch(LR_Signal, ivec2(26, 0), 0).b;
     LR_MON_PITCH = texelFetch(LR_Signal, ivec2(27, 0), 0).b;
     LR_MON_SPOT_LO = texelFetch(LR_Signal, ivec2(28, 0), 0).b;
@@ -554,7 +554,7 @@ void main()
     lrParams[1] = vec4(LR_MASK_TYPE, LR_MASK_STR, LR_MASK_PX, LR_WHITE);
     lrParams[2] = vec4(LR_PHOS, LR_CURV_X, LR_CURV_Y, LR_BEND);
     lrParams[3] = vec4(LR_CORNER, LR_GLOW, LR_VIGNETTE, LR_OVERSCAN);
-    lrParams[4] = vec4(LR_OVERSCAN_V, LR_LIN_X, LR_LIN_Y, LR_AMBIENT);
+    lrParams[4] = vec4(LR_OVERSCAN_V, LR_LIN_X, LR_LIN_Y, LR_REFLECT);
     lrParams[5] = vec4(LR_MON_SIZE, LR_MON_PITCH, LR_MON_SPOT_LO, LR_MON_SPOT_HI);
     lrParams[6] = vec4(LR_MON_CORNER, LR_SCREEN_H, LR_SCREEN_UNIT, LR_BACKDROP);
     lrParams[7] = vec4(LR_ROOM, LR_SPILL, LR_SCENE_SPEED, 0.0);
@@ -2633,7 +2633,7 @@ void lr_main()
         col = shoulder(col);
         float r2 = clamp(dot(c, c) * 0.5, 0.0, 1.0);
         col *= 1.0 - LR_VIGNETTE * pow(r2, 1.6);
-        col += LR_AMBIENT * LR_ROOM * vec3(0.80, 0.92, 0.87);
+        col += 0.01 * LR_REFLECT * LR_ROOM * vec3(0.80, 0.92, 0.87);   // Room reflection in %
         col *= inside;
     }
     if (LR_BACKDROP > 0.5 && inside < 1.0)
@@ -2665,7 +2665,7 @@ void main()
     LR_OVERSCAN_V = lrParams[4].x;
     LR_LIN_X = lrParams[4].y;
     LR_LIN_Y = lrParams[4].z;
-    LR_AMBIENT = lrParams[4].w;
+    LR_REFLECT = lrParams[4].w;
     LR_MON_SIZE = lrParams[5].x;
     LR_MON_PITCH = lrParams[5].y;
     LR_MON_SPOT_LO = lrParams[5].z;

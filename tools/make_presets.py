@@ -86,7 +86,7 @@ BASE = dict(
     LR_BRIGHT=0, LR_CONTRAST=1.05, LR_NOISE=0, LR_STEADY=1,
     LR_SIG_LO=0.2, LR_SIG_HI=0.44, LR_HFOCUS=0.5, LR_GAMMA=2.4, LR_PERSIST=0.08, LR_CONV=0.4,
     LR_MASK_TYPE=2, LR_MASK_STR=0.5, LR_MASK_TRIADS=360, LR_WHITE=8500, LR_PHOS=0,
-    LR_CURV_X=0.045, LR_CURV_Y=0.06, LR_BEND=0.3, LR_CORNER=0.045, LR_GLOW=0.06, LR_GLOW_SIZE=0.5, LR_VIGNETTE=0.3, LR_OVERSCAN=0.05, LR_AMBIENT=0.002,
+    LR_CURV_X=0.045, LR_CURV_Y=0.06, LR_BEND=0.3, LR_CORNER=0.045, LR_GLOW=0.06, LR_GLOW_SIZE=0.5, LR_VIGNETTE=0.3, LR_OVERSCAN=0.05, LR_REFLECT=0.2,
     # Monitor in mm: PC monitors (31 kHz) always use it; a typical mid-90s 15-inch, 0.28 mm dot mask.
     # LR_MON_MM turns it on for 15 kHz modes (the Amiga 1084S preset).
     LR_MON_MM=0, LR_MON_SIZE=15, LR_MON_PITCH=0.28, LR_MON_SPOT_LO=0.30, LR_MON_SPOT_HI=0.45, LR_MON_CORNER=1.4,
@@ -104,13 +104,13 @@ PRESETS = {
     "trinitron-s-video": dict(
         LR_CABLE=2, LR_SHARP=0.3, LR_SAT=1.15, LR_SIG_LO=0.18, LR_SIG_HI=0.4, LR_HFOCUS=0.4,
         LR_PERSIST=0.06, LR_CONV=0.18, LR_MASK_TYPE=1, LR_MASK_TRIADS=380, LR_WHITE=9300, LR_PHOS=4,
-        LR_CURV_X=0.04, LR_CURV_Y=0.0, LR_GLOW=0.05, LR_VIGNETTE=0.22, LR_AMBIENT=0.001),
+        LR_CURV_X=0.04, LR_CURV_Y=0.0, LR_GLOW=0.05, LR_VIGNETTE=0.22, LR_REFLECT=0.1),
     # Broadcast/studio monitor on RGB: sharp, fine grille, calibrated D65, EBU phosphors, standard decoder
     "studio-monitor-rgb": dict(
         LR_CABLE=3, LR_SHARP=0.0, LR_SAT=1.0, LR_CONTRAST=1.0, LR_SIG_LO=0.14, LR_SIG_HI=0.32,
         LR_HFOCUS=0.3, LR_PERSIST=0.04, LR_CONV=0.05, LR_MASK_TYPE=1, LR_MASK_STR=0.6,
         LR_MASK_TRIADS=450, LR_WHITE=6500, LR_PHOS=3, LR_DEMOD=1, LR_CURV_X=0.02, LR_CURV_Y=0.02, LR_GLOW=0.03,
-        LR_VIGNETTE=0.15, LR_OVERSCAN=0.03, LR_AMBIENT=0.0),
+        LR_VIGNETTE=0.15, LR_OVERSCAN=0.03, LR_REFLECT=0),
     # Sony PVM-14L2 on composite (issue #6): a 13-inch Trinitron with a 0.25 mm aperture grille
     # (198 mm high: about 790 stripe triads per height), flat vertically like every Trinitron, with
     # its digital comb filter (it only works where the subcarrier flips every line; on the Mega Drive
@@ -122,19 +122,19 @@ PRESETS = {
         LR_CABLE=1, LR_COMB=1, LR_SHARP=0.0, LR_SAT=1.0, LR_CONTRAST=1.0, LR_SIG_LO=0.3, LR_SIG_HI=0.38,
         LR_HFOCUS=0.35, LR_PERSIST=0.04, LR_CONV=0.05, LR_MASK_TYPE=1, LR_MASK_STR=0.6,
         LR_MASK_TRIADS=790, LR_WHITE=9300, LR_DEMOD=1, LR_CURV_X=0.02, LR_CURV_Y=0.0, LR_GLOW=0.03,
-        LR_VIGNETTE=0.15, LR_OVERSCAN=0.03, LR_AMBIENT=0.0),
+        LR_VIGNETTE=0.15, LR_OVERSCAN=0.03, LR_REFLECT=0),
     # Old TV on the antenna input: RF snow, ghosting, soft focus, round tube
     "old-tv-rf": dict(
         LR_CABLE=0, LR_YTRAP=0.6, LR_SHARP=0.5, LR_NOISE=0.09, LR_SAT=1.15, LR_SIG_LO=0.24, LR_SIG_HI=0.5,
         LR_HFOCUS=0.7, LR_PERSIST=0.12, LR_CONV=0.6, LR_MASK_TYPE=3, LR_MASK_STR=0.45,
         LR_MASK_TRIADS=320, LR_WHITE=7500, LR_CURV_X=0.07, LR_CURV_Y=0.09, LR_GLOW=0.1,
-        LR_VIGNETTE=0.4, LR_OVERSCAN=0.06, LR_AMBIENT=0.005),
+        LR_VIGNETTE=0.4, LR_OVERSCAN=0.06, LR_REFLECT=0.5),
     # Arcade CRT projector (three tubes on a flat screen), e.g. Daytona USA deluxe
     "crt-projector": dict(
         LR_CABLE=3, LR_SHARP=0.0, LR_SAT=1.18, LR_CONTRAST=1.0, LR_SIG_LO=0.24, LR_SIG_HI=0.46,
         LR_HFOCUS=0.6, LR_PERSIST=0.05, LR_CONV=0.85, LR_MASK_TYPE=4, LR_MASK_STR=0.4,
         LR_MASK_TRIADS=400, LR_WHITE=7500, LR_CURV_X=0.0, LR_CURV_Y=0.0, LR_GLOW=0.08,
-        LR_VIGNETTE=0.45, LR_OVERSCAN=0.02, LR_AMBIENT=0.006),
+        LR_VIGNETTE=0.45, LR_OVERSCAN=0.02, LR_REFLECT=0.6),
     # PC VGA monitor: 31 kHz line doubling, fine dot mask. The picture set up to fill the glass up
     # to a thin black border, as owners set it with the monitor's controls: the raster is straight
     # and the glass bows out a little, so the border is about 4 mm at the middle of each edge and
@@ -144,7 +144,7 @@ PRESETS = {
         LR_CONSOLE=7, LR_CABLE=3, LR_SHARP=0.0, LR_SAT=1.08, LR_SIG_LO=0.3, LR_SIG_HI=0.5,
         LR_HFOCUS=0.3, LR_PERSIST=0.03, LR_CONV=0.12, LR_MASK_TYPE=3, LR_MASK_STR=0.45,
         LR_MASK_TRIADS=600, LR_WHITE=9300, LR_CURV_X=0.025, LR_CURV_Y=0.03, LR_GLOW=0.04,
-        LR_VIGNETTE=0.15, LR_OVERSCAN=-0.035, LR_AMBIENT=0.003),
+        LR_VIGNETTE=0.15, LR_OVERSCAN=-0.035, LR_REFLECT=0.3),
     # Commodore 1084S on RGB, described from its service manual (1084S-P1): 14-inch Philips
     # M34EAQ10X tube, 0.42 mm slot mask, 6.5 MHz video amplifier, white set to D (6500 K).
     # EBU phosphors. Picture size as owners set it up: width and height turned up until a
@@ -157,7 +157,7 @@ PRESETS = {
         LR_CABLE=3, LR_SHARP=0.1, LR_SAT=1.12, LR_SIG_LO=0.2, LR_SIG_HI=0.42, LR_HFOCUS=0.45,
         LR_PERSIST=0.05, LR_CONV=0.25, LR_MASK_TYPE=2, LR_MASK_STR=0.5, LR_MASK_TRIADS=470,
         LR_WHITE=6500, LR_PHOS=3, LR_CURV_X=0.035, LR_CURV_Y=0.045, LR_GLOW=0.06, LR_VIGNETTE=0.25,
-        LR_OVERSCAN=0.1, LR_AMBIENT=0.002,
+        LR_OVERSCAN=0.1, LR_REFLECT=0.2,
         LR_MON_MM=1, LR_MON_SIZE=14, LR_MON_PITCH=0.42, LR_MON_SPOT_LO=0.28, LR_MON_SPOT_HI=0.65,
         LR_MON_CORNER=1.5),
 }
