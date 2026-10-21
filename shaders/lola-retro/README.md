@@ -34,7 +34,7 @@ On an HDR display, use the same presets from `lola-retro/hdr/curved` instead, se
 | `mega-drive-genesis` | Mega Drive / Genesis, Mega CD, 32X | Consumer TV (Composite) | 2 |
 | `pc-engine-turbografx` | PC Engine / TurboGrafx-16, PC Engine CD | Consumer TV (Composite), NTSC | 4 |
 | `playstation` | PlayStation | Consumer TV (Composite) | auto (4 at 1× and 2×, see below) |
-| `saturn` | Sega Saturn | Consumer TV (Composite) | auto (Beetle Saturn: 4, see below) |
+| `saturn` | Sega Saturn | Consumer TV (Composite) | 4, and Frames over 300 lines 1 (see below) |
 | `nintendo-64` | Nintendo 64 | Consumer TV (Composite) | auto (4 at 1× and 2×, see below) |
 | `playstation-2` | PlayStation 2 | Trinitron (S-Video) | 5 |
 | `gamecube` | GameCube | Trinitron (S-Video) | 5 |
@@ -44,8 +44,8 @@ On an HDR display, use the same presets from `lola-retro/hdr/curved` instead, se
 | `dos-pc` | DOS and Windows 9x | PC Monitor (VGA) | 7 |
 | `pc-98` | NEC PC-98 (640×400) | PC Monitor (VGA): 400 sharp lines on a computer monitor, as on the PC-98's own (for HDR use `hdr/curved/pc-monitor-vga`) | 7 |
 
-PlayStation, Saturn and N64 stay on auto: their native 480i games (Tekken 3, Virtua Fighter 2) and a 2×
-upscaled 240-line game both send 480 lines, and only you know which one it is. Auto reads 480 lines as 480i
+PlayStation and N64 stay on auto: their native 480i games (Tekken 3) and a 2× upscaled 240-line game both
+send 480 lines, and only you know which one it is. Auto reads 480 lines as 480i
 (with the PlayStation 2's timing) and 3× and up as upscaled. When you know what the core sends, set the
 console's own timing (4) by hand:
 
@@ -53,8 +53,11 @@ console's own timing (4) by hand:
   (the two fields of a 480i game are averaged into one line).
 - at 1×, and on cores that never upscale (Beetle Saturn): Console timing 4 and **Frames over 300 lines** 1.
   Every frame over 300 lines is then the console's own 480i, drawn in two fields with the console's timing
-  (960 lines are 480i at 2×). Beetle Saturn needs timing 4 anyway: auto picks the Mega Drive timing for its
-  320×224 games.
+  (960 lines are 480i at 2×).
+
+The `saturn` preset sets that: Console timing 4 and Frames over 300 lines 1. Auto would pick the Mega Drive
+timing for Beetle Saturn's 330×224 and 352×224 frames, Beetle Saturn has no upscaling, and Kronos and
+YabaSanshiro send native frames unless their resolution option is raised (then set Frames over 300 lines to 0).
 
 The presets are the device presets below with one or two values changed, so every parameter still works.
 For a PAL console set **TV standard** to 2 if the auto setting picks NTSC (the frame size cannot always tell).

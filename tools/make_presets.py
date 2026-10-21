@@ -187,10 +187,14 @@ SYSTEMS = {
     "mega-drive-genesis": ("consumer-tv-composite", dict(LR_CONSOLE=2)),
     # 227.5 cycles per line like the PlayStation; NTSC only, so the standard is set too
     "pc-engine-turbografx": ("consumer-tv-composite", dict(LR_CONSOLE=4, LR_NORM=1)),
-    # PlayStation, Saturn and N64 keep auto: set by hand, a 480-line frame would always be read as
-    # a 2x upscaled 240-line one, and their native 480i games (Tekken 3, Virtua Fighter 2) would lose it
+    # PlayStation and N64 keep auto: set by hand, a 480-line frame would always be read as a 2x
+    # upscaled 240-line one, and their native 480i games (Tekken 3) would lose it; Frames over 300
+    # lines 1 would instead read every 2x frame as 480i, and their cores are often run upscaled.
     "playstation": ("consumer-tv-composite", dict()),
-    "saturn": ("consumer-tv-composite", dict()),
+    # Saturn: its own timing (auto reads Beetle Saturn's 330x224 and 352x224 as a Mega Drive), and
+    # every frame over 300 lines is its own 480i: Beetle Saturn has no upscaling, and Kronos and
+    # YabaSanshiro send native frames by default (their resolution options start at "original")
+    "saturn": ("consumer-tv-composite", dict(LR_CONSOLE=4, LR_HIRES=1)),
     "nintendo-64": ("consumer-tv-composite", dict()),
     "playstation-2": ("trinitron-s-video", dict(LR_CONSOLE=5)),
     "gamecube": ("trinitron-s-video", dict(LR_CONSOLE=5)),

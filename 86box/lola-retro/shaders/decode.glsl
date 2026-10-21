@@ -281,6 +281,12 @@ Timing getTiming(vec2 orig, uint frameCount)
     // TV show: the station's encoder makes the subcarrier of a standard interlaced broadcast,
     // so its rhythm is the standard's (the PlayStation 2 row), not the console's
     if (isShow(t.cable)) { b = vec4(0.5, 0.75, 0.75, 0.875); c = 0.0; }
+    // PlayStation, Saturn and N64 in 480i/576i: 525 (625) lines per frame, as the standard, not
+    // twice their 263 (314) progressive lines: psx-spx gives 262.5 lines per NTSC field and 312.5
+    // per PAL field, n64brew 525 half-lines (VI_V_TOTAL 524), Mednafen's Saturn alternates fields
+    // of 263 and 262 lines. With 227.5 (283.75) cycles per line the phase then moves 3/4 (7/8) of
+    // a cycle per field, as on the PlayStation 2.
+    if (id > 3.5 && id < 4.5 && t.interlace > 0.5) { b.z = 0.75; b.w = 0.875; }
     t.lineFrac = mix(b.x, b.y, t.pal);
     t.fieldStep = mix(b.z, b.w, t.pal);
     // 24 is a multiple of every field cycle above (1, 2, 3, 4, 8), so the phase never drifts
