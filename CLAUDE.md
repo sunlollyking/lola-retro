@@ -22,6 +22,10 @@
 - Scanline smoothing stays 0 by default: 1 is more correct (a screen pixel shows the average light over its
   area), but it moves the calibrated line contrast (PC monitor table, 1084S) by 2-3 points, so making it
   the default needs those calibrations checked again.
+- RetroArch shows parameters with two decimals, so the ten parameters with steps of 0.005 (beam widths,
+  curvature, corners, overscan, brightness, RF noise, antenna ghost) show their values in pairs. They stay
+  as they are: every value can still be chosen, and rescaling them would break saved presets. New
+  parameters get steps of 0.01 or more (Room reflection was moved to % for this, as LR_REFLECT).
 
 ## Workflow
 
