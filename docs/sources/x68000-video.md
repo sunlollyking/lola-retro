@@ -77,6 +77,8 @@ scanned twice (512 rasters, no gaps on the monitor), at 55 Hz.
 - 15 kHz interlaced (512x480) and 31 kHz 512-line frames both arrive with every line, tall and close
   together; on the monitor the first is two interlaced fields of 240 lines, the second 512 progressive lines.
 
+What the shader makes of it (Console timing 10 and 11): see [x68000-monitors.md](x68000-monitors.md).
+
 ## Not found
 
 - An official Sharp (or "Inside X68000") CRTMOD register table; the values above are community sources.

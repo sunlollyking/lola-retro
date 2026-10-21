@@ -133,7 +133,8 @@ float hash13(vec3 p3)
 // Console timing
 // ---------------------------------------------------------------------------
 // Console ids: 1 SNES/NES, 2 Mega Drive H40, 3 Mega Drive H32 and Master System, 4 PlayStation,
-// 5 PlayStation 2, 6 Amiga, 7 PC VGA (also the PC-98's 640x400), 8 Arcade 15 kHz, 9 Arcade 24 kHz.
+// 5 PlayStation 2, 6 Amiga, 7 PC VGA (also the PC-98's 640x400), 8 Arcade 15 kHz, 9 Arcade 24 kHz,
+// 10 Sharp X68000 on its own monitor, 11 the same with 256-line frames at 15 kHz (see x68Raster).
 // Other systems use the id with their timing (PC Engine, Saturn, N64: 4).
 
 float autoConsole(vec2 s)
@@ -156,7 +157,8 @@ float autoConsole(vec2 s)
     return 2.0;
 }
 
-// a: pixel clock NTSC, pixel clock PAL (MHz), nominal width, scan mode (0 TV, 1 VGA, 2 fill)
+// a: pixel clock NTSC, pixel clock PAL (MHz), nominal width, scan mode (0 TV, 1 VGA, 2 fill,
+//    3 the X68000's monitor: 15 and 31 kHz on one tube, see x68Raster)
 // b: subcarrier phase step per line (NTSC, PAL), per field (NTSC, PAL)
 // c: x = 1 when the PAL line count per field is odd (V-switch flips every field)
 void consoleTable(float id, out vec4 a, out vec4 b, out float c)
@@ -169,11 +171,32 @@ void consoleTable(float id, out vec4 a, out vec4 b, out float c)
     else if (id < 6.5) { a = vec4(7.15909, 7.09379, 320.0, 0.0);  b = vec4(0.5, 0.75, 0.75, 0.875);                c = 0.0; }
     else if (id < 7.5) { a = vec4(12.5875, 12.5875, 320.0, 1.0);  b = vec4(0.5, 0.75, 0.75, 0.875);                c = 0.0; }
     else if (id < 8.5) { a = vec4(6.711647, 6.711647, 320.0, 0.0); b = vec4(0.5, 0.75, 0.5, 0.5);                  c = 0.0; }
-    else               { a = vec4(16.0, 16.0, 496.0, 2.0);        b = vec4(0.5, 0.75, 0.75, 0.875);                c = 0.0; }
+    else if (id < 9.5) { a = vec4(16.0, 16.0, 496.0, 2.0);        b = vec4(0.5, 0.75, 0.75, 0.875);                c = 0.0; }
+    else               { a = vec4(34.78, 34.78, 768.0, 3.0);      b = vec4(0.5, 0.75, 0.75, 0.875);                c = 0.0; }
 }
 
-// TV timings (and auto): everything but the Amiga, VGA and 24 kHz arcade (6, 7, 9)
+// TV timings (and auto): everything but the Amiga, VGA, 24 kHz arcade and X68000 (6, 7, 9, 10, 11)
 bool tvTiming(float id) { return id < 5.5 || (id > 7.5 && id < 8.5); }
+
+// The Sharp X68000 on its own monitor (Console timing 10 and 11): the CZ-600D and its family took
+// 15, 24 and 31 kHz on one tube, and Sharp's manuals (CZ-605D/613D, CZ-614D) give one picture size,
+// 278 x 209 mm, for all of them: 240 active lines at 15 kHz (52.69 us of each line), 400 at 24 kHz,
+// 512 at 31 kHz (22.08 us). px68k sends the CRTC's display window, no borders (TextDotX x TextDotY),
+// so the frame's rows tell the mode (docs/sources/x68000-video.md):
+// - up to 240 rows: 15 kHz, one raster per row, in the 240 lines of the picture: the gaps show;
+// - 241-300 rows: 31 kHz with every line scanned twice (512 rasters, no gaps), the X68000's usual
+//   game mode (256x256, 512x256). Console timing 11 takes them as 15 kHz instead, for the games
+//   with a 256-line window at 15 kHz: the frame alone cannot tell (only the frame rate, 55 or 61 Hz);
+// - more: every row is a raster, filling the height: 512 lines at 31 kHz (768x512, the Human68k
+//   prompt), both fields of 15 kHz interlace (512x480), 24 kHz modes (400 lines).
+// Returns x: rasters per row, y: rasters across the picture height, z: active line time (us).
+vec3 x68Raster(float rows, float id)
+{
+    bool k15 = id > 10.5;
+    if (rows <= 240.5 || (k15 && rows <= 300.0)) return vec3(1.0, 240.0, 52.69);
+    if (rows <= 300.0) return vec3(2.0, 512.0, 22.08);
+    return vec3(1.0, rows, rows <= 480.5 ? 52.69 : 22.08);
+}
 
 // Internal resolution: an upscaled frame (more than 576 lines, or a console set by hand
 // whose native mode is smaller) is read as k x k blocks of one native pixel.
@@ -242,7 +265,8 @@ Timing getTiming(vec2 orig, uint frameCount)
     // stays as it is. Passes read the cable from here (t.cable), never from Cable directly.
     t.monitor = (LR_HIRES > 1.5 && tvTiming(id) && nat.y > 300.0) ? 1.0 : 0.0;
     if (t.monitor > 0.5) id = 7.0;
-    t.cable = t.monitor > 0.5 ? 3.0 : LR_CABLE;
+    bool x68 = id > 9.5;                                // the X68000's monitor: RGB only
+    t.cable = (t.monitor > 0.5 || x68) ? 3.0 : LR_CABLE;
     vec4 a; vec4 b; float c;
     consoleTable(id, a, b, c);
     t.id = id;
@@ -271,6 +295,8 @@ Timing getTiming(vec2 orig, uint frameCount)
     if (t.scan > 0.5 && t.scan < 1.5 && orig.x > 720.0) t.pclk = 78.75 * orig.x * orig.y / (1024.0 * 768.0);
     // the computer monitor: an upscaled frame runs at its native mode's clock (k pixels per pixel)
     if (t.monitor > 0.5) t.pclk = (nat.x > 720.0 ? 78.75 * nat.x * nat.y / (1024.0 * 768.0) : base * nat.x / a.z) * t.scale;
+    // X68000: the window's pixels across the mode's active line time
+    if (x68) t.pclk = orig.x / x68Raster(orig.y, id).z;
     t.hres = amiga ? cls : orig.x / a.z;
     t.fsc = t.pal > 0.5 ? 4.433619 : 3.579545;
     // TV show: the station's encoder makes the subcarrier of a standard interlaced broadcast,
@@ -375,11 +401,12 @@ int steadyFrames(Timing t, out vec3 off, out vec3 vsw)
 }
 
 // ---------------------------------------------------------------------------
-// Monitor in millimetres: PC monitors (31 kHz modes) always, and 15 kHz monitors such as
-// the Commodore 1084S when "15 kHz monitor in mm" is on. The tube is described like on its
-// spec sheet (size, mask pitch, beam spot on dark and on white), so every video mode follows
-// from the same tube: 320x200 doubled to 400 lines or 1024x768 on a PC monitor, PAL or NTSC
-// on the 1084S (NTSC lines sit further apart, so they show more).
+// Monitor in millimetres: PC monitors (31 kHz modes) and the X68000's monitor always, and 15 kHz
+// monitors such as the Commodore 1084S when "15 kHz monitor in mm" is on. The tube is described
+// like on its spec sheet (size, mask pitch, beam spot on dark and on white), so every video mode
+// follows from the same tube: 320x200 doubled to 400 lines or 1024x768 on a PC monitor, PAL or
+// NTSC on the 1084S (NTSC lines sit further apart, so they show more), 240 lines at 15 kHz with
+// clear gaps and 512 nearly merged at 31 kHz on the X68000's.
 // Typical mid-90s 15-inch PC monitor: 13.8-14 inch viewable, 0.28 mm dot pitch, a spot of
 // about 0.45 mm on white (sharp at 800x600, soft at 1024x768), dynamic focus keeping the
 // corners below 1.5 x the centre spot.
@@ -387,7 +414,7 @@ int steadyFrames(Timing t, out vec3 off, out vec3 vsw)
 
 const float FWHM_TO_SIGMA = 0.4246609;   // Gaussian: sigma = FWHM / (2 sqrt(2 ln 2))
 
-bool isPC(float scan) { return scan > 0.5 && scan < 1.5; }
+bool isPC(float scan) { return (scan > 0.5 && scan < 1.5) || scan > 2.5; }   // VGA, and the X68000's monitor
 
 // the tube is described in mm
 bool inMM(float scan) { return isPC(scan) || (scan < 0.5 && LR_MON_MM > 0.5); }
@@ -471,7 +498,7 @@ float phosphorSet(Timing t)
     if (t.monitor > 0.5) return 1.0;                  // the computer monitor (Frames over 300 lines 2)
     if (LR_PHOS > 0.5) return LR_PHOS;
     if (t.scan > 0.5 && t.scan < 1.5) return 1.0;   // PC monitors: sRGB was defined from them
-    if (t.id > 7.5) return 4.0;                       // arcade monitors
+    if (t.id > 7.5) return 4.0;                       // arcade monitors, the X68000's (Japanese)
     return t.pal > 0.5 ? 3.0 : 2.0;
 }
 

@@ -63,6 +63,32 @@ Years are worked out from the computers each was sold with.
 - 31 kHz, CZ-600DE (a file manager, but scaled to 640x480 by an X68000 Z, not the native 512 lines):
   https://pbs.twimg.com/media/G3cKYyUWYAAJF67.jpg. No gaps, fairly crisp text, mild bloom.
 
+## What the shader does (Console timing 10 and 11, the x68000-monitor preset)
+
+Decided with the author on 2026-10-22, from the notes above and [x68000-video.md](x68000-video.md):
+
+- One tube in mm for every mode (scan mode 3, `x68Raster` in `common.inc`): the CZ-600D's 15-inch size and
+  0.39 mm dot (shadow) mask; the CZ-605D's 278 x 209 mm picture for every mode (Overscan -0.02: the shader's
+  15-inch tube face is 284 x 213 mm); 240 rasters across that height at 15 kHz, 512 at 31 kHz.
+- px68k's rows tell the mode: up to 240 rows 15 kHz; 241-300 rows 31 kHz with every line scanned twice
+  (timing 10; timing 11 takes them as 15 kHz); taller frames one raster per row, filling the height.
+- RGB only; pixel steps integrated exactly in the beam pass (the PC monitor's path); the amplifier's
+  bandwidth was not found, and at these dot clocks (up to 34.8 MHz) the spot, not the amplifier, sets the
+  sharpness.
+- Not found, so taken from elsewhere: the spot (0.28 mm dark, 0.65 mm white), its growth to the corners
+  (1.5x), misconvergence (0.25) and curvature are the 1084S's (a monitor of the same class and years, its
+  spot calibrated on a photo); white 9300 K and Japanese P22 phosphors are the Japanese TV standard.
+- The casing drawn around the tube (Around the tube) is the TV casing: the CZ-600D was a TV set too.
+- Measured from the shader (contrast between line centre and gap, (max - min) / (max + min), linear light,
+  centre of a flat screen, mask and glow off), 30% grey / white: 15 kHz 240 lines 87% / 16%; 31 kHz 256 lines
+  scanned twice and 768x512 10% / 0.5%; 15 kHz interlaced 512x480 15% / 0.5%. For comparison, the 1084S:
+  PAL 76% / 7.5%, NTSC 90% / 20%.
+- Checked by eye against the photos (2026-10-22): the CZ-600DE 15 kHz photo, viewed at 3x, shows thin dark
+  gaps on bright green and blue, as the model does on bright colours (deeper gaps on darker ones); at about
+  2.4 photo pixels per line it is too coarse to measure. The 31 kHz CZ-601D photo (i.redd.it) could not be
+  opened in the browser here; its description (no gaps, slightly soft kana) matches the model's merged
+  lines and soft 768-dot text.
+
 ## Not found
 
 - The CZ-600D's own manual or catalogue page: viewable size, tube, mask type (its 0.39 mm pitch comes from

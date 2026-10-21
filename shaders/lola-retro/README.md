@@ -43,6 +43,7 @@ On an HDR display, use the same presets from `lola-retro/hdr/curved` instead, se
 | `amiga` | Amiga | Amiga 1084S | 6 |
 | `dos-pc` | DOS and Windows 9x | PC Monitor (VGA) | 7 |
 | `pc-98` | NEC PC-98 (640×400) | PC Monitor (VGA): 400 sharp lines on a computer monitor, as on the PC-98's own (for HDR use `hdr/curved/pc-monitor-vga`) | 7 |
+| `x68000` | Sharp X68000 (px68k) | X68000 monitor (Sharp CZ-600D): 15 kHz games with gaps between the lines, 31 kHz games and the 768×512 prompt without (for HDR use `hdr/curved/x68000-monitor`) | 10 (11, see [X68000 monitor](#x68000-monitor)) |
 
 PlayStation and N64 stay on auto: their native 480i games (Tekken 3) and a 2× upscaled 240-line game both
 send 480 lines, and only you know which one it is. Auto reads 480 lines as 480i
@@ -89,6 +90,7 @@ The device folders have the same 14 presets; `systems/curved` and `systems/flat`
 | `pc-monitor-vga-good`, `-premium`, `-premium-plus` | The same, on a better 15-inch monitor; sharper Windows desktops at 800×600 and 1024×768. | Finer dot mask and a smaller, better focused beam (see [Better PC monitors](#better-pc-monitors)). |
 | `pc-monitor-vga-extreme` | Long work on the Windows desktop. | Sharper than any real 15-inch tube: the gaps between the lines show even at 1024×768. |
 | `amiga-1084s` | Amiga, and 15 kHz arcade games (CPS1/2, Neo Geo MVS). | Commodore 1084S on RGB, built from its service manual (see [Amiga 1084S](#amiga-1084s)). 0.42 mm slot mask, the picture nearly filling the glass. |
+| `x68000-monitor` | Sharp X68000. | Its own monitor, the Sharp CZ-600D: 15 and 31 kHz on one 15-inch tube, 0.39 mm dot mask (see [X68000 monitor](#x68000-monitor)). |
 
 The CRT projector already has a flat screen, so its `curved` version only adds rounded corners.
 
@@ -208,6 +210,8 @@ display. Space, Bouncing lines and Amiga demo take the most GPU time; on a slow 
 | 7 | PC VGA | 31 kHz; 200-line modes are drawn twice (400 lines). |
 | 8 | Arcade 15 kHz | Generic 15 kHz RGB. |
 | 9 | Arcade 24 kHz | Medium-res arcade, e.g. Sega Model 2 at 496×384 progressive. |
+| 10 | Sharp X68000 | On its own monitor: up to 240 lines at 15 kHz (gaps between the lines), 256-line frames at 31 kHz with every line drawn twice (no gaps), taller frames line by line. RGB only. |
+| 11 | Sharp X68000, 256 lines at 15 kHz | The same, but 256-line frames at 15 kHz, for the few games that show a 256-line window there. |
 
 Systems that are not in the list use the id with the same timing: PC Engine, Saturn and Nintendo 64 use 4, the PC-98 uses 7
 (its 640×400 on a computer monitor is the same picture as VGA's).
@@ -343,6 +347,40 @@ The `amiga-1084s` preset is built from the Commodore 1084S-P1 service manual and
   picture. Glow and misconvergence are measured in lores pixels, so hires and lores frames look the same.
 
 For the stand-alone emulator Amiberry, the repository has this preset converted to GLSL (`amiberry/`).
+
+## X68000 monitor
+
+The Sharp X68000 came with its own monitor, the CZ-600D (1987), which took 15, 24 and 31 kHz on one tube
+and switched by itself. The `x68000-monitor` preset (and `systems/x68000`, Console timing 10) draws every mode
+on that one tube, described in millimetres like the PC monitor and the 1084S:
+
+- From Sharp: a 15-inch tube with a 0.39 mm dot mask; one picture size for every mode, 278 × 209 mm, with
+  240 active lines at 15 kHz, 400 at 24 kHz and 512 at 31 kHz. (Sharp's manuals for the CZ-605D, a CZ-600D
+  successor with the same 0.39 mm pitch, give the tube type, the picture size and the timing table; the
+  CZ-600D's own manual was not found.)
+- Not found for any X68000 monitor: the beam spot, the video bandwidth and the white point. The spot, its
+  growth in the corners, the misconvergence and the curvature are the 1084S's, a monitor of the same class
+  and years whose spot was calibrated on a photo. White at 9300 K and Japanese phosphors: the Japanese TV
+  standard (the CZ-600D was also a TV), not measured on the monitor itself.
+- Because one tube in mm serves every mode, the same spot leaves clear gaps between 15 kHz lines and lets
+  31 kHz lines merge, as photos of X68000 monitors show:
+
+| Frame from px68k | Mode on the monitor | Line structure, 30% grey / white |
+|---|---|---|
+| 256×240, 512×240 | 15 kHz, 240 lines | 87% / 16% |
+| 256×256, 512×256 | 31 kHz, every line drawn twice (512 lines) | 10% / 0.5% |
+| 512×480 | 15 kHz interlaced, both fields | 15% / 0.5% |
+| 768×512, 512×512 (the Human68k prompt) | 31 kHz, 512 lines | 10% / 0.5% |
+
+(Line structure here: the contrast between the middle of a line and the gap, (max − min) / (max + min) in
+linear light, at the centre of a flat-screen picture, mask and glow off.)
+
+The frame alone does not say whether a 256-line game runs at 15 or 31 kHz: px68k sends both as 256 rows, and
+only the frame rate (55 or 61 Hz) differs. Most X68000 games run at 31 kHz, so Console timing 10 draws 256-row
+frames that way; for a game that shows 256 lines at 15 kHz (the gaps between the lines are then missing), set
+Console timing 11. px68k's own menu (F12) is 800×600, and after a reset from that menu px68k may keep sending
+800×600 with the picture in the top left corner; restart the content if that happens. The research behind
+this preset is in the repository (`docs/sources/x68000-video.md`, `docs/sources/x68000-monitors.md`).
 
 ## HDR
 

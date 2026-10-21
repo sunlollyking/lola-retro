@@ -19,7 +19,8 @@ device. Three rules cover almost everything:
 Every preset exists in `curved/` and `flat/`; the tables below apply to both.
 
 Console timing ids: 1 SNES/NES, 2 Mega Drive H40, 3 Mega Drive H32 and Master System, 4 PlayStation,
-5 PlayStation 2, 6 Amiga, 7 PC VGA (and PC-98), 8 Arcade 15 kHz, 9 Arcade 24 kHz.
+5 PlayStation 2, 6 Amiga, 7 PC VGA (and PC-98), 8 Arcade 15 kHz, 9 Arcade 24 kHz, 10 X68000, 11 X68000
+with 256-line frames at 15 kHz.
 Systems that are not in that list use the id whose timing matches theirs.
 
 ## 8-bit and 16-bit
@@ -67,6 +68,7 @@ and the picture is stable. Turn it off to see the fields alternate like on a rea
 |---|---|---|---|---|
 | DOS, Windows 9x | DOSBox Pure | PC Monitor (VGA) | 7 (set by the preset) | Every PC mode on one 15-inch monitor: 320×200 is drawn with VGA line doubling (400 lines), 640×480 up to 1024×768 on the same tube. For a sharper Windows desktop use `pc-monitor-vga-premium`, `-premium-plus` or `-extreme`. For 86Box there is a GLSL version of these presets (`86box/` in the repository). |
 | PC-98 | Neko Project II kai | `systems/pc-98` or PC Monitor (VGA); HDR: `hdr/curved/pc-monitor-vga` | 7 (auto for 640×400) | 640×400 on a computer monitor: 400 sharp lines, the same picture as VGA's 640×400 on a PC monitor. A real TV could not show the PC-98's 24 kHz picture, so use a computer monitor preset rather than a TV preset. |
+| Sharp X68000 | px68k | `systems/x68000` or X68000 monitor (`x68000-monitor`) | **10** (set by the presets); **11** for a game that shows 256 lines at 15 kHz | The X68000's own monitor, the Sharp CZ-600D: 15 kHz modes show gaps between the lines, 31 kHz modes (most games, and the 768×512 command prompt) do not. A 256-line game arrives as 256 rows at either frequency; Console timing 10 takes it as 31 kHz, the usual case. px68k's own menu (F12) is 800×600; after a reset from that menu the core may keep sending 800×600 frames with the picture in the top left corner, so restart the content. |
 | Amiga | PUAE | Amiga 1084S | auto (6) | PUAE's default output is recognised (720 wide with the overscan border, which shows like on the real monitor), and so are 320×256 / 640×512 (PAL) and 320×200 / 640×400 (NTSC) without border. With other crop settings, set timing 6 by hand. Keep **Line Mode** at Automatic: forced double lines would be read as an interlaced screen. The preset shows the whole picture with a black border, like the real monitor; raise Overscan to fill the screen. For Amiberry there is a GLSL version of this preset (`amiberry/` in the repository). |
 
 ## Not covered

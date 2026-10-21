@@ -162,6 +162,20 @@ PRESETS = {
         LR_MON_CORNER=1.5),
 }
 
+# Sharp CZ-600D, the X68000's own monitor (1987): 15-inch, 0.39 mm pitch, 15/24/31 kHz, RGB (it was
+# also a TV). Console timing 10 draws 15 kHz and 31 kHz modes on the one tube (x68Raster in
+# common.inc). From Sharp's manuals of its 0.39 mm sibling, the CZ-605D: a dot-type (shadow mask)
+# tube and a 278 x 209 mm picture in every mode; the shader's 15-inch tube face is 284 x 213 mm, so
+# Overscan -0.02. Not found for any X68000 monitor: the spot size, the video bandwidth and the white.
+# The spot, corner growth, misconvergence and curvature are the 1084S's: a monitor of the same class
+# and years, with a 0.42 mm mask, whose spot was calibrated on a photo (it gives clear gaps at 15 kHz
+# and merged lines at 31 kHz, as photos of X68000 monitors show). White at 9300 K, the Japanese TV
+# standard, and Japanese P22 phosphors (Phosphors auto on Console timing 10): Japanese sets, not
+# measured on this monitor. Sources and what was not found: docs/sources/x68000-monitors.md.
+PRESETS["x68000-monitor"] = {**PRESETS["amiga-1084s"], **dict(
+    LR_CONSOLE=10, LR_MON_MM=0, LR_MASK_TYPE=3, LR_WHITE=9300, LR_PHOS=0, LR_OVERSCAN=-0.02,
+    LR_MON_SIZE=15, LR_MON_PITCH=0.39)}
+
 # Better 15-inch PC monitors: the same tube size with a finer mask and a smaller, better focused beam.
 # "extreme" is sharper than any real 15-inch monitor (the gaps between lines show at 1024x768),
 # for long work on the desktop.
@@ -201,6 +215,8 @@ SYSTEMS = {
     "dreamcast": ("consumer-tv-composite", dict(LR_CONSOLE=5)),
     "arcade-15khz": ("amiga-1084s", dict(LR_CONSOLE=8)),
     "amiga": ("amiga-1084s", dict(LR_CONSOLE=6)),
+    # px68k: 15 kHz games with gaps, 31 kHz games (most of them) and the 768x512 prompt without
+    "x68000": ("x68000-monitor", dict()),
     "dos-pc": ("pc-monitor-vga", dict()),
     # The PC-98's 640x400 on its computer monitor: the same 400 sharp lines as VGA's 640x400 on a
     # 15-inch PC monitor (24 or 31 kHz makes no difference to the picture, the line spacing comes

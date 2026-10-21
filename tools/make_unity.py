@@ -377,7 +377,7 @@ def shader_lab():
 FIELDS = {
     "LR_CONSOLE": ("consoleTiming", ("ConsoleTiming", ["Auto", "NES and SNES", "Mega Drive H40", "Mega Drive H32 and Master System",
                                                        "PlayStation", "PlayStation 2", "Amiga", "PC VGA", "Arcade 15 kHz",
-                                                       "Arcade 24 kHz"])),
+                                                       "Arcade 24 kHz", "X68000", "X68000 256 lines at 15 kHz"])),
     "LR_NORM": ("tvStandard", ("TvStandard", ["Auto", "NTSC", "PAL"])),
     "LR_HIRES": ("framesOver300Lines", ("TallFrames", ["Auto", "Interlaced", "PC monitor"])),
     "LR_CABLE": ("cable", ("Cable", ["RF", "Composite", "S-Video", "RGB", "TV show"])),
@@ -453,12 +453,14 @@ DEVICE_TITLES = {
     "pc-monitor-vga-premium-plus": "PC monitor (VGA), premium+",
     "pc-monitor-vga-extreme": "PC monitor (VGA), extreme",
     "amiga-1084s": "Commodore 1084S (Amiga)",
+    "x68000-monitor": "Sharp CZ-600D (X68000)",
 }
 SYSTEM_TITLES = {
     "nes": "NES", "snes": "SNES", "master-system": "Master System", "mega-drive-genesis": "Mega Drive, Genesis",
     "pc-engine-turbografx": "PC Engine, TurboGrafx-16", "playstation": "PlayStation", "saturn": "Saturn",
     "nintendo-64": "Nintendo 64", "playstation-2": "PlayStation 2", "gamecube": "GameCube", "dreamcast": "Dreamcast",
     "arcade-15khz": "Arcade, 15 kHz", "amiga": "Amiga", "dos-pc": "DOS PC", "pc-98": "PC-98",
+    "x68000": "X68000",
 }
 assert set(DEVICE_TITLES) == set(mp.PRESETS), set(mp.PRESETS) ^ set(DEVICE_TITLES)
 assert set(SYSTEM_TITLES) == set(mp.SYSTEMS), set(mp.SYSTEMS) ^ set(SYSTEM_TITLES)

@@ -26,7 +26,8 @@ layout(location = 4) flat out float vShare;   // share of the active line the so
 #ifdef LR_FIELDS
 layout(location = 5) flat out float vAmiga;
 #endif
-layout(location = 6) flat out vec2 vSignal;  // the cable in use and the mask type (Timing: monitor switch)
+layout(location = 6) flat out vec4 vSignal;  // the cable in use, the mask type (Timing: monitor switch),
+                                             // X68000: rasters per row and across the picture (x68Raster)
 
 // Blackbody colour of the TV's white, relative to D65
 vec3 kelvinRGB(float T)
@@ -49,7 +50,8 @@ void main()
     vTiming = vec4(T.scan, T.pal, T.interlace, T.scale);
     vPhos = phosphorSet(T);
     vShare = activeShare(T, params.OriginalSize.xy);
-    vSignal = vec2(T.cable, maskType(T));
+    vec3 xr = T.scan > 2.5 ? x68Raster(params.OriginalSize.y, T.id) : vec3(1.0, 0.0, 0.0);
+    vSignal = vec4(T.cable, maskType(T), xr.xy);
 #ifdef LR_FIELDS
     vAmiga = isAmiga(T) ? 1.0 : 0.0;
 #endif
@@ -66,7 +68,7 @@ layout(location = 4) flat in float vShare;
 #ifdef LR_FIELDS
 layout(location = 5) flat in float vAmiga;
 #endif
-layout(location = 6) flat in vec2 vSignal;
+layout(location = 6) flat in vec4 vSignal;
 layout(location = 0) out vec4 FragColor;
 layout(set = 0, binding = 2) uniform sampler2D LR_Beam;
 layout(set = 0, binding = 3) uniform sampler2D LR_Glow;
@@ -1733,7 +1735,8 @@ vec3 backdrop(vec2 c, float dist, vec2 qq, vec2 tc, vec2 tubePx)
     //   tube (Monitor size), since TVs came from 14 to 29 inches.
     // Margins from the glass to the outline (side, top, bottom), recess width (with the mask),
     // mask width, the shell band around the front, corner radii of the outline and the recess.
-    bool tv = !inMM(vTiming.x);
+    // (the X68000's monitor, a CZ-600D, was a TV set with a tuner and a speaker: the TV casing)
+    bool tv = !inMM(vTiming.x) || vTiming.x > 2.5;
     bool amiga = !tv && global.LR_MON_MM > 0.5;
     bool pc = !tv && !amiga;
     vec3 m = amiga ? vec3(41.0, 41.0, 48.0) : pc ? vec3(44.0, 46.0, 39.0) : vec3(0.11, 0.13, 0.34) * tube.y;
@@ -2029,13 +2032,14 @@ void main()
         bool show = isShow(vSignal.x) && scan < 0.5;
         bool prog = interlace < 0.5;                       // the console's own picture: 240p/288p
         if (show) interlace = 1.0;
-        float dbl = (vga && srcH <= 300.0) ? 2.0 : 1.0;
+        bool x68 = scan > 2.5;                             // the X68000's monitor (x68Raster)
+        float dbl = (vga && srcH <= 300.0) ? 2.0 : (x68 ? vSignal.z : 1.0);
         float BH = srcH * dbl;
         // the TV's field: 240 or 288 lines (480 or 576 interlaced); a frame with fewer lines leaves a
         // border, as on the real set. Picture height 1 lets the core's lines fill the height
         // instead, for cores that crop lines and set the aspect ratio from the lines they keep
         // (the picture is then a zoom of the same tube: lines and beam keep their look).
-        float visField = scan > 0.5 ? BH : (pal > 0.5 ? 288.0 : 240.0) * (interlace > 0.5 ? 2.0 : 1.0);
+        float visField = x68 ? vSignal.w : scan > 0.5 ? BH : (pal > 0.5 ? 288.0 : 240.0) * (interlace > 0.5 ? 2.0 : 1.0);
         float visLines = (global.LR_FILL > 0.5 && scan < 0.5 && !show) ? BH : visField;
         bool il = interlace > 0.5 && global.LR_STEADY < 0.5;
         float stepL = il ? 2.0 : 1.0;
