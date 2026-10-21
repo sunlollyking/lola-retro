@@ -12,7 +12,7 @@ and the picture nearly filling the glass, as owners set up the real monitor.
 1. Amiberry 8.3 or newer, the normal OpenGL build (macOS, Linux, Windows).
 2. Copy this `lola-retro` folder into Amiberry's shader folder. **Paths → Shaders** shows where it is.
 3. **Play → Display defaults → Shader** (or **Filter → Native Display Shader**): choose
-   `lola-retro/amiga-1084s.glslp`.
+   `lola-retro/amiga-1084s.glslp`, or `lola-retro/amiga-1084s-flat.glslp` for a flat screen with square corners.
 
 ## Amiberry settings
 

@@ -173,7 +173,7 @@ The list is in [Scenes](shaders/lola-retro/README.md#scenes), all the settings i
 
 The Amiga 1084S preset also comes as GLSL for [Amiberry](https://amiberry.com), the stand-alone Amiga
 emulator: copy [`amiberry/lola-retro`](amiberry/lola-retro) into Amiberry's shader folder and choose
-`lola-retro/amiga-1084s.glslp`. Same picture as in RetroArch; setup and settings in its [README](amiberry/lola-retro/README.md).
+`lola-retro/amiga-1084s.glslp` (or `amiga-1084s-flat.glslp`). Same picture as in RetroArch; setup and settings in its [README](amiberry/lola-retro/README.md).
 
 ![Cannon Fodder and Super Stardust AGA in Amiberry with the 1084S preset](docs/amiberry-1084s.jpg)
 
@@ -192,7 +192,7 @@ RetroArch, from text mode and 320×200 up to 1024×768; setup and settings in it
 on a 3840×2560 screen.</sub>
 
 Five presets put the same 15-inch tube in different monitors, from an average one to `extreme`, which is
-sharper than any real tube and easy on the eyes for long work on the desktop:
+sharper than any real tube and easy on the eyes for long work on the desktop (each also comes flat, as `-flat.glslp`):
 
 ![The same dialog through the five PC monitor presets](docs/86box-pc-presets.jpg)
 

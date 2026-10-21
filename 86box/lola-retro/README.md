@@ -27,8 +27,11 @@ better monitors, up to one sharper than any real tube.
 | `pc-monitor-vga-premium-plus.glslp` | The best 15-inch monitors (0.24 mm, 0.17–0.24 mm). |
 | `pc-monitor-vga-extreme.glslp` | Sharper than any real tube (0.22 mm, 0.13–0.18 mm), for long work on the Windows desktop. |
 
-All five use the same shader files and differ only in their parameter values. The same part of the
-screen through each of them, at 1024×768 on a 3840×2560 screen:
+Each also comes flat, without curvature and with square corners: `pc-monitor-vga-flat.glslp`,
+`pc-monitor-vga-good-flat.glslp` and so on.
+
+All of them use the same shader files and differ only in their parameter values. The same part of the
+screen through each of the five monitors, at 1024×768 on a 3840×2560 screen:
 
 ![The same dialog through the five PC monitor presets](https://raw.githubusercontent.com/zoran123456/lola-retro/main/docs/86box-pc-presets.jpg)
 

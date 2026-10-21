@@ -4,6 +4,7 @@
 Two targets, each one preset:
 - Amiberry (Amiga 1084S): amiberry/lola-retro
 - 86Box (PC monitor, VGA): 86box/lola-retro
+Every preset also comes in a flat version (NAME-flat.glslp), as in RetroArch's flat folder.
 
 Both run the passes on OpenGL core profiles (Amiberry 3.3, 86Box 3.2 or newer). The conversion:
 - inlines the includes and turns each pass into one file with a VERTEX and a FRAGMENT part;
@@ -42,7 +43,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 SLANG = ROOT / "shaders" / "lola-retro" / "shaders"
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from make_presets import BASE, PASSES, PRESETS, fmt  # noqa: E402
+from make_presets import BASE, FLAT, PASSES, PRESETS, fmt  # noqa: E402
 
 # The parameters left adjustable, in the order the emulator's list shows them.
 # Everything else is fixed at the preset's value.
@@ -531,17 +532,18 @@ def main():
             dest.write_text(glsl)
             written.add(p["src"])
             print("wrote", dest.relative_to(ROOT))
-        dest = out / f"{target['preset']}.glslp"
-        dest.write_text(preset_text(target))
-        print("wrote", dest.relative_to(ROOT))
-        for name, title in target.get("variants", {}).items():
-            vals = {**values, **PRESETS[name], **target["fixed"]}
-            diff = {n: v for n, v in vals.items() if n in table and float(v) != float(values[n])}
-            fixed = [n for n in diff if n not in target["params"]]
-            assert not fixed, f"{name} changes {fixed}, which this version has built in"
-            dest = out / f"{name}.glslp"
-            dest.write_text(preset_text(target, title, diff))
-            print("wrote", dest.relative_to(ROOT))
+        # every preset also in a flat version (FLAT of make_presets.py: no curvature, square
+        # corners), as in RetroArch's flat folder; its .glslp only sets those parameters
+        presets = {target["preset"]: target["title"], **target.get("variants", {})}
+        for name, title in presets.items():
+            for flat in (False, True):
+                vals = {**values, **PRESETS[name], **target["fixed"], **(FLAT if flat else {})}
+                diff = {n: v for n, v in vals.items() if n in table and float(v) != float(values[n])}
+                fixed = [n for n in diff if n not in target["params"]]
+                assert not fixed, f"{name} changes {fixed}, which this version has built in"
+                dest = out / f"{name}{'-flat' if flat else ''}.glslp"
+                dest.write_text(preset_text(target, title + (", flat" if flat else ""), diff))
+                print("wrote", dest.relative_to(ROOT))
         (out / "LICENSE").write_text((ROOT / "LICENSE").read_text())
 
 
