@@ -8,6 +8,12 @@
    finer than its pixels). Say what the reason is, in the code comment and in the README.
 3. **Where a compromise works better as its own option, it is a separate parameter**, off by default, so
    the presets stay realistic. Examples: Dither blend, Mask on screen pixels, Scanline smoothing.
+4. **When sources disagree, trust them in this order:** spec sheets, service manuals and measurements;
+   then photos of a real screen, which are good for the beam, line gaps and geometry but not for colour or
+   brightness (the camera and the screen it is viewed on change both); last, how users remember it or
+   see it on their own display. Where the display cannot show the real thing (a mask finer than its
+   pixels, phosphor brightness in SDR, flicker at 60 Hz), the compromise shows what the eye saw on
+   average, as No flicker does, not something that only looks good.
 
 ## Decisions
 
