@@ -158,15 +158,23 @@ In a browser on an Apple M4 Pro (WebGL 2) the whole chain takes 2 to 3 ms per fr
 
 ## Tested
 
-The passes are made from the RetroArch shaders by a converter (`tools/make_unity.py` in the repository). They
-were checked by running both on the same GPU, every preset, cable and option, with the Unity passes run the way
-the package runs them, and with the rows the right way up for both kinds of graphics API: the pictures agree to
-within one step of 8-bit colour, apart from a few single pixels per frame where the mask changes colour
-(`tools/unity-preview.py`). The same holds for the HDR passes against the RetroArch version's `hdr` presets
-(within one step of 10-bit HDR10, which RetroArch dithers by half a step), for an eye's image read from a texture
-array (XR, HDRP), and in WebGL 2 in a browser, with the passes compiled to GLSL ES 3.00 (`tools/webgl-preview.py`).
-The C# side (the component, the URP renderer feature, the HDRP custom post-process) has not been run in Unity
-yet. Reports are welcome.
+In Unity 6.6 (6000.6.7f1) on a Mac: the package compiles without errors, and the test project's picture
+(`unity/test-project`, the SNES preset on composite) is RetroArch's, in the Built-in render pipeline and in URP on
+Metal, and in a web build (WebGL 2) of each: the pictures agree to within one step of 8-bit colour, apart from a
+few single pixels per frame where the mask changes colour.
+
+The passes are made from the RetroArch shaders by a converter (`tools/make_unity.py` in the repository). Every
+preset, cable and option was also checked by running both on the same GPU, with the Unity passes run the way
+the package runs them, and with the rows the right way up for both kinds of graphics API (`tools/unity-preview.py`).
+The same holds for the HDR passes against the RetroArch version's `hdr` presets (within one step of 10-bit HDR10,
+which RetroArch dithers by half a step), for an eye's image read from a texture array (XR, HDRP), and in WebGL 2
+in a browser (`tools/webgl-preview.py`).
+
+On OpenGL ES and WebGL the shader uses GLSL made from the same passes by SPIRV-Cross. Unity's own translation
+there keeps integers in float registers as tiny bit patterns that these GPUs flush to zero, and the picture came
+out black.
+
+Not yet run in Unity: HDR output, XR and HDRP. Reports are welcome.
 
 ## License
 

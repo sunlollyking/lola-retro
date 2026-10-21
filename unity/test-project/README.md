@@ -38,6 +38,22 @@ The project starts in the Built-in render pipeline. **Lola Retro Test → Use UR
 with a Universal Renderer that has the Lola Retro renderer feature, and uses it; **Use the Built-in render
 pipeline** goes back. **Rebuild the test scene** makes the scene again.
 
+## From the command line
+
+The editor scripts can render the scene into a PNG, or make a web build, without opening the editor
+(`Unity` is the editor's executable, for example
+`/Applications/Unity/Hub/Editor/6000.6.7f1/Unity.app/Contents/MacOS/Unity`):
+
+```
+Unity -batchmode -projectPath unity/test-project -executeMethod LolaRetroTestCapture.Capture -lolaOut out.png -quit
+Unity -batchmode -projectPath unity/test-project -buildTarget WebGL -executeMethod LolaRetroTestBuild.WebGL -quit
+```
+
+The capture takes `-lolaSize 1440x1080`, `-lolaFrames 3` and `-lolaPipeline urp|builtin` (switching the
+pipeline first; `urp` needs URP installed). The web build is in `Builds/WebGL`, uncompressed, for any local web
+server (`python3 -m http.server -d unity/test-project/Builds/WebGL`); `-lolaDevelopment` makes a development
+build, which logs what the game camera rendered.
+
 ## If something is wrong
 
 Errors in the Console (red) and anything that looks wrong on the screen: please send them, with the Unity

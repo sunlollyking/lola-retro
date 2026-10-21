@@ -31,11 +31,16 @@ from the file's path, for every file that has none.
 tools/unity-preview.py runs the Unity passes the way the C# side does and compares the picture
 with the slang passes'; tools/webgl-preview.py does the same in WebGL 2 in a browser.
 
+Needs glslangValidator and spirv-cross on PATH (for the GLSL of OpenGL ES and WebGL, see gles_glsl).
+
 Usage: python3 tools/make_unity.py
 """
 import hashlib
+import json
 import re
+import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -259,29 +264,102 @@ EXTRA_PASSES = [("crt-hdr", "../Passes/crt-hdr.hlsl", None),                 # t
                 ("source-array", "../lola-retro-source.hlsl", "LR_INPUT_ARRAY")]   # one slice of a texture array (XR, HDRP)
 
 
+def run_tool(*args):
+    r = subprocess.run([str(a) for a in args], capture_output=True, text=True)
+    if r.returncode != 0:
+        raise SystemExit(f"{args[0]} failed:\n{r.stdout}{r.stderr}")
+    return r.stdout
+
+
+def gles_glsl(path, define):
+    """GLSL ES 3.00 of a Unity pass (HLSL), for its GLSLPROGRAM pass: glslang's HLSL front end to
+    SPIR-V, SPIRV-Cross to GLSL. Unity's own way there (FXC, then HLSLcc) keeps integers in float
+    registers as their bit patterns, tiny denormal floats, which WebGL GPUs flush to zero: the
+    passes that use integers came out black. This way the integers stay integers (it is the way
+    tools/webgl-preview.py checks against the slang passes). Unity binds uniforms and textures
+    by name, so the uniform block becomes plain uniforms, the varyings are named by their
+    location, and each texture's sampler takes the texture's name (its filter is the texture's
+    own anyway, as in the HLSL passes)."""
+    parts = {}
+    with tempfile.TemporaryDirectory() as tmp:
+        for short, entry in (("vert", "LRVert"), ("frag", "LRFrag")):
+            spv = Path(tmp) / f"{short}.spv"
+            run_tool("glslangValidator", "-D", "-V", "-S", short, "-e", entry, "-o", spv,
+                     *([f"-D{define}"] if define else []), path)
+            refl = json.loads(run_tool("spirv-cross", spv, "--reflect", "--entry", entry))
+            io = ("outputs", "out") if short == "vert" else ("inputs", "in")
+            names = [a for v in refl.get(io[0], []) for a in
+                     ("--rename-interface-variable", io[1], v["location"], f"lr_var{v['location']}")]
+            glsl = run_tool("spirv-cross", spv, "--es", "--version", "300", "--entry", entry,
+                            "--glsl-emit-ubo-as-plain-uniforms", *names)
+            # the uniform block, a struct uniform now -> one plain uniform per member
+            def plain(m):
+                members = [l.strip() for l in m.group(2).split(";") if l.strip()]
+                return "".join(f"uniform {member};\n" for member in members)
+            glsl, n = re.subn(r"struct (\w+)\s*\{([^}]*)\};\s*uniform \1 (\w+);\n", plain, glsl)
+            inst = re.findall(r"uniform _Global (\w+);", glsl)
+            assert n <= 1 and not inst, path
+            glsl = re.sub(r"\b_\d+\.(?=LR_)", "", glsl)
+            # samplers: SPIRV_Cross_Combined<texture><sampler> (or the dummy sampler of Load) -> <texture>
+            textures = re.findall(r"^Texture2D(?:Array)?\s+(\w+)\s*;", Path(path).read_text(), flags=re.M)
+            if Path(path).name == "lola-retro-source.hlsl":
+                textures = ["LR_InputArray" if define == "LR_INPUT_ARRAY" else "LR_Input"]
+            for t in sorted(textures, key=len, reverse=True):
+                glsl = re.sub(r"\bSPIRV_Cross_Combined" + t + r"\w*", t, glsl)
+            decl = re.compile(r"^uniform\s+highp\s+sampler2D(Array)?\s+(\w+)\s*;\n", flags=re.M)
+            seen = set()
+            glsl = decl.sub(lambda m: "" if m.group(2) in seen or seen.add(m.group(2)) else m.group(0), glsl)
+            assert "SPIRV_Cross" not in glsl, (path, re.findall(r"SPIRV_Cross\w*", glsl)[:3])
+            glsl = glsl.replace("precision mediump float;", "precision highp float;")
+            assert glsl.startswith("#version 300 es\n"), path
+            parts[short] = glsl[len("#version 300 es\n"):]
+    return "\n".join(["#version 300 es", "#ifdef VERTEX", parts["vert"].strip("\n"), "#endif",
+                      "#ifdef FRAGMENT", parts["frag"].strip("\n"), "#endif"])
+
+
 def shader_lab():
-    """Hidden/Lola Retro: Unity's source pass, every pass of CHAIN, then EXTRA_PASSES."""
-    passes = ([("source", "../lola-retro-source.hlsl", None)] + [(p["src"], f"../Passes/{p['src']}.hlsl", None) for p in CHAIN]
-              + EXTRA_PASSES)
+    """Hidden/Lola Retro: Unity's source pass, every pass of CHAIN, then EXTRA_PASSES. First a
+    SubShader in GLSL for OpenGL ES 3 and WebGL (see gles_glsl), then one in HLSL for the rest."""
+    passes = ([("source", "lola-retro-source.hlsl", None)] + [(p["src"], f"Passes/{p['src']}.hlsl", None) for p in CHAIN]
+              + [(n, f[3:], d) for n, f, d in EXTRA_PASSES])
     out = ["// Lola Retro - every pass of the chain, run by the C# side (LolaRetroChain.cs) in this order.",
            "// Generated by tools/make_unity.py. Do not edit.",
            'Shader "Hidden/Lola Retro"',
            "{",
+           "    // OpenGL ES 3 and WebGL: GLSL made from the HLSL passes by SPIRV-Cross (tools/make_unity.py, gles_glsl)",
            "    SubShader",
            "    {",
            "        Cull Off ZWrite Off ZTest Always Blend Off",
            ""]
+    for name, path, define in passes:
+        glsl = gles_glsl(OUT / "Shaders" / path, define)
+        out += ["        Pass",
+                "        {",
+                f'            Name "{name}"',
+                "            GLSLPROGRAM",
+                glsl,
+                "            ENDGLSL",
+                "        }",
+                ""]
+    out += ["    }",
+            "",
+            "    // everything else",
+            "    SubShader",
+            "    {",
+            "        Cull Off ZWrite Off ZTest Always Blend Off",
+            ""]
     for name, path, define in passes:
         out += ["        Pass",
                 "        {",
                 f'            Name "{name}"',
                 "            HLSLPROGRAM",
                 "            #pragma target 3.5",
+                "            #pragma exclude_renderers gles3",
                 "            #pragma vertex LRVert",
                 "            #pragma fragment LRFrag"]
         if define:
             out.append(f"            #define {define}")
-        out += [f'            #include "{path}"',
+        out += [f'            #include "../{path}"',
                 "            ENDHLSL",
                 "        }",
                 ""]

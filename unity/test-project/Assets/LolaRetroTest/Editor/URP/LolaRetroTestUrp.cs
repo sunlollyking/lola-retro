@@ -9,7 +9,7 @@ using UnityEngine.Rendering.Universal;
 /// with the Lola Retro renderer feature, and a URP asset that uses it, for every quality level.
 /// </summary>
 [InitializeOnLoad]
-static class LolaRetroTestUrp
+public static class LolaRetroTestUrp
 {
     const string Folder = "Assets/LolaRetroTest/URP";
     const string UrpRequest = "LolaRetroTest.SetUpUrp";
@@ -22,7 +22,7 @@ static class LolaRetroTestUrp
     }
 
     [MenuItem("Lola Retro Test/Set up URP (after installing it)", priority = 22)]
-    static void SetUp()
+    public static void SetUp()
     {
         SessionState.SetBool(UrpRequest, false);
         if (!AssetDatabase.IsValidFolder(Folder))
@@ -63,13 +63,16 @@ static class LolaRetroTestUrp
         QualitySettings.SetQualityLevel(level, false);
 
         // the test scene's sprites get URP's sprite shader (LolaRetroTestControls.OnEnable)
-        foreach (var b in Object.FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None))
+        foreach (var b in Resources.FindObjectsOfTypeAll<MonoBehaviour>())
         {
             if (b.GetType().Name != "LolaRetroTestControls")
                 continue;
             b.enabled = false;
             b.enabled = true;
         }
+        var scene = UnityEditor.SceneManagement.EditorSceneManager.GetActiveScene();
+        if (scene.path == "Assets/LolaRetroTest/LolaRetroTest.unity")
+            UnityEditor.SceneManagement.EditorSceneManager.SaveScene(scene);
         Debug.Log("Lola Retro test: URP set up (" + Folder + "), with the Lola Retro renderer feature.");
     }
 }

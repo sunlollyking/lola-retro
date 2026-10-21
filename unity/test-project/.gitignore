@@ -10,3 +10,16 @@
 *.sln
 .vs/
 .idea/
+
+# made by the test scene's setup (Lola Retro Test menu) on the first start
+/Assets/LolaRetroTest/LolaRetroTest.unity*
+/Assets/LolaRetroTest/Ball.png*
+/Assets/LolaRetroTest/Console.renderTexture*
+/Assets/LolaRetroTest/URP*
+/Assets/DefaultVolumeProfile.asset*
+/Assets/UniversalRenderPipelineGlobalSettings.asset*
+# Unity's own settings and package lock, made on the first start
+/ProjectSettings/*
+!/ProjectSettings/ProjectVersion.txt
+/Packages/packages-lock.json
+/Data/

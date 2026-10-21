@@ -12,7 +12,7 @@ using UnityEngine.Rendering;
 /// render texture, and the display camera with Lola Retro showing that texture.
 /// </summary>
 [InitializeOnLoad]
-static class LolaRetroTestSetup
+public static class LolaRetroTestSetup
 {
     const string Folder = "Assets/LolaRetroTest";
     const string ScenePath = Folder + "/LolaRetroTest.unity";
@@ -28,7 +28,7 @@ static class LolaRetroTestSetup
     }
 
     [MenuItem("Lola Retro Test/Rebuild the test scene", priority = 0)]
-    static void Build()
+    public static void Build()
     {
         // linear colour space, as most projects (the shader handles both)
         PlayerSettings.colorSpace = ColorSpace.Linear;
@@ -136,7 +136,7 @@ static class LolaRetroTestSetup
     }
 
     [MenuItem("Lola Retro Test/Use the Built-in render pipeline", priority = 21)]
-    static void UseBuiltIn()
+    public static void UseBuiltIn()
     {
         GraphicsSettings.defaultRenderPipeline = null;
         int level = QualitySettings.GetQualityLevel();
@@ -150,13 +150,16 @@ static class LolaRetroTestSetup
         Debug.Log("Lola Retro test: Built-in render pipeline.");
     }
 
-    // the sprites get the pipeline's sprite shader
+    // the sprites get the pipeline's sprite material, saved with the scene
     internal static void RefreshSprites()
     {
-        foreach (var c in Object.FindObjectsByType<LolaRetroTestControls>(FindObjectsSortMode.None))
+        foreach (var c in Resources.FindObjectsOfTypeAll<LolaRetroTestControls>())
         {
             c.enabled = false;
             c.enabled = true;
         }
+        var scene = EditorSceneManager.GetActiveScene();
+        if (scene.path == ScenePath)
+            EditorSceneManager.SaveScene(scene);
     }
 }

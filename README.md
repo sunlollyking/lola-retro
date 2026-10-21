@@ -308,7 +308,7 @@ Measured on synthetic patterns:
 ```
 python3 tools/make_presets.py     # regenerate the systems/, curved/, flat/ and hdr/ .slangp files from one table
 python3 tools/make_glsl.py        # regenerate the Amiberry and 86Box versions (amiberry/, 86box/) from the slang passes
-python3 tools/make_unity.py       # regenerate the Unity package's passes and tables (unity/) from the slang passes
+python3 tools/make_unity.py       # regenerate the Unity package's passes and tables (unity/) from the slang passes (glslang, spirv-cross)
 python3 tools/check_shaders.py    # compile every pass (slang, GLSL and Unity's HLSL) with glslangValidator
 tools/render-preview.sh PRESET IMAGE OUT.png [glcore|vulkan]   # Linux: render a frame in headless RetroArch
 tools/amiberry-preview.py PRESET.glslp FRAME.png OUT.png       # render a frame the way Amiberry does (moderngl)

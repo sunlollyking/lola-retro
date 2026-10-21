@@ -36,16 +36,26 @@ public class LolaRetroTestControls : MonoBehaviour
         ShowPicture(pictureIndex);
     }
 
-    // Sprites need the pipeline's own sprite shader
+    // Sprites need the pipeline's own sprite material. It is set in the editor, where the
+    // materials can be found, and saved with the scene, so builds have it too.
     void SetMaterials()
     {
+#if UNITY_EDITOR
         bool srp = GraphicsSettings.currentRenderPipeline != null;
-        var shader = Shader.Find(srp ? "Universal Render Pipeline/2D/Sprite-Unlit-Default" : "Sprites/Default");
-        if (shader == null)
+        Material m = srp
+            ? UnityEditor.AssetDatabase.LoadAssetAtPath<Material>("Packages/com.unity.render-pipelines.universal/Runtime/Materials/Sprite-Unlit-Default.mat")
+            : UnityEditor.AssetDatabase.GetBuiltinExtraResource<Material>("Sprites-Default.mat");
+        if (m == null)
             return;
         foreach (var r in new[] { picture, ball })
-            if (r != null && (r.sharedMaterial == null || r.sharedMaterial.shader != shader))
-                r.sharedMaterial = new Material(shader) { name = "Sprite (" + shader.name + ")" };
+        {
+            if (r != null && r.sharedMaterial != m)
+            {
+                r.sharedMaterial = m;
+                UnityEditor.EditorUtility.SetDirty(r);
+            }
+        }
+#endif
     }
 
     // The picture at 1 unit per pixel, the game camera and its render texture exactly its size
@@ -91,6 +101,8 @@ public class LolaRetroTestControls : MonoBehaviour
     {
         if (effect == null || gameCamera == null)
             return;
+        if (Debug.isDebugBuild && Application.isPlaying && Time.frameCount == 60)
+            LogConsole();
         MoveBall();
         if (!Application.isPlaying)
             return;
@@ -115,6 +127,24 @@ public class LolaRetroTestControls : MonoBehaviour
         if (ballPos.x < 8 || ballPos.x > size.x - 8) ballVel.x = -ballVel.x;
         if (ballPos.y < 8 || ballPos.y > size.y - 8) ballVel.y = -ballVel.y;
         ball.transform.position = new Vector3(Mathf.Round(ballPos.x) - size.x * 0.5f, Mathf.Round(ballPos.y) - size.y * 0.5f, -1f);
+    }
+
+    // development builds: what the game camera rendered (to tell a black picture from a black tube)
+    void LogConsole()
+    {
+        var prev = RenderTexture.active;
+        RenderTexture.active = console;
+        var t = new Texture2D(console.width, console.height, TextureFormat.RGBA32, false);
+        t.ReadPixels(new Rect(0, 0, console.width, console.height), 0, 0);
+        RenderTexture.active = prev;
+        Color mean = Color.clear;
+        foreach (var c in t.GetPixels())
+            mean += c;
+        mean /= console.width * console.height;
+        Debug.Log($"Lola Retro test: console {console.width}x{console.height} {console.graphicsFormat}, mean {mean}, " +
+                  $"picture material {(picture.sharedMaterial != null ? picture.sharedMaterial.shader.name : "none")}, " +
+                  $"pipeline {(GraphicsSettings.currentRenderPipeline != null ? GraphicsSettings.currentRenderPipeline.name : "Built-in")}, " +
+                  $"shader supported {Shader.Find("Hidden/Lola Retro")?.isSupported}");
     }
 
     static bool Pressed(KeyCode key)

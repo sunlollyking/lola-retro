@@ -9,7 +9,8 @@ The .glsl files (tools/make_glsl.py) are compiled the way their emulator does, o
 - 86Box keeps "#version" and the word after it, removes the #pragma parameter lines and any
   "#define texture..." line, and puts an #extension line, the defines and "#line 1" in front.
 The Unity passes (tools/make_unity.py) are HLSL: glslang's HLSL front end compiles each one's
-vertex and fragment function (LRVert, LRFrag) the way the ShaderLab pass names them.
+vertex and fragment function (LRVert, LRFrag) the way the ShaderLab pass names them. Their GLSL
+ES 3.00 versions (Unity's OpenGL ES and WebGL SubShader) are compiled as Unity compiles them.
 
 Usage: python3 tools/check_shaders.py
 Needs glslangValidator (package glslang-tools / glslang).
@@ -118,6 +119,13 @@ def main():
     for pass_file, define in unity:
         for stage, entry, short in (("vertex", "LRVert", "vert"), ("fragment", "LRFrag", "frag")):
             ok &= compile_unity(pass_file, define, stage, entry, short)
+    # the GLSL ES 3.00 passes of Unity's OpenGL ES and WebGL SubShader, as Unity compiles them:
+    # the source once with VERTEX and once with FRAGMENT defined
+    shader = (UNITY / "Resources" / "LolaRetro.shader").read_text()
+    for name, glsl in re.findall(r'Name "([^"]+)"\s*GLSLPROGRAM\n(.*?)\n\s*ENDGLSL', shader, flags=re.S):
+        for stage, define in (("vertex", "VERTEX"), ("fragment", "FRAGMENT")):
+            src = glsl.replace("#version 300 es\n", f"#version 300 es\n#define {define}\n", 1)
+            ok &= compile_stage(f"unity-gles/{name}", stage, src + "\n", [])
     sys.exit(0 if ok else 1)
 
 
