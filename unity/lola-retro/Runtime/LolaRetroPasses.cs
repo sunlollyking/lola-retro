@@ -4,23 +4,27 @@ namespace LolaRetro
 {
     static class LolaRetroPasses
     {
-        // the shader's passes (Source is Unity's own: the console's frame)
-        public const int Source = 0;
-        public const int Native = 1;
-        public const int Encode = 2;
-        public const int Decode = 3;
-        public const int GlowH = 4;
-        public const int GlowV = 5;
-        public const int Beam = 6;
-        public const int ShowLines = 7;
-        public const int Crt = 8;
-        public const int Present = 9;
-        public const int Count = 10;
+        // the shader's passes
+        public const int Source = 0;   // Unity's own: the console's frame
+        public const int Native = 1;   // native
+        public const int Encode = 2;   // encode
+        public const int Decode = 3;   // decode
+        public const int GlowH = 4;   // glow-h
+        public const int GlowV = 5;   // glow-v
+        public const int Beam = 6;   // beam
+        public const int ShowLines = 7;   // show-lines
+        public const int Crt = 8;   // crt
+        public const int Present = 9;   // present
+        public const int CrtHdr = 10;   // the CRT pass for HDR displays
+        public const int OutputHdr = 11;   // Unity's own: the last pass for HDR displays
+        public const int SourceArray = 12;   // Unity's own: the source pass for one slice of a texture array
+        public const int Count = 13;
 
-        // Size of each pass's output, as in RetroArch's presets: x and y (Source: the console's frame)
+        // Size of each pass's output, as in RetroArch's presets, along x and y (the source passes
+        // make the console's frame)
         public static readonly PassScale[] X =
         {
-            default,
+            default,   // source
             new PassScale(ScaleKind.Source, 1.0f),   // native
             new PassScale(ScaleKind.Absolute, 1280.0f),   // encode
             new PassScale(ScaleKind.Source, 1.0f),   // decode
@@ -30,10 +34,13 @@ namespace LolaRetro
             new PassScale(ScaleKind.Absolute, 8192.0f),   // show-lines
             new PassScale(ScaleKind.Viewport, 1.0f),   // crt
             new PassScale(ScaleKind.Viewport, 1.0f),   // present
+            new PassScale(ScaleKind.Viewport, 1.0f),   // crt-hdr
+            new PassScale(ScaleKind.Viewport, 1.0f),   // output-hdr
+            default,   // source-array
         };
         public static readonly PassScale[] Y =
         {
-            default,
+            default,   // source
             new PassScale(ScaleKind.Source, 1.0f),   // native
             new PassScale(ScaleKind.Source, 1.0f),   // encode
             new PassScale(ScaleKind.Source, 1.0f),   // decode
@@ -43,6 +50,9 @@ namespace LolaRetro
             new PassScale(ScaleKind.Absolute, 577.0f),   // show-lines
             new PassScale(ScaleKind.Viewport, 1.0f),   // crt
             new PassScale(ScaleKind.Viewport, 1.0f),   // present
+            new PassScale(ScaleKind.Viewport, 1.0f),   // crt-hdr
+            new PassScale(ScaleKind.Viewport, 1.0f),   // output-hdr
+            default,   // source-array
         };
 
         // The TV presets run the encoder at a fixed width, the PC and Amiga monitors (and every
@@ -51,9 +61,9 @@ namespace LolaRetro
 
         // How each pass samples what it reads (filter_linear): a target gets the filter of the
         // next pass that runs (RetroArch reads a pass's output with the filter of the pass after it)
-        public static readonly bool[] Linear = { false, false, false, true, true, true, true, false, true, false };
+        public static readonly bool[] Linear = { false, false, false, true, true, true, true, false, true, false, true, false, false };
 
         // Float output (RGBA16F), or 8 bits
-        public static readonly bool[] Float = { false, true, true, true, true, true, true, true, true, false };
+        public static readonly bool[] Float = { false, true, true, true, true, true, true, true, true, false, true, true, false };
     }
 }

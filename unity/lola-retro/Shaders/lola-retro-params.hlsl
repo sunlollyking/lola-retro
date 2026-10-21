@@ -53,3 +53,7 @@ float LR_BACKDROP;
 float LR_ROOM;
 float LR_SPILL;
 float LR_SCENE_SPEED;
+
+// HDR displays (hdr.inc): set from Unity's HDR output settings
+float LR_NITS_WHITE;
+float LR_NITS_PEAK;

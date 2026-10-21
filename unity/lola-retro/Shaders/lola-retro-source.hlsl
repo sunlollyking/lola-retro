@@ -5,11 +5,23 @@
 // it. Unity works in linear light, a console sends gamma-coded RGB: the frame is coded the way an
 // emulator's frame is (sRGB), which is what the other passes expect.
 // The texels are read directly (no sampler), so the input's own filter setting does not matter.
+// With LR_INPUT_ARRAY the input is one slice of a texture array: one eye in XR, and HDRP's
+// camera image, which is always an array.
+// On an HDR display the input is in the form Unity's post-processing leaves it (see
+// lola-retro-output-hdr.hlsl): LR_InputRow0..2 turn it back into Rec.709, 1.0 at paper white.
 #include "lola-retro-unity.hlsl"
 
+#ifdef LR_INPUT_ARRAY
+Texture2DArray LR_InputArray;
+float LR_InputSlice;
+#define LR_INPUT_LOAD(p) LR_InputArray.Load(int4(p, int(LR_InputSlice), 0))
+#else
 Texture2D LR_Input;
-float4 LR_InputRect;     // the part of LR_Input to use, in texels: left, bottom, width, height
-float LR_InputLinear;    // 1: LR_Input holds linear light (Unity's linear colour space)
+#define LR_INPUT_LOAD(p) LR_Input.Load(int3(p, 0))
+#endif
+float4 LR_InputRect;     // the part of the input to use, in texels: left, bottom, width, height
+float LR_InputLinear;    // 1: the input holds linear light (Unity's linear colour space)
+float4 LR_InputRow0, LR_InputRow1, LR_InputRow2;   // its colour -> linear Rec.709 (identity in SDR)
 
 struct LRVaryings
 {
@@ -27,7 +39,7 @@ LRVaryings LRVert(uint vertexID : SV_VertexID)
 float3 lr_input(float2 t)
 {
     int2 p = (int2)clamp(floor(t), LR_InputRect.xy, LR_InputRect.xy + LR_InputRect.zw - 1.0);
-    return LR_Input.Load(int3(p, 0)).rgb;
+    return LR_INPUT_LOAD(p).rgb;
 }
 
 float4 LRFrag(LRVaryings i) : SV_Target
@@ -67,7 +79,7 @@ float4 LRFrag(LRVaryings i) : SV_Target
                 c += lr_input(a + (float2(x, y) + 0.5) * scale / 16.0);
         c /= 256.0;
     }
-    c = saturate(c);
+    c = saturate(mul(float3x3(LR_InputRow0.xyz, LR_InputRow1.xyz, LR_InputRow2.xyz), c));
     if (LR_InputLinear > 0.5)
         c = lr_linear_to_srgb(c);
     return float4(c, 1.0);

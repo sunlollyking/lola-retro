@@ -91,11 +91,13 @@ def box86_source(src, define):
             + f"#define {define}\n#define PARAMETER_UNIFORM\n" + "\n#line 1\n" + src)
 
 
-def compile_unity(path, stage, entry, short):
-    """One stage of a Unity pass, with its includes found next to it as Unity finds them."""
-    r = subprocess.run(["glslangValidator", "-D", "-V", "-S", short, "-e", entry, "-o", "/dev/null", str(path)],
-                       capture_output=True, text=True)
-    print(f"{'unity/' + path.stem:18} {stage:8} {'ok' if r.returncode == 0 else 'FAILED'}")
+def compile_unity(path, define, stage, entry, short):
+    """One stage of a Unity pass (with the #define its ShaderLab pass sets), its includes found
+    next to it as Unity finds them."""
+    r = subprocess.run(["glslangValidator", "-D", "-V", "-S", short, "-e", entry, "-o", "/dev/null",
+                        *([f"-D{define}"] if define else []), str(path)], capture_output=True, text=True)
+    name = "unity/" + path.stem.replace("lola-retro-", "") + (f" {define}" if define else "")
+    print(f"{name:18} {stage:8} {'ok' if r.returncode == 0 else 'FAILED'}")
     if r.returncode != 0:
         print(r.stdout + r.stderr)
     return r.returncode == 0
@@ -111,9 +113,11 @@ def main():
             src = glsl.read_text()
             for stage, define in (("vertex", "VERTEX"), ("fragment", "FRAGMENT")):
                 ok &= compile_stage(f"{label}/{glsl.stem}", stage, assemble(src, define), [])
-    for pass_file in [UNITY / "lola-retro-source.hlsl"] + sorted((UNITY / "Passes").glob("*.hlsl")):
+    unity = [(UNITY / "lola-retro-source.hlsl", None), (UNITY / "lola-retro-source.hlsl", "LR_INPUT_ARRAY"),
+             (UNITY / "lola-retro-output-hdr.hlsl", None)] + [(f, None) for f in sorted((UNITY / "Passes").glob("*.hlsl"))]
+    for pass_file, define in unity:
         for stage, entry, short in (("vertex", "LRVert", "vert"), ("fragment", "LRFrag", "frag")):
-            ok &= compile_unity(pass_file, stage, entry, short)
+            ok &= compile_unity(pass_file, define, stage, entry, short)
     sys.exit(0 if ok else 1)
 
 

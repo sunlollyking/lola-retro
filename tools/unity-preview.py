@@ -14,7 +14,10 @@ Unity's side as LolaRetroChain.cs runs it:
   used, as on OpenGL ES), the show-lines pass only on a TV show;
 - the last pass writes linear light; it is coded to 8-bit sRGB as Unity's backbuffer would.
 --uvtop runs the passes as on Direct3D, Metal and Vulkan (LR_UVTop: clip space turned upside down
-against the rows), where Unity's targets start at the top.
+against the rows), where Unity's targets start at the top. --hdr runs the HDR passes (crt-hdr and
+Unity's output-hdr, with the picture in nits in Rec.2020 around them, as URP's post-processing and
+HDRP leave it) against RetroArch's hdr presets, both coded with PQ. --array reads the input from
+slice 1 of a texture array, as for one eye in XR and in HDRP.
 
 RetroArch's side follows the preset's .slangp chain (tools/make_presets.py): the frame with the
 top row first, each texture read with RetroArch's filter and edge rule (clamp_to_border with a
@@ -23,7 +26,7 @@ real black border), float_framebuffer targets in RGBA16F, the last pass into 8 b
 Needs: glslangValidator and spirv-cross on PATH; pip install moderngl numpy pillow.
 
 Usage: tools/unity-preview.py PRESET FRAME.png OUT.png [--size 1440x1080] [--frames 3] [--uvtop]
-       [--input-scale K] [--compare RETROARCH_OUT.png] [--set NAME=VALUE ...]
+       [--input-scale K] [--hdr] [--array] [--compare RETROARCH_OUT.png] [--set NAME=VALUE ...]
 PRESET is a preset of tools/make_presets.py (consumer-tv-composite, amiga-1084s, ...).
 """
 import argparse
@@ -76,14 +79,16 @@ def cross(spv, entry=None, flip=False):
 _cache = {}
 
 
-def unity_program(ctx, path, flip):
-    """The Unity pass in path (HLSL, LRVert and LRFrag) as a GL program."""
-    key = (path, flip)
+def unity_program(ctx, path, flip, define=None):
+    """The Unity pass in path (HLSL, LRVert and LRFrag, with the #define of its ShaderLab pass)
+    as a GL program."""
+    key = (path, flip, define)
     if key not in _cache:
         stages = {}
         for short, entry in (("vert", "LRVert"), ("frag", "LRFrag")):
-            spv = TMP / f"{path.stem}.{short}.spv"
-            run("glslangValidator", "-D", "-V", "-S", short, "-e", entry, "-o", spv, path)
+            spv = TMP / f"{path.stem}{define or ''}.{short}.spv"
+            run("glslangValidator", "-D", "-V", "-S", short, "-e", entry, "-o", spv,
+                *([f"-D{define}"] if define else []), path)
             stages[short] = cross(spv, entry, flip and short == "vert")
         _cache[key] = program(ctx, stages)
     return _cache[key]
@@ -170,22 +175,44 @@ def target(ctx, w, h, is_float):
     return tex, ctx.framebuffer(color_attachments=[tex])
 
 
+# HDR (--hdr): the picture Unity's post-processing hands on, in nits in Rec.2020 (URP with
+# post-processing, HDRP), the display's levels as in RetroArch's hdr presets
+REC709_TO_REC2020 = np.array([[0.627402, 0.329292, 0.043306],
+                              [0.069095, 0.919544, 0.011360],
+                              [0.016394, 0.088028, 0.895578]])
+
+
+def pq(nits):
+    """SMPTE ST 2084, as present-hdr.slang."""
+    m1, m2, c1, c2, c3 = 0.1593017578125, 78.84375, 0.8359375, 18.8515625, 18.6875
+    y = np.clip(nits / 10000.0, 0.0, 1.0) ** m1
+    return ((c1 + c2 * y) / (1.0 + c3 * y)) ** m2
+
+
 def preset_values(name, overrides):
     table = parameter_table()
     values = {n: d[1] for n, d in table.items()}
     values.update(mp.BASE)
     values.update(mp.PRESETS[name])
+    values.update(mp.HDR)
     values.update(overrides)
     return values
 
 
 # ---------------------------------------------------------------- Unity
 
-def render_unity(ctx, frame_srgb, values, out_size, frames, uvtop, input_scale=1):
+def unity_plan(frame_srgb, values, out_size, frames, input_scale=1, hdr=False, array=False, max_texture=16384):
+    """What LolaRetroChain.cs draws, as data: the textures (id -> size, format "f1" 8 bits, "f2"
+    half or "f4" float, filter, slices, data), every draw of every frame (pass file and #define,
+    target, uniform values, textures by name) and the output's id. tools/webgl-preview.py runs the
+    same plan in a browser."""
     H, W = frame_srgb.shape[:2]
     console = (W, H)
     names = ["source"] + [p["src"] for p in CHAIN]
-    files = [UNITY / "Shaders" / "lola-retro-source.hlsl"] + [UNITY / "Shaders" / "Passes" / f"{n}.hlsl" for n in names[1:]]
+    files = [("lola-retro-source.hlsl", "LR_INPUT_ARRAY" if array else None)] + [
+        ("Passes/crt-hdr.hlsl", None) if hdr and n == "crt" else
+        ("lola-retro-output-hdr.hlsl", None) if hdr and n == "present" else
+        (f"Passes/{n}.hlsl", None) for n in names[1:]]
     show = values["LR_CABLE"] > 3.5
     monitor = round(values["LR_CONSOLE"]) == 7 or values["LR_MON_MM"] > 0.5
     run_idx = [i for i in range(len(names)) if not (names[i] == "show-lines" and not show)]
@@ -197,7 +224,8 @@ def render_unity(ctx, frame_srgb, values, out_size, frames, uvtop, input_scale=1
     for i in run_idx[1:]:
         p = CHAIN[i - 1]
         sx = ("source", 4.0) if p["src"] == "encode" and monitor else p["sx"]
-        size[i] = (size_of(sx, size[prev][0], out_size[0]), size_of(p["sy"], size[prev][1], out_size[1]))
+        # as LolaRetroChain.cs: no wider than the GPU's largest texture (SystemInfo.maxTextureSize)
+        size[i] = (min(size_of(sx, size[prev][0], out_size[0]), max_texture), size_of(p["sy"], size[prev][1], out_size[1]))
         prev = i
 
     # the input: linear light, rows from the bottom (Unity's texture layout); input_scale: the
@@ -205,75 +233,100 @@ def render_unity(ctx, frame_srgb, values, out_size, frames, uvtop, input_scale=1
     lin = np.where(frame_srgb <= 0.04045, frame_srgb / 12.92, ((frame_srgb + 0.055) / 1.055) ** 2.4)
     lin = lin.repeat(input_scale, axis=0).repeat(input_scale, axis=1)
     IW, IH = W * input_scale, H * input_scale
-    inp = ctx.texture((IW, IH), 4, np.ascontiguousarray(np.dstack([lin, np.ones((IH, IW))])[::-1]).astype("f4").tobytes(), dtype="f4")
+    to_pipeline = REC709_TO_REC2020 * values["LR_NITS_WHITE"] if hdr else np.eye(3)
+    lin = lin @ to_pipeline.T
+    rgba = np.ascontiguousarray(np.dstack([lin, np.ones((IH, IW))])[::-1]).astype("f4")
+    if array:
+        # the frame in slice 1 of two, noise in slice 0 (one eye of single-pass XR)
+        noise = np.random.default_rng(1).random(rgba.shape).astype("f4") * 100.0
+        rgba = np.stack([noise, rgba])
+    textures = {"input": dict(size=(IW, IH), kind="f4", linear=False, slices=2 if array else 0, data=rgba)}
+    rows = lambda m: {f"Row{r}": list(m[r]) + [0.0] for r in range(3)}          # noqa: E731
+    matrices = {f"LR_Input{k}": v for k, v in rows(np.linalg.inv(to_pipeline)).items()}
+    matrices.update({f"LR_Output{k}": v for k, v in rows(to_pipeline).items()})
 
-    targets = {}
     for k, i in enumerate(run_idx):
-        if names[i] in ("crt", "present"):
-            continue
-        tex, fbo = target(ctx, *size[i], float_of[i])
-        nxt = run_idx[k + 1]
-        tex.filter = (moderngl.LINEAR, moderngl.LINEAR) if linear_of[nxt] else (moderngl.NEAREST, moderngl.NEAREST)
-        tex.repeat_x = tex.repeat_y = False
-        targets[i] = (tex, fbo)
+        if names[i] not in ("crt", "present"):
+            # each target gets the filter of the pass that reads it
+            textures[names[i]] = dict(size=size[i], kind="f2" if float_of[i] else "f1",
+                                      linear=linear_of[run_idx[k + 1]], slices=0, data=None)
     crt_i = names.index("crt")
-    glow = [target(ctx, *size[crt_i], True) for _ in range(2)]
-    for tex, fbo in glow:
-        tex.filter = (moderngl.NEAREST, moderngl.NEAREST)
-        tex.repeat_x = tex.repeat_y = False
-        fbo.clear(0, 0, 0, 0)
-    out_tex = ctx.texture(out_size, 4, dtype="f4")
-    out_fbo = ctx.framebuffer(color_attachments=[out_tex])
+    for g in ("afterglow0", "afterglow1"):
+        textures[g] = dict(size=size[crt_i], kind="f2", linear=False, slices=0, data=None)
+    textures["output"] = dict(size=out_size, kind="f4", linear=False, slices=0, data=None)
 
-    alias = {"Original": 0, "LR_Decoded": names.index("decode"), "LR_Glow": names.index("glow-v"),
-             "LR_Beam": names.index("show-lines") if show else names.index("beam")}
+    alias = {"Original": "source", "LR_Decoded": "decode", "LR_Glow": "glow-v",
+             "LR_Beam": "show-lines" if show else "beam"}
+    draws = []
     for f in range(frames):
-        cur, last = glow[f & 1], glow[(f + 1) & 1]
-        textures = {"LR_Input": inp, "LR_CRTFeedback": last[0]}
+        cur, last = f"afterglow{f & 1}", f"afterglow{(f + 1) & 1}"
         source_size = console
         for k, i in enumerate(run_idx):
-            prog = unity_program(ctx, files[i], uvtop)
-            if names[i] == "crt":
-                fbo, osz = cur[1], size[i]
-            elif names[i] == "present":
-                fbo, osz = out_fbo, out_size
-            else:
-                fbo, osz = targets[i][1], size[i]
+            tgt = cur if names[i] == "crt" else "output" if names[i] == "present" else names[i]
+            osz = textures[tgt]["size"]
             vals = dict(values)
             vals.update(LR_SourceSize=[source_size[0], source_size[1], 1 / source_size[0], 1 / source_size[1]],
                         LR_OriginalSize=[W, H, 1 / W, 1 / H],
                         LR_OutputSize=[osz[0], osz[1], 1 / osz[0], 1 / osz[1]],
-                        LR_FrameCountI=f, LR_UVTop=1.0 if uvtop else 0.0, LR_OutputLinear=1.0,
-                        LR_InputLinear=1.0, LR_InputRect=[0, 0, IW, IH])
-            prog.set_block(ctx, vals)
-            tex_of = dict(textures)
+                        LR_FrameCountI=f, LR_OutputLinear=1.0,
+                        LR_InputLinear=1.0, LR_InputRect=[0, 0, IW, IH], LR_InputSlice=1.0, **matrices)
+            tex_of = {"LR_InputArray" if array else "LR_Input": "input", "LR_CRTFeedback": last}
             if k > 0:
                 prev_i = run_idx[k - 1]
-                tex_of["Source"] = cur[0] if names[prev_i] == "crt" else targets[prev_i][0]
-            for n, j in alias.items():
-                if j in targets:
-                    tex_of[n] = targets[j][0]
-            unit = 0
-            for u in prog.samplers():
-                n = texture_name(u, tex_of)
-                assert n, f"{names[i]}: no texture for {u}"
-                tex_of[n].use(location=unit)
-                prog.prog[u].value = unit
-                unit += 1
-            fbo.use()
-            ctx.vertex_array(prog.prog, []).render(moderngl.TRIANGLES, vertices=3)
+                tex_of["Source"] = cur if names[prev_i] == "crt" else names[prev_i]
+            tex_of.update({n: t for n, t in alias.items() if t in textures})
+            draws.append(dict(file=files[i][0], define=files[i][1], target=tgt, values=vals, textures=tex_of))
             source_size = osz
-    lin_out = np.frombuffer(out_tex.read(), dtype="f4").reshape(out_size[1], out_size[0], 4)[::-1, :, :3]
+    return dict(textures=textures, draws=draws, output="output")
+
+
+def unity_signal(lin_out, hdr):
+    """The output's linear light (rows from the bottom) as the display gets it: 8-bit sRGB codes
+    / 255 (Unity's sRGB backbuffer), or the PQ signal for HDR10 (Unity's last pass, here exact)."""
+    lin_out = lin_out[::-1].astype(np.float64)
+    if hdr:
+        return pq(lin_out)
     lin_out = np.clip(lin_out, 0.0, 1.0)
     srgb = np.where(lin_out <= 0.0031308, lin_out * 12.92, 1.055 * lin_out ** (1 / 2.4) - 0.055)
-    return np.floor(srgb * 255.0 + 0.5).astype(np.uint8)
+    return np.floor(srgb * 255.0 + 0.5) / 255.0
+
+
+def render_unity(ctx, plan, uvtop, hdr):
+    """Run a plan of unity_plan with moderngl."""
+    tex = {}
+    for name, t in plan["textures"].items():
+        if t["slices"]:
+            g = ctx.texture_array((*t["size"], t["slices"]), 4, t["data"].tobytes(), dtype=t["kind"])
+        else:
+            g = ctx.texture(t["size"], 4, None if t["data"] is None else t["data"].tobytes(), dtype=t["kind"])
+        g.filter = (moderngl.LINEAR, moderngl.LINEAR) if t["linear"] else (moderngl.NEAREST, moderngl.NEAREST)
+        g.repeat_x = g.repeat_y = False
+        tex[name] = (g, None if t["data"] is not None else ctx.framebuffer(color_attachments=[g]))
+        if tex[name][1] is not None:
+            tex[name][1].clear(0, 0, 0, 0)
+    for d in plan["draws"]:
+        prog = unity_program(ctx, UNITY / "Shaders" / d["file"], uvtop, d["define"])
+        prog.set_block(ctx, dict(d["values"], LR_UVTop=1.0 if uvtop else 0.0))
+        for unit, u in enumerate(prog.samplers()):
+            n = texture_name(u, d["textures"])
+            assert n, f"{d['file']}: no texture for {u}"
+            tex[d["textures"][n]][0].use(location=unit)
+            prog.prog[u].value = unit
+        tex[d["target"]][1].use()
+        ctx.vertex_array(prog.prog, []).render(moderngl.TRIANGLES, vertices=3)
+    out = tex[plan["output"]][0]
+    w, h = out.size
+    return unity_signal(np.frombuffer(out.read(), dtype="f4").reshape(h, w, 4)[:, :, :3], hdr)
 
 
 # ---------------------------------------------------------------- RetroArch
 
-def render_retroarch(ctx, frame_srgb, name, values, out_size, frames):
+def render_retroarch(ctx, frame_srgb, name, values, out_size, frames, hdr=False):
+    """The picture as the display gets it: 8-bit codes / 255, or with hdr the HDR10 signal (here
+    in float, not 10 bits)."""
     H, W = frame_srgb.shape[:2]
-    passes = parse_chain(mp.with_native_pass(mp.PRESET_PASSES.get(name, mp.PASSES)))
+    passes = mp.with_native_pass(mp.PRESET_PASSES.get(name, mp.PASSES))
+    passes = parse_chain(mp.hdr_passes(passes) if hdr else passes)
     frame = ctx.texture((W, H), 4, (np.dstack([frame_srgb, np.ones((H, W))]) * 255 + 0.5).astype("u1").tobytes())
     sizes, prev = [], (W, H)
     for p in passes:
@@ -283,7 +336,8 @@ def render_retroarch(ctx, frame_srgb, name, values, out_size, frames):
     outs = []
     for i, p in enumerate(passes):
         if i == len(passes) - 1:
-            outs.append(target(ctx, *sizes[i], False))
+            outs.append((lambda t: (t, ctx.framebuffer(color_attachments=[t])))(ctx.texture(sizes[i], 4, dtype="f4"))
+                        if hdr else target(ctx, *sizes[i], False))
         elif p["alias"] == "LR_CRT":
             outs.append([target(ctx, *sizes[i], True) for _ in range(2)])
         else:
@@ -333,8 +387,11 @@ def render_retroarch(ctx, frame_srgb, name, values, out_size, frames):
             ctx.vertex_array(pr, [(quad, "2f 2f", "Position", "TexCoord")] if "TexCoord" in pr else
                              [(quad, "2f 8x", "Position")]).render(moderngl.TRIANGLE_STRIP)
             source, source_size = cur(i)[0], osz
+    if hdr:
+        data = np.frombuffer(outs[-1][0].read(), dtype="f4").reshape(sizes[-1][1], sizes[-1][0], 4)
+        return data[:, :, :3].astype(np.float64)
     data = np.frombuffer(outs[-1][0].read(), dtype="u1").reshape(sizes[-1][1], sizes[-1][0], 4)
-    return data[:, :, :3].copy()
+    return data[:, :, :3] / 255.0
 
 
 def main():
@@ -347,6 +404,8 @@ def main():
     ap.add_argument("--uvtop", action="store_true")
     ap.add_argument("--input-scale", type=int, default=1, metavar="K",
                     help="Unity's input is the frame enlarged K times (a camera image at the screen's resolution)")
+    ap.add_argument("--hdr", action="store_true", help="the HDR passes, against RetroArch's hdr presets")
+    ap.add_argument("--array", action="store_true", help="the input is slice 1 of a texture array (XR, HDRP)")
     ap.add_argument("--compare", metavar="RETROARCH_OUT")
     ap.add_argument("--set", action="append", default=[], metavar="NAME=VALUE")
     a = ap.parse_args()
@@ -355,16 +414,21 @@ def main():
     values = preset_values(a.preset, overrides)
     frame = np.asarray(Image.open(a.frame).convert("RGB"), dtype=np.float64) / 255.0
     ctx = moderngl.create_standalone_context(require=410)
-    unity = render_unity(ctx, frame, values, out_size, a.frames, a.uvtop, a.input_scale)
-    Image.fromarray(unity).save(a.out)
+    plan = unity_plan(frame, values, out_size, a.frames, a.input_scale, a.hdr, a.array)
+    unity = render_unity(ctx, plan, a.uvtop, a.hdr)
+    # HDR: the PQ signal shown as it is (a dim, flat picture on an SDR screen)
+    save = lambda img, path: Image.fromarray(np.clip(img * 255.0 + 0.5, 0, 255).astype(np.uint8)).save(path)   # noqa: E731
+    save(unity, a.out)
     print("wrote", a.out)
     if a.compare:
-        ra = render_retroarch(ctx, frame, a.preset, values, out_size, a.frames)
-        Image.fromarray(ra).save(a.compare)
+        ra = render_retroarch(ctx, frame, a.preset, values, out_size, a.frames, a.hdr)
+        save(ra, a.compare)
         print("wrote", a.compare)
-        d = np.abs(unity.astype(int) - ra.astype(int))
-        print(f"difference: max {d.max()}, mean {d.mean():.4f}, pixels off by more than 1: "
-              f"{(d.max(axis=2) > 1).mean() * 100:.3f}%")
+        # in steps of the output: 8 bits, or 10 bits for HDR10 (RetroArch's HDR pass dithers by half a step)
+        steps = 1023.0 if a.hdr else 255.0
+        d = np.abs(unity - ra).max(axis=2) * steps
+        print(f"difference: max {d.max():.1f}, mean {d.mean():.4f}, pixels off by more than 1: "
+              f"{(d > 1.0001).mean() * 100:.3f}% (steps of {'10' if a.hdr else '8'} bits)")
 
 
 if __name__ == "__main__":

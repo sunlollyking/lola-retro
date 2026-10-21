@@ -50,7 +50,8 @@ namespace LolaRetro
         [SerializeField, HideInInspector] bool appliedFlat;
         [SerializeField, HideInInspector] Shader shader;
 
-        LolaRetroChain chain;
+        // one chain per eye in XR (each keeps its own afterglow)
+        readonly LolaRetroChain[] chains = new LolaRetroChain[2];
         CommandBuffer cmd;
 
         /// <summary>Sets every value to the preset's.</summary>
@@ -72,27 +73,31 @@ namespace LolaRetro
 
         void OnDisable()
         {
-            chain?.Dispose();
-            chain = null;
+            for (int i = 0; i < chains.Length; i++)
+            {
+                chains[i]?.Dispose();
+                chains[i] = null;
+            }
             cmd?.Release();
             cmd = null;
         }
 
-        /// <summary>The chain of this camera, made when it is first needed (null without the shader).</summary>
-        internal LolaRetroChain Chain
+        /// <summary>The shader, when this platform can run it.</summary>
+        internal bool Supported
         {
             get
             {
-                if (chain == null)
-                {
-                    if (shader == null)
-                        shader = Resources.Load<Shader>("LolaRetro");
-                    if (shader == null || !shader.isSupported)
-                        return null;
-                    chain = new LolaRetroChain(shader);
-                }
-                return chain;
+                if (shader == null)
+                    shader = Resources.Load<Shader>("LolaRetro");
+                return shader != null && shader.isSupported;
             }
+        }
+
+        /// <summary>The chain of this camera's eye (0 without XR), made when it is first needed.</summary>
+        LolaRetroChain ChainFor(int eye)
+        {
+            eye = Mathf.Clamp(eye, 0, chains.Length - 1);
+            return chains[eye] ??= new LolaRetroChain(shader);
         }
 
         /// <summary>The size of the console's frame for an input of this size.</summary>
@@ -126,24 +131,21 @@ namespace LolaRetro
             return new RectInt((output.x - w) / 2, (output.y - h) / 2, w, h);
         }
 
-        /// <summary>Records the chain from the camera's image (or Input) into output.</summary>
-        internal bool Record(CommandBuffer buffer, RenderTargetIdentifier image, Vector2Int imageSize,
-                             RenderTargetIdentifier output, Vector2Int outputSize)
+        /// <summary>Records the chain from the camera's image (or Input) into output, for one eye.</summary>
+        internal void Record(CommandBuffer buffer, in LolaRetroImage image, in LolaRetroImage output, int eye, in LolaRetroHdr hdr)
         {
-            var c = Chain;
-            if (c == null)
-                return false;
-            Vector2Int console = ConsoleSize(imageSize);
-            RenderTargetIdentifier src = input != null ? new RenderTargetIdentifier(input) : image;
-            Rect rect = input != null ? new Rect(0, 0, input.width, input.height) : new Rect(0, 0, imageSize.x, imageSize.y);
-            c.Render(buffer, src, rect, console, output, outputSize, PictureArea(outputSize, console), settings);
-            return true;
+            LolaRetroImage src = input != null
+                ? new LolaRetroImage(new RenderTargetIdentifier(input), -1, new RectInt(0, 0, input.width, input.height))
+                : image;
+            Vector2Int console = ConsoleSize(src.rect.size);
+            Vector2Int outSize = output.rect.size;
+            ChainFor(eye).Render(buffer, src, console, output, PictureArea(outSize, console), settings, hdr);
         }
 
         // Built-in render pipeline (the render pipelines do not call it)
         void OnRenderImage(RenderTexture src, RenderTexture dst)
         {
-            if (Chain == null)
+            if (!Supported)
             {
                 Graphics.Blit(src, dst);
                 return;
@@ -156,7 +158,8 @@ namespace LolaRetro
             if (dst == null)
                 target = RenderTexture.GetTemporary(src.width, src.height, 0, RenderTextureFormat.ARGB32,
                     QualitySettings.activeColorSpace == ColorSpace.Linear ? RenderTextureReadWrite.sRGB : RenderTextureReadWrite.Linear);
-            Record(cmd, src, new Vector2Int(src.width, src.height), target, new Vector2Int(target.width, target.height));
+            Record(cmd, new LolaRetroImage(src, -1, new RectInt(0, 0, src.width, src.height)),
+                   new LolaRetroImage(target, -1, new RectInt(0, 0, target.width, target.height)), 0, default);
             Graphics.ExecuteCommandBuffer(cmd);
             if (dst == null)
             {

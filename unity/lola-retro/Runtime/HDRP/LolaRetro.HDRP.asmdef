@@ -1,0 +1,26 @@
+{
+    "name": "LolaRetro.HDRP",
+    "rootNamespace": "LolaRetro",
+    "references": [
+        "LolaRetro",
+        "Unity.RenderPipelines.Core.Runtime",
+        "Unity.RenderPipelines.HighDefinition.Runtime"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [
+        "LOLA_RETRO_HDRP"
+    ],
+    "versionDefines": [
+        {
+            "name": "com.unity.render-pipelines.high-definition",
+            "expression": "17.0.0",
+            "define": "LOLA_RETRO_HDRP"
+        }
+    ],
+    "noEngineReferences": false
+}

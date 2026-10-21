@@ -116,5 +116,39 @@ Shader "Hidden/Lola Retro"
             ENDHLSL
         }
 
+        Pass
+        {
+            Name "crt-hdr"
+            HLSLPROGRAM
+            #pragma target 3.5
+            #pragma vertex LRVert
+            #pragma fragment LRFrag
+            #include "../Passes/crt-hdr.hlsl"
+            ENDHLSL
+        }
+
+        Pass
+        {
+            Name "output-hdr"
+            HLSLPROGRAM
+            #pragma target 3.5
+            #pragma vertex LRVert
+            #pragma fragment LRFrag
+            #include "../lola-retro-output-hdr.hlsl"
+            ENDHLSL
+        }
+
+        Pass
+        {
+            Name "source-array"
+            HLSLPROGRAM
+            #pragma target 3.5
+            #pragma vertex LRVert
+            #pragma fragment LRFrag
+            #define LR_INPUT_ARRAY
+            #include "../lola-retro-source.hlsl"
+            ENDHLSL
+        }
+
     }
 }

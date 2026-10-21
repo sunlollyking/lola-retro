@@ -202,14 +202,15 @@ sharper than any real tube and easy on the eyes for long work on the desktop:
 ## Unity
 
 The whole shader also comes as a package for [Unity](https://unity.com), for games with a retro look: every pass,
-preset and parameter of the RetroArch version, in URP (Unity 6) and the Built-in render pipeline. In the Package
-Manager, **Install package from git URL…** with
+preset and parameter of the RetroArch version, in URP (Unity 6), HDRP and the Built-in render pipeline, on SDR
+and HDR displays, in XR and on the web (WebGL 2). In the Package Manager, **Install package from git URL…** with
 
 ```
 https://github.com/zoran123456/lola-retro.git?path=/unity/lola-retro
 ```
 
-then put **Lola Retro** on the camera and pick a preset (in URP, add the Lola Retro renderer feature too). The
+then put **Lola Retro** on the camera and pick a preset (in URP add the Lola Retro renderer feature too, in HDRP its
+custom post-process). The
 game can render at the screen's resolution, Lola Retro makes the console's picture from it, or into a
 low-resolution render texture for pixel-exact games. The passes are translated from the slang shaders by
 `tools/make_unity.py` and give the same picture as RetroArch. Setup and settings in its [README](unity/lola-retro/README.md).
@@ -312,6 +313,7 @@ tools/render-preview.sh PRESET IMAGE OUT.png [glcore|vulkan]   # Linux: render a
 tools/amiberry-preview.py PRESET.glslp FRAME.png OUT.png       # render a frame the way Amiberry does (moderngl)
 tools/86box-preview.py PRESET.glslp FRAME.png OUT.png          # render a frame the way 86Box does (moderngl)
 tools/unity-preview.py PRESET FRAME.png OUT.png --compare RA.png  # the way the Unity package does, against RetroArch (moderngl, spirv-cross)
+tools/webgl-preview.py PRESET FRAME.png OUT_DIR                   # a page that runs the Unity passes in WebGL 2 against RetroArch
 ```
 
 ## License
