@@ -462,7 +462,7 @@ void main()
     LR_NORM = texelFetch(LR_Signal, ivec2(0, 0), 0).b;
     LR_STEADY = texelFetch(LR_Signal, ivec2(5, 0), 0).b;
     LR_GAMMA = texelFetch(LR_Signal, ivec2(6, 0), 0).b;
-    LR_GLOW_SIZE = texelFetch(LR_Signal, ivec2(17, 0), 0).b;
+    LR_GLOW_SIZE = texelFetch(LR_Signal, ivec2(19, 0), 0).b;
     lrParams[0] = vec4(LR_NORM, LR_STEADY, LR_GAMMA, LR_GLOW_SIZE);
     lr_main();
 }

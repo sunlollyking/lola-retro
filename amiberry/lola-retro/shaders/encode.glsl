@@ -16,8 +16,10 @@
 #pragma parameter LR_STEADY "No flicker (dot crawl and fields blended as the eye saw them)" 1 0 1 1
 #pragma parameter LR_GAMMA "Tube gamma" 2.4 2 2.8 0.01
 #pragma parameter LR_CONV "Misconvergence (px)" 0.25 0 1.5 0.01
+#pragma parameter LR_SMOOTH "Scanline smoothing (screen pixels, less moire)" 0 0 2 0.1
 #pragma parameter LR_MASK_TYPE "Mask (0 none, 1 aperture, 2 slot, 3 shadow, 4 projection)" 2 0 4 1
 #pragma parameter LR_MASK_STR "Mask strength" 0.5 0 1 0.01
+#pragma parameter LR_MASK_PX "Mask on screen pixels (0 off, 1 auto, 2-6 px per triad)" 0 0 6 1
 #pragma parameter LR_WHITE "White point (K)" 6500 6500 9300 100
 #pragma parameter LR_PHOS "Phosphors (0 auto, 1 sRGB, 2 SMPTE-C, 3 EBU, 4 Japanese P22)" 3 0 4 1
 #pragma parameter LR_CURV_X "Curvature horizontal" 0.035 0 0.15 0.005
@@ -71,8 +73,10 @@ uniform float LR_CONTRAST;
 uniform float LR_STEADY;
 uniform float LR_GAMMA;
 uniform float LR_CONV;
+uniform float LR_SMOOTH;
 uniform float LR_MASK_TYPE;
 uniform float LR_MASK_STR;
+uniform float LR_MASK_PX;
 uniform float LR_WHITE;
 uniform float LR_PHOS;
 uniform float LR_CURV_X;
@@ -737,7 +741,7 @@ void lr_main()
 // The adjustable values go to the later passes: texel k of the first row, blue channel.
 float lr_param(int k)
 {
-    float p[35] = float[35](LR_NORM, LR_DBLEND, LR_SAT, LR_BRIGHT, LR_CONTRAST, LR_STEADY, LR_GAMMA, LR_CONV, LR_MASK_TYPE, LR_MASK_STR, LR_WHITE, LR_PHOS, LR_CURV_X, LR_CURV_Y, LR_BEND, LR_CORNER, LR_GLOW, LR_GLOW_SIZE, LR_VIGNETTE, LR_OVERSCAN, LR_OVERSCAN_V, LR_LIN_X, LR_LIN_Y, LR_AMBIENT, LR_MON_SIZE, LR_MON_PITCH, LR_MON_SPOT_LO, LR_MON_SPOT_HI, LR_MON_CORNER, LR_SCREEN_H, LR_SCREEN_UNIT, LR_BACKDROP, LR_ROOM, LR_SPILL, LR_SCENE_SPEED);
+    float p[37] = float[37](LR_NORM, LR_DBLEND, LR_SAT, LR_BRIGHT, LR_CONTRAST, LR_STEADY, LR_GAMMA, LR_CONV, LR_SMOOTH, LR_MASK_TYPE, LR_MASK_STR, LR_MASK_PX, LR_WHITE, LR_PHOS, LR_CURV_X, LR_CURV_Y, LR_BEND, LR_CORNER, LR_GLOW, LR_GLOW_SIZE, LR_VIGNETTE, LR_OVERSCAN, LR_OVERSCAN_V, LR_LIN_X, LR_LIN_Y, LR_AMBIENT, LR_MON_SIZE, LR_MON_PITCH, LR_MON_SPOT_LO, LR_MON_SPOT_HI, LR_MON_CORNER, LR_SCREEN_H, LR_SCREEN_UNIT, LR_BACKDROP, LR_ROOM, LR_SPILL, LR_SCENE_SPEED);
     return p[k];
 }
 
@@ -745,6 +749,6 @@ void main()
 {
     lr_main();
     ivec2 q = ivec2(gl_FragCoord.xy);
-    if (q.y == 0 && q.x < 35) FragColor.b = lr_param(q.x);
+    if (q.y == 0 && q.x < 37) FragColor.b = lr_param(q.x);
 }
 #endif

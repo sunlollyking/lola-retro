@@ -13,7 +13,8 @@ Named after Lola, my retriever. Retro because it is retro.
    (or `systems/flat/` for a flat screen), for example `snes.slangp`.
 
 Each system preset is the TV or monitor most people had for that system, on the cable that came in the box,
-with the system's timing already set (see [Systems](#systems)). The mask adapts to your screen resolution.
+with the system's timing already set (see [Systems](#systems)). The mask is drawn at the tube's real size; on a
+lower-resolution display, or against moiré, set **Mask on screen pixels** to 1 (see [Parameters](#parameters)).
 To try another TV, cable or monitor, use the presets by device in `curved/` and `flat/` (see [Presets](#presets)).
 They guess the console from the frame size, which works for most games, but systems with the same frame size
 (the NES, SNES, Master System, PC Engine and Mega Drive all have 256-wide modes) can only be told apart by hand.
@@ -135,8 +136,10 @@ Every preset only sets parameters, so you can tweak any preset in **Quick Menu �
 | Tube gamma | 2.4 is typical. |
 | Phosphor afterglow | Real phosphors fade within about a millisecond, so keep this low. |
 | Misconvergence | How far the red and blue beams land from green, growing toward the edges. |
+| Scanline smoothing | 0 (default) off. With narrow beams (dark gaps between the lines) and a line pitch that is not a whole number of screen pixels, some lines land on a pixel row and others between two, so they look unevenly thick and bands appear (moiré), stronger on a curved screen. 1 averages each line's light over the screen pixel it falls on, as the display shows it, so every line keeps its brightness wherever it lands; 1.5 to 2 averages over a taller band, which evens the lines out further and keeps the gaps dark. The lines get a little softer, mostly at 1080p; at 4K it hardly shows. |
 | Mask | 0 none, 1 aperture grille, 2 slot mask, 3 shadow mask, 4 projection screen. |
 | Mask strength / triads per screen height | Lower the triad count for a coarser mask. Below about 2 screen pixels per triad the mask fades out to avoid moiré, so the fine PC mask shows best at 4K. On monitors in mm the triad count comes from the mask pitch instead. |
+| Mask on screen pixels | 0 (default): the mask at the tube's own size (triads per screen height, or the dot pitch in mm), the same on every display. 2–6: the mask drawn on whole screen pixels, one triad every 2 to 6 pixels, like the pixel masks of other CRT shaders: it lines up with the screen's pixels, so it shows no moiré and does not fade out on a low-resolution display, but the number of triads follows your resolution instead of the tube. 2 is magenta and green (fine), 3 red, green and blue, 4 and up coarser. 1 (auto) takes the whole number of pixels nearest the tube's own triads (for 360 triads: 3 at 1080p, 4 at 1440p, 6 at 4K). For the aperture grille, slot mask and shadow mask; best on an LCD with RGB stripes. |
 | White point | 6500 K neutral, 9300 K is the bluish white many TVs and monitors had. |
 | Phosphors | 0 auto, 1 sRGB, 2 SMPTE-C, 3 EBU, 4 Japanese P22. The colours of the tube's phosphors. Auto: SMPTE-C on NTSC sets, EBU on PAL sets, sRGB on PC monitors, Japanese P22 on arcade monitors; the Trinitron preset uses Japanese P22 and the studio monitor EBU. Colours outside your display's range are clipped in SDR and kept in HDR. |
 | Curvature, Rounded corners, Glass glow, Glass glow size, Darker edges, Overscan, Overscan height, Room reflection | The glass. Curvature is how much the glass bulges: its edges bow outwards and crop the corners of the picture. Glass glow sets how strong the halo around bright things is, Glass glow size how far it reaches. Set curvature and corners to 0 for a flat screen (that is all the `flat` presets change). Overscan is how far the picture runs past the edges of the glass; negative overscan adds a black border, like PC monitors. Overscan height is added to it for the height alone, like the monitor's height knob: raise it to fill the height (a 224-line SNES game keeps thin black bars at the top and bottom otherwise), lower it for a border at the top and bottom only. |

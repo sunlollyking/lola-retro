@@ -38,7 +38,7 @@ how strongly the screen lights the walls around the glass (1 as on the real moni
 
 ## Parameters
 
-**Filter → Shader Parameters...** lists 35 of them, each once. They mean the same as in RetroArch
+**Filter → Shader Parameters...** lists 37 of them, each once. They mean the same as in RetroArch
 (see the [shader pack's README](https://github.com/zoran123456/lola-retro/blob/main/shaders/lola-retro/README.md)); **Reset to Shader Defaults** returns to
 the 1084S. Fixed in this version: the cable (RGB), the console timing (Amiga) and the tube described in
 millimetres.

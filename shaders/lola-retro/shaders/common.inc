@@ -39,10 +39,12 @@ layout(push_constant) uniform Push
 #pragma parameter LR_GAMMA "Tube gamma" 2.4 2.0 2.8 0.01
 #pragma parameter LR_PERSIST "Phosphor afterglow" 0.08 0.0 0.8 0.01
 #pragma parameter LR_CONV "Misconvergence (px)" 0.4 0.0 1.5 0.01
+#pragma parameter LR_SMOOTH "Scanline smoothing (screen pixels, less moire)" 0.0 0.0 2.0 0.1
 #pragma parameter LR_HDR_MASK "--- Mask ---" 0.0 0.0 0.0 1.0
 #pragma parameter LR_MASK_TYPE "Mask (0 none, 1 aperture, 2 slot, 3 shadow, 4 projection)" 2.0 0.0 4.0 1.0
 #pragma parameter LR_MASK_STR "Mask strength" 0.5 0.0 1.0 0.01
 #pragma parameter LR_MASK_TRIADS "Mask triads per screen height" 360.0 150.0 900.0 10.0
+#pragma parameter LR_MASK_PX "Mask on screen pixels (0 off, 1 auto, 2-6 px per triad)" 0.0 0.0 6.0 1.0
 #pragma parameter LR_WHITE "White point (K)" 8500.0 6500.0 9300.0 100.0
 #pragma parameter LR_PHOS "Phosphors (0 auto, 1 sRGB, 2 SMPTE-C, 3 EBU, 4 Japanese P22)" 0.0 0.0 4.0 1.0
 #pragma parameter LR_HDR_GLASS "--- Glass ---" 0.0 0.0 0.0 1.0
@@ -102,10 +104,12 @@ layout(std140, set = 0, binding = 0) uniform UBO
     float LR_GAMMA;
     float LR_PERSIST;
     float LR_CONV;
+    float LR_SMOOTH;
     float LR_HDR_MASK;
     float LR_MASK_TYPE;
     float LR_MASK_STR;
     float LR_MASK_TRIADS;
+    float LR_MASK_PX;
     float LR_WHITE;
     float LR_PHOS;
     float LR_HDR_GLASS;

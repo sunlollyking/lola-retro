@@ -33,8 +33,10 @@ uniform sampler2D LR_Signal;
 float LR_NORM;
 float LR_STEADY;
 float LR_CONV;
+float LR_SMOOTH;
 float LR_MASK_TYPE;
 float LR_MASK_STR;
+float LR_MASK_PX;
 float LR_WHITE;
 float LR_PHOS;
 float LR_CURV_X;
@@ -520,40 +522,42 @@ void main()
     LR_NORM = texelFetch(LR_Signal, ivec2(0, 0), 0).b;
     LR_STEADY = texelFetch(LR_Signal, ivec2(5, 0), 0).b;
     LR_CONV = texelFetch(LR_Signal, ivec2(7, 0), 0).b;
-    LR_MASK_TYPE = texelFetch(LR_Signal, ivec2(8, 0), 0).b;
-    LR_MASK_STR = texelFetch(LR_Signal, ivec2(9, 0), 0).b;
-    LR_WHITE = texelFetch(LR_Signal, ivec2(10, 0), 0).b;
-    LR_PHOS = texelFetch(LR_Signal, ivec2(11, 0), 0).b;
-    LR_CURV_X = texelFetch(LR_Signal, ivec2(12, 0), 0).b;
-    LR_CURV_Y = texelFetch(LR_Signal, ivec2(13, 0), 0).b;
-    LR_BEND = texelFetch(LR_Signal, ivec2(14, 0), 0).b;
-    LR_CORNER = texelFetch(LR_Signal, ivec2(15, 0), 0).b;
-    LR_GLOW = texelFetch(LR_Signal, ivec2(16, 0), 0).b;
-    LR_VIGNETTE = texelFetch(LR_Signal, ivec2(18, 0), 0).b;
-    LR_OVERSCAN = texelFetch(LR_Signal, ivec2(19, 0), 0).b;
-    LR_OVERSCAN_V = texelFetch(LR_Signal, ivec2(20, 0), 0).b;
-    LR_LIN_X = texelFetch(LR_Signal, ivec2(21, 0), 0).b;
-    LR_LIN_Y = texelFetch(LR_Signal, ivec2(22, 0), 0).b;
-    LR_AMBIENT = texelFetch(LR_Signal, ivec2(23, 0), 0).b;
-    LR_MON_SIZE = texelFetch(LR_Signal, ivec2(24, 0), 0).b;
-    LR_MON_PITCH = texelFetch(LR_Signal, ivec2(25, 0), 0).b;
-    LR_MON_SPOT_LO = texelFetch(LR_Signal, ivec2(26, 0), 0).b;
-    LR_MON_SPOT_HI = texelFetch(LR_Signal, ivec2(27, 0), 0).b;
-    LR_MON_CORNER = texelFetch(LR_Signal, ivec2(28, 0), 0).b;
-    LR_SCREEN_H = texelFetch(LR_Signal, ivec2(29, 0), 0).b;
-    LR_SCREEN_UNIT = texelFetch(LR_Signal, ivec2(30, 0), 0).b;
-    LR_BACKDROP = texelFetch(LR_Signal, ivec2(31, 0), 0).b;
-    LR_ROOM = texelFetch(LR_Signal, ivec2(32, 0), 0).b;
-    LR_SPILL = texelFetch(LR_Signal, ivec2(33, 0), 0).b;
-    LR_SCENE_SPEED = texelFetch(LR_Signal, ivec2(34, 0), 0).b;
-    lrParams[0] = vec4(LR_NORM, LR_STEADY, LR_CONV, LR_MASK_TYPE);
-    lrParams[1] = vec4(LR_MASK_STR, LR_WHITE, LR_PHOS, LR_CURV_X);
-    lrParams[2] = vec4(LR_CURV_Y, LR_BEND, LR_CORNER, LR_GLOW);
-    lrParams[3] = vec4(LR_VIGNETTE, LR_OVERSCAN, LR_OVERSCAN_V, LR_LIN_X);
-    lrParams[4] = vec4(LR_LIN_Y, LR_AMBIENT, LR_MON_SIZE, LR_MON_PITCH);
-    lrParams[5] = vec4(LR_MON_SPOT_LO, LR_MON_SPOT_HI, LR_MON_CORNER, LR_SCREEN_H);
-    lrParams[6] = vec4(LR_SCREEN_UNIT, LR_BACKDROP, LR_ROOM, LR_SPILL);
-    lrParams[7] = vec4(LR_SCENE_SPEED, 0.0, 0.0, 0.0);
+    LR_SMOOTH = texelFetch(LR_Signal, ivec2(8, 0), 0).b;
+    LR_MASK_TYPE = texelFetch(LR_Signal, ivec2(9, 0), 0).b;
+    LR_MASK_STR = texelFetch(LR_Signal, ivec2(10, 0), 0).b;
+    LR_MASK_PX = texelFetch(LR_Signal, ivec2(11, 0), 0).b;
+    LR_WHITE = texelFetch(LR_Signal, ivec2(12, 0), 0).b;
+    LR_PHOS = texelFetch(LR_Signal, ivec2(13, 0), 0).b;
+    LR_CURV_X = texelFetch(LR_Signal, ivec2(14, 0), 0).b;
+    LR_CURV_Y = texelFetch(LR_Signal, ivec2(15, 0), 0).b;
+    LR_BEND = texelFetch(LR_Signal, ivec2(16, 0), 0).b;
+    LR_CORNER = texelFetch(LR_Signal, ivec2(17, 0), 0).b;
+    LR_GLOW = texelFetch(LR_Signal, ivec2(18, 0), 0).b;
+    LR_VIGNETTE = texelFetch(LR_Signal, ivec2(20, 0), 0).b;
+    LR_OVERSCAN = texelFetch(LR_Signal, ivec2(21, 0), 0).b;
+    LR_OVERSCAN_V = texelFetch(LR_Signal, ivec2(22, 0), 0).b;
+    LR_LIN_X = texelFetch(LR_Signal, ivec2(23, 0), 0).b;
+    LR_LIN_Y = texelFetch(LR_Signal, ivec2(24, 0), 0).b;
+    LR_AMBIENT = texelFetch(LR_Signal, ivec2(25, 0), 0).b;
+    LR_MON_SIZE = texelFetch(LR_Signal, ivec2(26, 0), 0).b;
+    LR_MON_PITCH = texelFetch(LR_Signal, ivec2(27, 0), 0).b;
+    LR_MON_SPOT_LO = texelFetch(LR_Signal, ivec2(28, 0), 0).b;
+    LR_MON_SPOT_HI = texelFetch(LR_Signal, ivec2(29, 0), 0).b;
+    LR_MON_CORNER = texelFetch(LR_Signal, ivec2(30, 0), 0).b;
+    LR_SCREEN_H = texelFetch(LR_Signal, ivec2(31, 0), 0).b;
+    LR_SCREEN_UNIT = texelFetch(LR_Signal, ivec2(32, 0), 0).b;
+    LR_BACKDROP = texelFetch(LR_Signal, ivec2(33, 0), 0).b;
+    LR_ROOM = texelFetch(LR_Signal, ivec2(34, 0), 0).b;
+    LR_SPILL = texelFetch(LR_Signal, ivec2(35, 0), 0).b;
+    LR_SCENE_SPEED = texelFetch(LR_Signal, ivec2(36, 0), 0).b;
+    lrParams[0] = vec4(LR_NORM, LR_STEADY, LR_CONV, LR_SMOOTH);
+    lrParams[1] = vec4(LR_MASK_TYPE, LR_MASK_STR, LR_MASK_PX, LR_WHITE);
+    lrParams[2] = vec4(LR_PHOS, LR_CURV_X, LR_CURV_Y, LR_BEND);
+    lrParams[3] = vec4(LR_CORNER, LR_GLOW, LR_VIGNETTE, LR_OVERSCAN);
+    lrParams[4] = vec4(LR_OVERSCAN_V, LR_LIN_X, LR_LIN_Y, LR_AMBIENT);
+    lrParams[5] = vec4(LR_MON_SIZE, LR_MON_PITCH, LR_MON_SPOT_LO, LR_MON_SPOT_HI);
+    lrParams[6] = vec4(LR_MON_CORNER, LR_SCREEN_H, LR_SCREEN_UNIT, LR_BACKDROP);
+    lrParams[7] = vec4(LR_ROOM, LR_SPILL, LR_SCENE_SPEED, 0.0);
     lr_main();
 }
 
@@ -593,6 +597,18 @@ vec4 showBeam(float p, float x, float lines)
     return max(r, 0.0);
 }
 
+// The light of one line on this screen pixel: the beam's Gaussian profile (1 / isg wide, d from
+// its centre, in lines) averaged over a band hw lines high around the pixel's centre, instead of
+// taken at the centre alone. A screen pixel shows the average light over its height, and a narrow
+// beam then keeps its brightness and shape wherever it falls between two pixel rows, so dark
+// scanlines do not beat against the rows (moire). hw 0: the centre alone.
+vec3 lineLight(vec3 d, vec3 isg, float hw)
+{
+    if (hw < 1e-3) return exp(-0.5 * d * d * isg * isg) * isg * 0.39894228;
+    vec3 e = 0.5 * hw * isg;
+    return (gaussCdf(d * isg + e) - gaussCdf(d * isg - e)) / hw;
+}
+
 // Rear-projection screen: lenticular sheet with thin black stripes, no RGB pattern
 float lenticular(float x)
 {
@@ -600,16 +616,17 @@ float lenticular(float x)
     return smoothstep(0.0, 0.18, f) * smoothstep(1.0, 0.82, f);
 }
 
-// Shadow mask: staggered round dots
-vec3 shadowDots(vec2 mp)
+// Shadow mask: staggered round dots. s counts dot columns (3 per triad), r dot rows.
+vec3 dots(float s, float r)
 {
-    float s = mp.x * 3.0;
     float ci = floor(s), fx = fract(s);
-    float fy = fract(mp.y * 1.732 + mod(ci, 2.0) * 0.5);
+    float fy = fract(r + mod(ci, 2.0) * 0.5);
     float dt = smoothstep(0.52, 0.30, length(vec2(fx - 0.5, fy - 0.5)));
     float chn = mod(ci, 3.0);
     return vec3(chn < 0.5 ? dt : 0.0, (chn > 0.5 && chn < 1.5) ? dt : 0.0, chn > 1.5 ? dt : 0.0);
 }
+// on the tube: 1.732 rows of dots per triad height; mp in triads
+vec3 shadowDots(vec2 mp) { return dots(mp.x * 3.0, mp.y * 1.732); }
 
 // Aperture grille / slot mask: vertical RGB stripes
 vec3 stripes(float x)
@@ -641,6 +658,49 @@ vec3 maskAvg(vec2 a, vec2 b, float mt)
     if (mt > 1.5)
         return 0.25 * (ma * (slotGate(a.x, a.y) + slotGate(a.x, b.y)) + mb * (slotGate(b.x, a.y) + slotGate(b.x, b.y)));
     return 0.5 * (ma + mb);
+}
+
+// Mask on screen pixels (Mask on screen pixels 1-6): the same mask with one triad every w screen
+// pixels, each pixel the average of the pattern over its area (4 points across, 4 down). The
+// pattern then repeats exactly every few pixels and cannot beat against the screen's own pixels
+// (no moire); the number of triads follows the screen's resolution instead of the tube. The rows
+// of the slot and dot masks are moved to whole pixels too, a slot's break and a dot's centre onto
+// the middle of a pixel row. Two pixels cannot hold three stripes: w = 2 is magenta and green
+// (a checkerboard for the dot mask), as in pixel masks for low-resolution screens.
+// p: the screen pixel. Returns the mask, and in a its average (the masks' averages on the tube).
+vec4 pixelMask(vec2 p, float w, float mt)
+{
+    vec3 m = vec3(0.0);
+    if (mt > 2.5 && w > 2.5)
+    {
+        // dot rows: the whole number of pixels nearest the tube's spacing (1.732 rows per triad)
+        float R = max(1.0, floor(w / 1.732 + 0.5));
+        for (float i = 0.125; i < 1.0; i += 0.25)
+            for (float j = 0.125; j < 1.0; j += 0.25)
+                m += dots(3.0 * (p.x + i) / w, (p.y + j - 0.5) / R + 0.5);
+        return vec4(m / 16.0, 0.19);
+    }
+    float avg;
+    if (w < 2.5)
+    {
+        m = mod(p.x + (mt > 2.5 ? p.y : 0.0), 2.0) < 0.5 ? vec3(1.0, 0.0, 1.0) : vec3(0.0, 1.0, 0.0);
+        avg = 0.5;
+    }
+    else
+    {
+        for (float i = 0.125; i < 1.0; i += 0.25) m += stripes((p.x + i) / w);
+        m *= 0.25;
+        avg = 0.367;
+    }
+    if (mt > 1.5 && mt < 2.5)
+    {
+        // slot mask: the breaks, half a slot (w rows) lower from one triad column to the next
+        float x = (p.x + 0.5) / w, g = 0.0;
+        for (float j = 0.125; j < 1.0; j += 0.25) g += slotGate(x, (p.y + j - 0.5) / w);
+        m *= 0.25 * g;
+        avg *= w < 2.5 ? 0.88 : 0.31 / 0.367;
+    }
+    return vec4(m, avg);
 }
 
 vec3 shoulder(vec3 x)
@@ -2485,9 +2545,14 @@ void lr_main()
             sig = vec2(LR_MON_SPOT_LO, max(LR_MON_SPOT_LO, LR_MON_SPOT_HI))
                 * (FWHM_TO_SIGMA * monCornerGrowth(c) * visField / monScanMM().y);
 
+        // the band each line's light is averaged over (lineLight), in lines: Scanline smoothing
+        // times one screen pixel's height. 0 takes the light at the pixel's centre, 1 averages it
+        // over the pixel; more softens the lines a little and takes out more moire, for narrow beams.
+        float hw = LR_SMOOTH * visLines * monShown().y / (tubePx.y * stepL);
+
         // every line within 3.5 spot widths: the lines left out are at least kn + 1 away
         // (4 lines for 240p TV, more for wide spots: merged fields, 1024x768 on a PC monitor)
-        int kn = int(clamp(ceil(3.5 * sig.y - 1.0), 1.0, 6.0));
+        int kn = int(clamp(ceil(3.5 * sig.y + 0.5 * hw - 1.0), 1.0, 6.0));
         float lastRow = -1e6;                                // TV show: the programme line read last
         vec4 bb = vec4(0.0);
         for (int k = -kn; k <= kn + 1; k++)
@@ -2511,7 +2576,7 @@ void lr_main()
             // beam height: TV from the local brightness per gun; PC from the spot that made the light
             vec3 isg = 1.0 / mix(vec3(sig.x), vec3(sig.y), mm ? vec3(bb.a) : b);
             vec3 d = vec3(u - j) + vec3(convV, 0.0, -convV);
-            col += lc * exp(-0.5 * d * d * isg * isg) * isg * 0.39894228;
+            col += lc * lineLight(d, isg, hw);
         }
         col *= smoothstep(-0.002, 0.002, xs) * smoothstep(1.002, 0.998, xs);
 
@@ -2521,13 +2586,28 @@ void lr_main()
         // tube in mm: from the mask pitch (a dot mask's pitch is diagonal, 0.866 of it horizontal)
         if (mm) triads = monTubeMM().y / (LR_MON_PITCH * (mt > 2.5 && mt < 3.5 ? 0.866 : 1.0));
         float pitchPx = tubePx.y / triads;
-        float str = LR_MASK_STR * smoothstep(1.6, 2.6, pitchPx);
+        // on screen pixels (pixelMask): w pixels per triad, or with 1 (auto) the whole number nearest
+        // the tube's own pitch; it does not need to fade out on fine pitches
+        bool onPx = LR_MASK_PX > 0.5 && mt > 0.5 && mt < 3.5;
+        float wPx = LR_MASK_PX < 1.5 ? clamp(floor(pitchPx + 0.5), 2.0, 6.0) : LR_MASK_PX;
+        float str = LR_MASK_STR * (onPx ? 1.0 : smoothstep(1.6, 2.6, pitchPx));
         if (mt > 0.5 && str > 0.0)
         {
-            vec2 mp = ut * tubePx / pitchPx;
-            float dp = 0.25 / pitchPx;
-            vec3 m = maskAvg(mp - dp, mp + dp, mt);
-            float avg = mt < 1.5 ? 0.367 : (mt < 2.5 ? 0.31 : (mt < 3.5 ? 0.19 : 0.84));
+            vec3 m;
+            float avg;
+            if (onPx)
+            {
+                vec4 pm = pixelMask(floor(vTexCoord * LR_OutputSize.xy), wPx, mt);
+                m = pm.rgb;
+                avg = pm.a;
+            }
+            else
+            {
+                vec2 mp = ut * tubePx / pitchPx;
+                float dp = 0.25 / pitchPx;
+                m = maskAvg(mp - dp, mp + dp, mt);
+                avg = mt < 1.5 ? 0.367 : (mt < 2.5 ? 0.31 : (mt < 3.5 ? 0.19 : 0.84));
+            }
             col *= mix(vec3(1.0 - str), vec3(1.0), m) / mix(1.0 - str, 1.0, avg);
         }
         if (mt > 0.5 && mt < 1.5)
@@ -2569,32 +2649,34 @@ void main()
     LR_NORM = lrParams[0].x;
     LR_STEADY = lrParams[0].y;
     LR_CONV = lrParams[0].z;
-    LR_MASK_TYPE = lrParams[0].w;
-    LR_MASK_STR = lrParams[1].x;
-    LR_WHITE = lrParams[1].y;
-    LR_PHOS = lrParams[1].z;
-    LR_CURV_X = lrParams[1].w;
-    LR_CURV_Y = lrParams[2].x;
-    LR_BEND = lrParams[2].y;
-    LR_CORNER = lrParams[2].z;
-    LR_GLOW = lrParams[2].w;
-    LR_VIGNETTE = lrParams[3].x;
-    LR_OVERSCAN = lrParams[3].y;
-    LR_OVERSCAN_V = lrParams[3].z;
-    LR_LIN_X = lrParams[3].w;
-    LR_LIN_Y = lrParams[4].x;
-    LR_AMBIENT = lrParams[4].y;
-    LR_MON_SIZE = lrParams[4].z;
-    LR_MON_PITCH = lrParams[4].w;
-    LR_MON_SPOT_LO = lrParams[5].x;
-    LR_MON_SPOT_HI = lrParams[5].y;
-    LR_MON_CORNER = lrParams[5].z;
-    LR_SCREEN_H = lrParams[5].w;
-    LR_SCREEN_UNIT = lrParams[6].x;
-    LR_BACKDROP = lrParams[6].y;
-    LR_ROOM = lrParams[6].z;
-    LR_SPILL = lrParams[6].w;
-    LR_SCENE_SPEED = lrParams[7].x;
+    LR_SMOOTH = lrParams[0].w;
+    LR_MASK_TYPE = lrParams[1].x;
+    LR_MASK_STR = lrParams[1].y;
+    LR_MASK_PX = lrParams[1].z;
+    LR_WHITE = lrParams[1].w;
+    LR_PHOS = lrParams[2].x;
+    LR_CURV_X = lrParams[2].y;
+    LR_CURV_Y = lrParams[2].z;
+    LR_BEND = lrParams[2].w;
+    LR_CORNER = lrParams[3].x;
+    LR_GLOW = lrParams[3].y;
+    LR_VIGNETTE = lrParams[3].z;
+    LR_OVERSCAN = lrParams[3].w;
+    LR_OVERSCAN_V = lrParams[4].x;
+    LR_LIN_X = lrParams[4].y;
+    LR_LIN_Y = lrParams[4].z;
+    LR_AMBIENT = lrParams[4].w;
+    LR_MON_SIZE = lrParams[5].x;
+    LR_MON_PITCH = lrParams[5].y;
+    LR_MON_SPOT_LO = lrParams[5].z;
+    LR_MON_SPOT_HI = lrParams[5].w;
+    LR_MON_CORNER = lrParams[6].x;
+    LR_SCREEN_H = lrParams[6].y;
+    LR_SCREEN_UNIT = lrParams[6].z;
+    LR_BACKDROP = lrParams[6].w;
+    LR_ROOM = lrParams[7].x;
+    LR_SPILL = lrParams[7].y;
+    LR_SCENE_SPEED = lrParams[7].z;
     lr_main();
 }
 #endif

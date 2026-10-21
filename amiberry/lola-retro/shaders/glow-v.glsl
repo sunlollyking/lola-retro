@@ -457,7 +457,7 @@ void main()
     // the adjustable values: blue channel of the first pass's first row
     LR_NORM = texelFetch(LR_Signal, ivec2(0, 0), 0).b;
     LR_STEADY = texelFetch(LR_Signal, ivec2(5, 0), 0).b;
-    LR_GLOW_SIZE = texelFetch(LR_Signal, ivec2(17, 0), 0).b;
+    LR_GLOW_SIZE = texelFetch(LR_Signal, ivec2(19, 0), 0).b;
     lrParams[0] = vec4(LR_NORM, LR_STEADY, LR_GLOW_SIZE, 0.0);
     lr_main();
 }

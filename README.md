@@ -238,7 +238,8 @@ Which preset and settings to use per system: [RECOMMENDED-CORES.md](shaders/lola
 - **S-Video and RGB** skip the parts of that chain they skipped in real life.
 - **Electron beam.** Each line is a spot whose width grows with brightness, in both directions and per colour gun.
   Bright detail merges and rounds off, dark detail stays sharp. Interlaced fields alternate; VGA 200-line modes are drawn twice.
-- **Phosphor mask.** Aperture grille (with Trinitron damper wires), slot mask, shadow mask, or a projection screen.
+- **Phosphor mask.** Aperture grille (with Trinitron damper wires), slot mask, shadow mask, or a projection screen,
+  at the tube's real size, or drawn on whole screen pixels for lower-resolution displays (no moiré).
 - **Monitors in millimetres.** PC monitors (31 kHz) and the Amiga 1084S use a tube described in millimetres (size,
   mask pitch, beam spot on dark and on white, larger in the corners), so 320×200, 640×480, 800×600 and 1024×768 each
   look as they did on that monitor, and NTSC Amiga games show stronger lines than PAL ones.

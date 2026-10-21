@@ -13,8 +13,10 @@
 #pragma parameter LR_CONTRAST "Contrast" 1.05 0.6 1.4 0.01
 #pragma parameter LR_GAMMA "Tube gamma" 2.4 2 2.8 0.01
 #pragma parameter LR_CONV "Misconvergence (px)" 0.12 0 1.5 0.01
+#pragma parameter LR_SMOOTH "Scanline smoothing (screen pixels, less moire)" 0 0 2 0.1
 #pragma parameter LR_MASK_TYPE "Mask (0 none, 1 aperture, 2 slot, 3 shadow, 4 projection)" 3 0 4 1
 #pragma parameter LR_MASK_STR "Mask strength" 0.45 0 1 0.01
+#pragma parameter LR_MASK_PX "Mask on screen pixels (0 off, 1 auto, 2-6 px per triad)" 0 0 6 1
 #pragma parameter LR_WHITE "White point (K)" 9300 6500 9300 100
 #pragma parameter LR_PHOS "Phosphors (0 auto, 1 sRGB, 2 SMPTE-C, 3 EBU, 4 Japanese P22)" 0 0 4 1
 #pragma parameter LR_CURV_X "Curvature horizontal" 0.025 0 0.15 0.005
@@ -68,8 +70,10 @@ uniform float LR_BRIGHT;
 uniform float LR_CONTRAST;
 uniform float LR_GAMMA;
 uniform float LR_CONV;
+uniform float LR_SMOOTH;
 uniform float LR_MASK_TYPE;
 uniform float LR_MASK_STR;
+uniform float LR_MASK_PX;
 uniform float LR_WHITE;
 uniform float LR_PHOS;
 uniform float LR_CURV_X;
