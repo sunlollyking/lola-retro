@@ -23,3 +23,5 @@
 !/ProjectSettings/ProjectVersion.txt
 /Packages/packages-lock.json
 /Data/
+/Assets/Samples/
+/Assets/Samples.meta

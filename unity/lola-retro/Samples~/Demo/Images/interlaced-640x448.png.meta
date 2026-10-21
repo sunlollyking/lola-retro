@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: 155be6e3d38504803a52c56f6e5bba41
+guid: 28f774cffe07f4a15bbe09e3997b134c
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: -167537297052003739
-    second: platformer_0
+      213: 1807906975302389065
+    second: interlaced-640x448_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -115,13 +115,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: platformer_0
+      name: interlaced-640x448_0
       rect:
         serializedVersion: 2
         x: 0
         y: 0
-        width: 256
-        height: 224
+        width: 640
+        height: 448
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -130,8 +130,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 562169a47b9ccadf0800000000000000
-      internalID: -167537297052003739
+      spriteID: 94d89d9b0d9f61910800000000000000
+      internalID: 1807906975302389065
       vertices: []
       indices: 
       edges: []
@@ -150,7 +150,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      platformer_0: -167537297052003739
+      interlaced-640x448_0: 1807906975302389065
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

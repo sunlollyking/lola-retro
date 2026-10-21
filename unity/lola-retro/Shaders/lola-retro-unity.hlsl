@@ -3,6 +3,12 @@
 #ifndef LOLA_RETRO_UNITY_INCLUDED
 #define LOLA_RETRO_UNITY_INCLUDED
 
+// FXC's notes on code that is right as it is (the same code runs in RetroArch): pow of values
+// that are never negative (3571), loop variables named as one outside the loop (3078), functions
+// it cannot prove return on every path (4000), loops it unrolls to index an array (3550), and
+// that integer division is slower (3556)
+#pragma warning (disable : 3078 3550 3556 3571 4000)
+
 #include "lola-retro-params.hlsl"
 
 // Per pass, as RetroArch's push constants: (width, height, 1 / width, 1 / height)

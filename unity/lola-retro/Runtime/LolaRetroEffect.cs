@@ -132,8 +132,17 @@ namespace LolaRetro
         }
 
         /// <summary>Records the chain from the camera's image (or Input) into output, for one eye.</summary>
+        int lastFrame = -10;
+
+        /// <summary>
+        /// True while the render pipeline draws this camera through Lola Retro. False in URP when
+        /// the renderer has no Lola Retro feature, or in HDRP without the custom post-process.
+        /// </summary>
+        public bool IsRendering => isActiveAndEnabled && Time.frameCount - lastFrame <= 2;
+
         internal void Record(CommandBuffer buffer, in LolaRetroImage image, in LolaRetroImage output, int eye, in LolaRetroHdr hdr)
         {
+            lastFrame = Time.frameCount;
             LolaRetroImage src = input != null
                 ? new LolaRetroImage(new RenderTargetIdentifier(input), -1, new RectInt(0, 0, input.width, input.height))
                 : image;

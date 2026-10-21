@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: 03a87ee331edf4b87bd67dfaf916b31f
+guid: 0717c95dfd6e54cf3af19ff3bf28df2c
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 2333020893515587696
-    second: waterfall_0
+      213: 9209588190441599877
+    second: amiga_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -115,13 +115,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: waterfall_0
+      name: amiga_0
       rect:
         serializedVersion: 2
         x: 0
         y: 0
         width: 320
-        height: 224
+        height: 256
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -130,8 +130,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 070af8b442e806020800000000000000
-      internalID: 2333020893515587696
+      spriteID: 58377ea2aa70fcf70800000000000000
+      internalID: 9209588190441599877
       vertices: []
       indices: 
       edges: []
@@ -150,7 +150,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      waterfall_0: 2333020893515587696
+      amiga_0: 9209588190441599877
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

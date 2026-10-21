@@ -38,6 +38,7 @@ Usage: python3 tools/make_unity.py
 import hashlib
 import json
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -265,6 +266,8 @@ EXTRA_PASSES = [("crt-hdr", "../Passes/crt-hdr.hlsl", None),                 # t
 
 
 def run_tool(*args):
+    if shutil.which(str(args[0])) is None:
+        raise SystemExit(f"{args[0]} is not on PATH (glslang and SPIRV-Cross make the OpenGL ES and WebGL passes)")
     r = subprocess.run([str(a) for a in args], capture_output=True, text=True)
     if r.returncode != 0:
         raise SystemExit(f"{args[0]} failed:\n{r.stdout}{r.stderr}")

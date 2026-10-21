@@ -297,7 +297,8 @@ Measured on synthetic patterns:
 | `amiberry/lola-retro/` | The Amiga 1084S preset converted to GLSL for Amiberry. Details in its [README](amiberry/lola-retro/README.md). |
 | `86box/lola-retro/` | The PC monitor presets converted to GLSL for 86Box. Details in its [README](86box/lola-retro/README.md). |
 | `unity/lola-retro/` | The Unity package: every pass converted to HLSL, with all presets. Details in its [README](unity/lola-retro/README.md). |
-| `unity/test-project/` | A small Unity 2D project that shows the test pictures through the package. Details in its [README](unity/test-project/README.md). |
+| `unity/test-project/` | A small Unity project that shows the package's Demo, and makes it. Details in its [README](unity/test-project/README.md). |
+| `unity/asset-store/` | The Unity Asset Store listing: description, checklist and pictures. |
 | `web/lola-retro.html` | The original WebGL version. Open it in a browser, try test scenes or drop in your own screenshots. |
 | `tools/` | Preset generator, GLSL and Unity converters, compile checker and headless preview renderers. |
 | `test-images/` | Native-resolution test frames for the preview tools. |
@@ -315,6 +316,7 @@ tools/amiberry-preview.py PRESET.glslp FRAME.png OUT.png       # render a frame 
 tools/86box-preview.py PRESET.glslp FRAME.png OUT.png          # render a frame the way 86Box does (moderngl)
 tools/unity-preview.py PRESET FRAME.png OUT.png --compare RA.png  # the way the Unity package does, against RetroArch (moderngl, spirv-cross)
 tools/webgl-preview.py PRESET FRAME.png OUT_DIR                   # a page that runs the Unity passes in WebGL 2 against RetroArch
+tools/make_store_images.py                                        # the Unity Asset Store pictures (unity/asset-store), rendered in Unity
 ```
 
 ## License

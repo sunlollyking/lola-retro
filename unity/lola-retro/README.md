@@ -10,10 +10,50 @@ composite blends dithering into new colours and makes 1-pixel stripes shimmer, R
 grows with brightness, the mask and the glass are drawn at your screen's resolution. Made for indie games with a
 retro look: pixel art, PS1-style 3D, anything that should look like it ran on a TV or monitor of the 80s and 90s.
 
-![The same frame on composite and RGB](https://raw.githubusercontent.com/zoran123456/lola-retro/main/docs/sonic-composite-vs-rgb.jpg)
+![Raw pixels, a real Sony Trinitron on composite, and Lola Retro](https://raw.githubusercontent.com/zoran123456/lola-retro/main/docs/dracula-vs-real-crt.jpg)
 
-<sub>The RetroArch version on composite and RGB. The Unity version draws the same picture: its passes are
-translated from the RetroArch shaders and checked against them pixel for pixel (see [Tested](#tested)).</sub>
+<sub>Dracula from Castlevania: Symphony of the Night, the same frame in every picture. From left: the raw pixels; a
+photo of a real Sony KV-13M51 Trinitron on composite, by [CRTpixels](https://x.com/CRTpixels/status/1408451743214616587);
+Lola Retro with the Trinitron preset switched to composite, and with the consumer TV composite preset. The Unity
+version draws the same picture as the RetroArch version it is made from (see [Tested](#tested)).</sub>
+
+## Install in a minute
+
+1. On Lola Retro's Asset Store page, **Add to My Assets**.
+2. In Unity: **Window → Package Manager**, then **My Assets → Lola Retro → Install**.
+3. To see it at once: on the same page open **Samples → Demo → Import**. Open the scene
+   `Assets/Samples/Lola Retro/…/Demo/Lola Retro Demo` and press **Play**. The arrow keys change the TV, **C** the cable.
+
+## Put it on your game
+
+1. In the **Hierarchy**, click the camera that shows your game (usually *Main Camera*).
+2. In the **Inspector**: **Add Component**, type `Lola Retro`, press **Enter**.
+3. If the component shows a box with a **Fix it** button (in URP and HDRP it does the first time), press it.
+4. Pick a **Preset** and press **Play**.
+
+That is all. Your game now shows on the TV most people had: a consumer TV on the composite cable. The presets under
+*Systems* are the TV or monitor most people had for that console (the NES and SNES dots, the Mega Drive's rainbow),
+and every value under **Settings** can be changed while the game runs.
+
+Lola Retro makes a console picture of 240 lines from what the camera sees (**Lines**; the width follows the
+camera's shape). For pixel art, set Lines to your game's height, or see [The console's picture](#the-consoles-picture).
+
+**Without the Asset Store**, from GitHub: **Window → Package Manager → + → Install package from git URL…** and enter
+`https://github.com/zoran123456/lola-retro.git?path=/unity/lola-retro` (add `#v1.12` or another release tag at the
+end to stay on that version).
+
+<details><summary>What Fix it does</summary>
+
+- **URP** draws Lola Retro through its renderer feature: Fix it adds **Lola Retro** to the camera's renderer asset
+  (the Universal Renderer Data, or the Renderer 2D Data in a 2D project), as **Add Renderer Feature → Lola Retro**
+  would.
+- **HDRP** runs it as a custom post-process: Fix it adds `LolaRetro.LolaRetroVolume` to **Project Settings →
+  Graphics → HDRP Global Settings → Custom Post Process Orders → After Post Process**. No Volume is needed. A
+  second, milder note sets HDRP's post-processing buffer to R16G16B16A16 (its default keeps only 6 or 7 bits a
+  channel, and Lola Retro's picture would lose about one step of 8-bit colour).
+- **Built-in render pipeline:** nothing to fix.
+
+</details>
 
 ## Requirements
 
@@ -22,35 +62,6 @@ translated from the RetroArch shaders and checked against them pixel for pixel (
 - Desktop (Direct3D 11/12, Metal, Vulkan, OpenGL Core) or the web (WebGL 2). It needs about what the RetroArch
   version needs, see [Performance](#performance). Phones have not been tried.
 - SDR and HDR displays, and XR headsets (URP and HDRP).
-
-## Install
-
-**Window → Package Manager → + → Install package from git URL…** and enter
-
-```
-https://github.com/zoran123456/lola-retro.git?path=/unity/lola-retro
-```
-
-Add `#v1.12` (or another release tag) at the end to stay on that version.
-
-## Set up
-
-To see it first: the repository has a small 2D test project, `unity/test-project` (its
-[README](https://github.com/zoran123456/lola-retro/tree/main/unity/test-project)).
-
-1. Select the camera that shows your game and **Add Component → Rendering → Lola Retro**.
-2. **URP:** select your renderer asset (the Universal Renderer Data, or Renderer 2D Data in a 2D project),
-   **Add Renderer Feature → Lola Retro**. Every camera that uses that renderer can then have Lola Retro.
-   **HDRP:** in **Project Settings → Graphics → HDRP Global Settings → Custom Post Process Orders**, add
-   `LolaRetro.LolaRetroVolume` under *After Post Process*, then on a Volume the camera sees (a global one is
-   simplest) **Add Override → Post-processing → Custom → Lola Retro**. The settings stay on the camera's component.
-   **Built-in:** nothing more.
-3. Pick a **Preset**. The default is the TV most people had: a consumer TV on composite. The presets under
-   *Systems* are the device most people had for that console, with its timing (the NES and SNES dots, the Mega
-   Drive's rainbow and so on).
-
-That is all for a game that renders at the screen's resolution: Lola Retro makes a console picture of 240 lines
-from it (**Lines**, with the width from the camera's shape) and shows it on the tube.
 
 ## The console's picture
 
@@ -115,7 +126,8 @@ next frame.
   the tube too, render it with the game: Screen Space - Camera on the camera whose image Lola Retro shows.
 - **URP's own anti-aliasing and upscaling** run after Lola Retro and would blur the mask: on the camera, set
   Post-processing *Anti-aliasing* to None, and keep the URP asset's *Render Scale* at 1. URP's *Dithering* is not
-  needed: the last pass dithers like the RetroArch version.
+  needed: the last pass dithers like the RetroArch version. In HDRP the same: the camera's *Anti-aliasing* None,
+  *Dithering* off.
 - **Colour.** Unity renders in linear light, a console sent gamma-coded RGB: the first pass codes the picture as an
   emulator's frame is coded, the last one turns the result back. Post-processing (tonemapping, colour grading)
   happens before Lola Retro, as if it were part of the game.
@@ -158,10 +170,11 @@ In a browser on an Apple M4 Pro (WebGL 2) the whole chain takes 2 to 3 ms per fr
 
 ## Tested
 
-In Unity 6.6 (6000.6.7f1) on a Mac: the package compiles without errors, and the test project's picture
-(`unity/test-project`, the SNES preset on composite) is RetroArch's, in the Built-in render pipeline and in URP on
-Metal, and in a web build (WebGL 2) of each: the pictures agree to within one step of 8-bit colour, apart from a
-few single pixels per frame where the mask changes colour.
+In Unity 6.6 (6000.6.7f1) on a Mac: the package compiles without errors or warnings, and the Demo's picture (the
+SNES preset on composite) is RetroArch's in the Built-in render pipeline, in URP and in HDRP (with its
+post-processing buffer at R16G16B16A16) on Metal, and in a web build (WebGL 2) for the Built-in pipeline and URP:
+the pictures agree to within one step of 8-bit colour, apart from a few single pixels per frame where the mask
+changes colour. The Fix it buttons were run there too.
 
 The passes are made from the RetroArch shaders by a converter (`tools/make_unity.py` in the repository). Every
 preset, cable and option was also checked by running both on the same GPU, with the Unity passes run the way
@@ -174,7 +187,7 @@ On OpenGL ES and WebGL the shader uses GLSL made from the same passes by SPIRV-C
 there keeps integers in float registers as tiny bit patterns that these GPUs flush to zero, and the picture came
 out black.
 
-Not yet run in Unity: HDR output, XR and HDRP. Reports are welcome.
+Not yet run in Unity: HDR output and XR. Reports are welcome.
 
 ## License
 
