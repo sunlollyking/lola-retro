@@ -17,6 +17,19 @@ What the Asset Store listing needs, ready to paste into the Publisher Portal. Th
   all four show Konami's Castlevania. The Asset Store asks for content you have the rights to: ask CRTpixels
   before using it there, and leave it out if Unity's review objects. Every other picture is the Demo's own.
 
+## Publisher profile
+
+**Promo banner:** `images/promo-banner-3000x1000.jpg` (shown at the top of the publisher page during a discount;
+the TV is in the middle, so the portal can cut it narrower)
+
+**Headline** (60 characters at most):
+Free CRT shader that simulates the whole analog TV
+
+**Paragraph** (300 characters at most):
+I make Lola Retro, a CRT shader that recreates how 80s and 90s games really looked on a TV: the console's video
+encoder, the cable, the electron beam, the phosphor mask and the curved glass. It began in RetroArch and is now free
+for Unity. Open source on GitHub.
+
 ## Listing
 
 **Name:** Lola Retro – CRT Shader
@@ -92,6 +105,7 @@ vhs, 8-bit, 16-bit, ps1
 | Card (420 × 280) | `images/card-420x280.png` |
 | Cover (1950 × 1300) | `images/cover-1950x1300.jpg` |
 | Social media (1200 × 630, no text) | `images/social-1200x630.jpg` |
+| Publisher profile's promo banner | `images/promo-banner-3000x1000.jpg` |
 | Screenshots | `images/screenshot-01` to `-09` (`-09` is the Dracula comparison, see above) |
 
 Screenshot captions:

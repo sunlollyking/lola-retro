@@ -4,8 +4,9 @@
 Each picture is rendered by the test project (unity/test-project, its LolaRetroTestCapture) in
 batch mode, from the Demo sample's own pictures (test-images), and then cut to the sizes the
 Asset Store asks for: icon 160 x 160, card 420 x 280, cover 1950 x 1300, social media 1200 x 630
-(no text on any of them) and screenshots of at least 1200 wide. The Dracula comparison comes from
-docs/ as it is.
+(no text on any of them), screenshots of at least 1200 wide and the publisher profile's promo banner
+(3000 x 1000, the TV in the middle so that it can be cut narrower). The Dracula comparison comes
+from docs/ as it is.
 
 Needs: Unity (--unity, or the newest editor in /Applications/Unity/Hub/Editor), the test project
 with the demo imported (Lola Retro Test, Import the demo), pip install pillow.
@@ -34,6 +35,8 @@ RENDERS = {
     "cover": ["-lolaSize", "1950x1300", *SCENE, "-lolaSet", "aroundTheTube=Synthwave", *ROOM],
     "social": ["-lolaSize", "1200x630", *SCENE, "-lolaSet", "aroundTheTube=NightCity", "-lolaSet", "roomLight=2",
                "-lolaSet", "realSizeScreenHeight=44", "-lolaSet", "monitorSize=14"],
+    "banner": ["-lolaSize", "3000x1000", *SCENE, "-lolaSet", "aroundTheTube=Synthwave", "-lolaSet", "realSizeScreenHeight=52",
+               "-lolaSet", "monitorSize=14", "-lolaSet", "roomLight=3"],
     "hero": ["-lolaSize", "1920x1080", *SCENE, "-lolaSet", "aroundTheTube=Synthwave", *ROOM],
     "snes-detail": ["-lolaSize", "2880x2160"],
     "md-composite": ["-lolaSize", "1440x1080", "-lolaPreset", "SystemMegaDriveGenesis", "-lolaPicture", "waterfall"],
@@ -118,6 +121,7 @@ def main():
     pic["card"].resize((420, 280), Image.LANCZOS).save(OUT / "card-420x280.png")
     pic["cover"].save(OUT / "cover-1950x1300.jpg", **JPG)
     pic["social"].save(OUT / "social-1200x630.jpg", **JPG)
+    pic["banner"].save(OUT / "promo-banner-3000x1000.jpg", **JPG)
     pic["hero"].save(OUT / "screenshot-01-synthwave.jpg", **JPG)
     pixels_and_crt(pic["snes-detail"]).save(OUT / "screenshot-02-pixels-and-crt.jpg", **JPG)
     split(pic["md-composite"], pic["md-rgb"], 720).save(OUT / "screenshot-03-composite-and-rgb.jpg", **JPG)
