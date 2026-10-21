@@ -10,7 +10,8 @@ after every change to the package.
 
 ## Uploading
 
-1. `tools/make_asset_store_project.py` (needs only Python).
+1. `tools/make_manual.py` when the package's README has changed (the PDF manual the Validator asks for), then
+   `tools/make_asset_store_project.py` (needs only Python).
 2. Unity Hub: **Add → Add project from disk**, choose `unity/asset-store/upload-project`, and open it with Unity
    6000.6.7f1.
 3. Install the [Asset Store Publishing Tools](https://assetstore.unity.com/packages/package/5368745): on that page

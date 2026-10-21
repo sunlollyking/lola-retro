@@ -318,6 +318,7 @@ tools/unity-preview.py PRESET FRAME.png OUT.png --compare RA.png  # the way the 
 tools/webgl-preview.py PRESET FRAME.png OUT_DIR                   # a page that runs the Unity passes in WebGL 2 against RetroArch
 tools/make_store_images.py                                        # the Unity Asset Store pictures (unity/asset-store), rendered in Unity
 tools/make_asset_store_project.py                                 # the Asset Store version: the package as Assets/Lola Retro of the upload project
+tools/make_manual.py                                              # the Unity package's PDF manual, from its README (macOS)
 ```
 
 ## License

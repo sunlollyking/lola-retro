@@ -122,6 +122,18 @@ crt.enabled = false;                             // off
 An options menu can offer the cable (RF, composite, S-Video, RGB) and the presets; the picture changes in the
 next frame.
 
+Everything is in the namespace `LolaRetro`:
+
+| Name | What it is |
+|---|---|
+| `LolaRetroEffect` | The component on the camera. Its fields are the Inspector's: `preset`, `flatScreen`, `input`, `lines`, `width`, `tubeShape`, `settings`. |
+| `LolaRetroEffect.ApplyPreset(preset, flat = false)` | Sets every value of `settings` to the preset's (and `preset`, `flatScreen`). |
+| `LolaRetroEffect.IsRendering` | True while Lola Retro draws this camera's picture (false when the render pipeline still needs Fix it). |
+| `LolaRetroSettings` | Every parameter, one field each, with the Inspector's names (`cable`, `mask`, `maskStrength`, `aroundTheTube`, …); the tooltips say what they do. |
+| `LolaRetroPreset` | The presets, as in the Inspector's Preset list. |
+| `Cable`, `MaskType`, `TubeShape`, … | The choices of the fields that have a list. |
+| `LolaRetroFeature` (URP), `LolaRetroVolume` (HDRP) | What draws it in those pipelines; Fix it sets them up. |
+
 ## Good to know
 
 - **UI.** A Screen Space - Overlay canvas is drawn after Lola Retro, sharp on top of the tube. To have the UI on
