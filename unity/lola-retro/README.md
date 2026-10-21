@@ -19,10 +19,11 @@ version draws the same picture as the RetroArch version it is made from (see [Te
 
 ## Install in a minute
 
-1. On Lola Retro's Asset Store page, **Add to My Assets**.
-2. In Unity: **Window → Package Manager**, then **My Assets → Lola Retro → Install**.
-3. To see it at once: on the same page open **Samples → Demo → Import**. Open the scene
-   `Assets/Samples/Lola Retro/…/Demo/Lola Retro Demo` and press **Play**. The arrow keys change the TV, **C** the cable.
+1. On Lola Retro's Asset Store page, press **Add to My Assets** (it is free).
+2. In Unity: **Window → Package Manager** (in newer versions **Window → Package Management → Package Manager**),
+   then **My Assets → Lola Retro → Download → Import**, and **Import** once more in the window that opens.
+3. To see it at once: open the scene `Assets/Lola Retro/Demo/Lola Retro Demo` and press **Play**. The arrow keys
+   change the TV, **C** the cable.
 
 ## Put it on your game
 
@@ -40,7 +41,8 @@ camera's shape). For pixel art, set Lines to your game's height, or see [The con
 
 **Without the Asset Store**, from GitHub: **Window → Package Manager → + → Install package from git URL…** and enter
 `https://github.com/zoran123456/lola-retro.git?path=/unity/lola-retro` (add `#v1.12` or another release tag at the
-end to stay on that version).
+end to stay on that version). The Demo is then in the Package Manager, under **Lola Retro → Samples → Demo →
+Import**. Use one or the other, not both in the same project.
 
 <details><summary>What Fix it does</summary>
 

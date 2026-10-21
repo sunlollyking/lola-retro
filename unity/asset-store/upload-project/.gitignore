@@ -1,0 +1,19 @@
+# made by Unity when the project is opened
+/Library/
+/Temp/
+/Logs/
+/obj/
+/UserSettings/
+*.csproj
+*.sln
+.vs/
+.idea/
+/ProjectSettings/*
+!/ProjectSettings/ProjectVersion.txt
+/Packages/packages-lock.json
+
+# made by tools/make_asset_store_project.py from unity/lola-retro
+/Assets/Lola Retro/
+/Assets/Lola Retro.meta
+# the Asset Store Publishing Tools, installed from the Asset Store
+/Assets/AssetStoreTools*

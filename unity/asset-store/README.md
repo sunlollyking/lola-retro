@@ -1,21 +1,34 @@
 # Lola Retro on the Unity Asset Store
 
-What the Asset Store listing needs, ready to paste into the Publisher Portal. The package itself is
-`unity/lola-retro` (a UPM package); the pictures are in `images/`, made in Unity by
-`tools/make_store_images.py` from the Demo's own pictures.
+What the Asset Store listing needs, ready to paste into the Publisher Portal. The pictures are in `images/`, made
+in Unity by `tools/make_store_images.py` from the Demo's own pictures.
 
-## Before uploading
+The Asset Store version goes up through the classic workflow (a package draft made with **Create a package**, a
+.unitypackage): the folder `Assets/Lola Retro` of `upload-project/`, which `tools/make_asset_store_project.py`
+makes from the UPM package (`unity/lola-retro`), the same files with the Demo as an ordinary folder. Run it again
+after every change to the package.
 
-- **Package name.** The Publisher Portal reserves a technical name for the product (`com.<publisher>.<product>`).
-  `package.json`'s `name` must be exactly that, and so must the folder's name if the uploader asks for it. It is
-  `com.zoran123456.lola-retro` now; change it (and `LolaRetroTestSetup.Package` in the test project) when the
-  portal gives another.
-- **Asset Store Publishing Tools**: install them in a Unity 6 project that has the package (the test project
-  will do), then **Window → Tools → Asset Store → Validator** with Validation Type **UPM**, and fix what it
-  reports. Then **Uploader → UPM Packages → Upload**.
-- **The Dracula picture** (`screenshot-09-dracula-real-crt.jpg`): its second panel is a photo by CRTpixels, and
-  all four show Konami's Castlevania. The Asset Store asks for content you have the rights to: ask CRTpixels
-  before using it there, and leave it out if Unity's review objects. Every other picture is the Demo's own.
+## Uploading
+
+1. `tools/make_asset_store_project.py` (needs only Python).
+2. Unity Hub: **Add → Add project from disk**, choose `unity/asset-store/upload-project`, and open it with Unity
+   6000.6.7f1.
+3. Install the [Asset Store Publishing Tools](https://assetstore.unity.com/packages/package/5368745): on that page
+   **Add to My Assets**, then in Unity **Window → Package Management → Package Manager → My Assets → Asset Store
+   Publishing Tools → Download → Import → Import**.
+4. **Tools → Asset Store → Validator → Add a path**, choose `Assets/Lola Retro`, **Validate**, and fix what it
+   reports (warnings about textures that are not a power of two are the Demo's pixel art at its own size).
+5. **Tools → Asset Store → Uploader**, sign in, choose the draft **Lola Retro - CRT Shader**, the folder
+   `Assets/Lola Retro`, **Export and Upload**.
+6. In the Publisher Portal, in the draft: the price (free), the texts and pictures below, then **Submit**.
+
+The Unity version the package is uploaded from is, as far as Unity's forums tell, the oldest the Asset Store offers
+it for. It is tested in 6000.6; uploading from an older Unity 6 (installed in Unity Hub) reaches more people, once
+it is tested there.
+
+**The Dracula picture** (`screenshot-09-dracula-real-crt.jpg`): its second panel is a photo by CRTpixels, and all
+four show Konami's Castlevania. The Asset Store asks for content you have the rights to: ask CRTpixels before using
+it there, and leave it out if Unity's review objects. Every other picture is the Demo's own.
 
 ## Publisher profile
 
@@ -56,8 +69,8 @@ screen's resolution.
 2. If the component shows a Fix it button (URP and HDRP), press it.
 3. Pick a preset and press Play.
 
-The Demo (Package Manager, Samples) shows it at once: open the scene, press Play, and change the TV with the arrow
-keys.
+The Demo shows it at once: open the scene Lola Retro/Demo/Lola Retro Demo, press Play, and change the TV with the
+arrow keys.
 
 **Presets**
 - Consumer TV on composite, SCART RGB, S-Video and RF, an old TV, a Sony Trinitron, a Sony PVM studio monitor
