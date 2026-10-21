@@ -1,7 +1,7 @@
 # Lola Retro
 
 **A CRT shader that simulates the whole analog chain, not just scanlines. For RetroArch, with versions for
-Amiberry (Amiga) and 86Box (PC).**
+Amiberry (Amiga), 86Box (PC) and Unity (your own games).**
 
 `console video encoder → cable → TV decoder → electron beam → phosphor mask → glass`
 
@@ -51,7 +51,8 @@ little rainbow, just as it did on a living-room TV. On RGB you see the stripes t
 Default core settings are fine for most systems. The few that matter are in
 [RECOMMENDED-CORES.md](shaders/lola-retro/RECOMMENDED-CORES.md).
 
-Using Amiberry or 86Box instead? See [Amiberry](#amiberry) and [86Box](#86box) below.
+Using Amiberry or 86Box instead? See [Amiberry](#amiberry) and [86Box](#86box) below. Making a game in Unity?
+See [Unity](#unity).
 
 Every preset also comes in a `flat/` version without curvature:
 
@@ -198,6 +199,21 @@ sharper than any real tube and easy on the eyes for long work on the desktop:
 <sub>The same part of the screen through each preset, 1:1 on that 3840×2560 screen. The average monitor is soft at
 1024×768, as many were; the better ones keep the text sharp; `extreme` shows the gaps between the lines.</sub>
 
+## Unity
+
+The whole shader also comes as a package for [Unity](https://unity.com), for games with a retro look: every pass,
+preset and parameter of the RetroArch version, in URP (Unity 6) and the Built-in render pipeline. In the Package
+Manager, **Install package from git URL…** with
+
+```
+https://github.com/zoran123456/lola-retro.git?path=/unity/lola-retro
+```
+
+then put **Lola Retro** on the camera and pick a preset (in URP, add the Lola Retro renderer feature too). The
+game can render at the screen's resolution, Lola Retro makes the console's picture from it, or into a
+low-resolution render texture for pixel-exact games. The passes are translated from the slang shaders by
+`tools/make_unity.py` and give the same picture as RetroArch. Setup and settings in its [README](unity/lola-retro/README.md).
+
 ## Presets
 
 | | |
@@ -279,8 +295,9 @@ Measured on synthetic patterns:
 | `shaders/lola-retro/` | The RetroArch shader pack (slang): one preset per system in `systems/`, and 14 presets by device, each in a `curved/` and a `flat/` version, plus the same for HDR displays in `hdr/`. Details in its [README](shaders/lola-retro/README.md). |
 | `amiberry/lola-retro/` | The Amiga 1084S preset converted to GLSL for Amiberry. Details in its [README](amiberry/lola-retro/README.md). |
 | `86box/lola-retro/` | The PC monitor presets converted to GLSL for 86Box. Details in its [README](86box/lola-retro/README.md). |
+| `unity/lola-retro/` | The Unity package: every pass converted to HLSL, with all presets. Details in its [README](unity/lola-retro/README.md). |
 | `web/lola-retro.html` | The original WebGL version. Open it in a browser, try test scenes or drop in your own screenshots. |
-| `tools/` | Preset generator, GLSL converter, compile checker and headless preview renderers. |
+| `tools/` | Preset generator, GLSL and Unity converters, compile checker and headless preview renderers. |
 | `test-images/` | Native-resolution test frames for the preview tools. |
 | `docs/` | Screenshots used in this README. |
 
@@ -289,10 +306,12 @@ Measured on synthetic patterns:
 ```
 python3 tools/make_presets.py     # regenerate the systems/, curved/, flat/ and hdr/ .slangp files from one table
 python3 tools/make_glsl.py        # regenerate the Amiberry and 86Box versions (amiberry/, 86box/) from the slang passes
-python3 tools/check_shaders.py    # compile every pass (slang and GLSL) with glslangValidator
+python3 tools/make_unity.py       # regenerate the Unity package's passes and tables (unity/) from the slang passes
+python3 tools/check_shaders.py    # compile every pass (slang, GLSL and Unity's HLSL) with glslangValidator
 tools/render-preview.sh PRESET IMAGE OUT.png [glcore|vulkan]   # Linux: render a frame in headless RetroArch
 tools/amiberry-preview.py PRESET.glslp FRAME.png OUT.png       # render a frame the way Amiberry does (moderngl)
 tools/86box-preview.py PRESET.glslp FRAME.png OUT.png          # render a frame the way 86Box does (moderngl)
+tools/unity-preview.py PRESET FRAME.png OUT.png --compare RA.png  # the way the Unity package does, against RetroArch (moderngl, spirv-cross)
 ```
 
 ## License

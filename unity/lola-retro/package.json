@@ -1,0 +1,14 @@
+{
+    "name": "com.zoran123456.lola-retro",
+    "version": "1.12.0",
+    "displayName": "Lola Retro",
+    "description": "A CRT shader that simulates the whole analog chain, not just scanlines: console video encoder, cable, TV decoder, electron beam, phosphor mask and glass. The Unity version of the RetroArch shader, with its TV and monitor presets. URP (Unity 6) and the Built-in render pipeline.",
+    "unity": "6000.0",
+    "keywords": ["crt", "retro", "shader", "post-processing", "composite", "scanlines", "pixel art"],
+    "author": {
+        "name": "Zoki",
+        "url": "https://github.com/zoran123456/lola-retro"
+    },
+    "documentationUrl": "https://github.com/zoran123456/lola-retro/tree/main/unity/lola-retro#readme",
+    "license": "MIT"
+}

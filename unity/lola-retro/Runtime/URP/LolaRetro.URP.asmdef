@@ -1,0 +1,31 @@
+{
+    "name": "LolaRetro.URP",
+    "rootNamespace": "LolaRetro",
+    "references": [
+        "LolaRetro",
+        "Unity.RenderPipelines.Core.Runtime",
+        "Unity.RenderPipelines.Universal.Runtime"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [
+        "LOLA_RETRO_URP"
+    ],
+    "versionDefines": [
+        {
+            "name": "com.unity.render-pipelines.universal",
+            "expression": "17.0.0",
+            "define": "LOLA_RETRO_URP"
+        },
+        {
+            "name": "com.unity.render-pipelines.universal",
+            "expression": "17.3.0",
+            "define": "LOLA_RETRO_URP_17_3"
+        }
+    ],
+    "noEngineReferences": false
+}
