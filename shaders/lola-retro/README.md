@@ -33,9 +33,9 @@ On an HDR display, use the same presets from `lola-retro/hdr/curved` instead, se
 | `master-system` | Master System (also MSX, ColecoVision) | Consumer TV (Composite) | 3 |
 | `mega-drive-genesis` | Mega Drive / Genesis, Mega CD, 32X | Consumer TV (Composite) | 2 |
 | `pc-engine-turbografx` | PC Engine / TurboGrafx-16, PC Engine CD | Consumer TV (Composite), NTSC | 4 |
-| `playstation` | PlayStation | Consumer TV (Composite) | auto (set 4 at 2× internal resolution) |
-| `saturn` | Sega Saturn | Consumer TV (Composite) | auto (set 4 for 320×224 games) |
-| `nintendo-64` | Nintendo 64 | Consumer TV (Composite) | auto (set 4 at 2× upscaling) |
+| `playstation` | PlayStation | Consumer TV (Composite) | auto (4 at 1× and 2×, see below) |
+| `saturn` | Sega Saturn | Consumer TV (Composite) | auto (Beetle Saturn: 4, see below) |
+| `nintendo-64` | Nintendo 64 | Consumer TV (Composite) | auto (4 at 1× and 2×, see below) |
 | `playstation-2` | PlayStation 2 | Trinitron (S-Video) | 5 |
 | `gamecube` | GameCube | Trinitron (S-Video) | 5 |
 | `dreamcast` | Dreamcast on a TV (for the VGA cable use `dos-pc`) | Consumer TV (Composite) | 5 |
@@ -45,8 +45,18 @@ On an HDR display, use the same presets from `lola-retro/hdr/curved` instead, se
 | `pc-98` | NEC PC-98 (640×400) | PC Monitor (VGA): 400 sharp lines on a computer monitor, as on the PC-98's own (for HDR use `hdr/curved/pc-monitor-vga`) | 7 |
 
 PlayStation, Saturn and N64 stay on auto: their native 480i games (Tekken 3, Virtua Fighter 2) and a 2×
-upscaled 240-line game both send 480 lines, and only you know which one it is. With the timing set by hand,
-a 480-line frame is read as 2× upscaled. The presets are the device presets below with one or two values changed, so every parameter still works.
+upscaled 240-line game both send 480 lines, and only you know which one it is. Auto reads 480 lines as 480i
+(with the PlayStation 2's timing) and 3× and up as upscaled. When you know what the core sends, set the
+console's own timing (4) by hand:
+
+- at 2× internal resolution: Console timing 4. Every 480-line frame is then read as a 2× upscaled 240-line one
+  (the two fields of a 480i game are averaged into one line).
+- at 1×, and on cores that never upscale (Beetle Saturn): Console timing 4 and **Frames over 300 lines** 1.
+  Every frame over 300 lines is then the console's own 480i, drawn in two fields with the console's timing
+  (960 lines are 480i at 2×). Beetle Saturn needs timing 4 anyway: auto picks the Mega Drive timing for its
+  320×224 games.
+
+The presets are the device presets below with one or two values changed, so every parameter still works.
 For a PAL console set **TV standard** to 2 if the auto setting picks NTSC (the frame size cannot always tell).
 
 ## Curved or flat
@@ -110,6 +120,8 @@ The composite simulation needs the console's real pixel grid:
 **Internal resolution.** Frames with more than 576 lines are read as an upscaled 240-line mode (3× and up).
 At 2× an upscaled PS1 frame looks like 480i, so set Console timing 4 by hand. 480-line consoles
 (PS2, GameCube, Dreamcast) upscaled: set Console timing 5, then the frame is read as upscaled 480i.
+**Frames over 300 lines** 1 does the same for every TV timing, for cores that never upscale (Beetle Saturn)
+or run at 1×: every frame over 300 lines is the console's own 480i or 576i (960 or 1152 lines: 2×).
 In the TV presets a higher internal resolution costs about as much GPU time as native: the encoder and
 decoder always work at 1280 samples per line (see [Performance](#performance)).
 
@@ -121,6 +133,7 @@ Every preset only sets parameters, so you can tweak any preset in **Quick Menu �
 |---|---|
 | Console timing | Pixel clock and colour-subcarrier rhythm of the console. 0 = auto (see below). |
 | TV standard | 0 auto (by line count), 1 NTSC, 2 PAL. Set it by hand for PAL consoles in 60 Hz mode (PAL60, common on PS2 and Dreamcast): the line count says NTSC but the colour is PAL. It also switches the colour decoder and the phosphors. On a TV show (Cable 4) it is the standard of the programme: `tv-show-broadcast` sets 2, a European programme, and a game in the other standard goes through the studio's standards converter (see [TV show](#tv-show)). |
+| Frames over 300 lines | 0 (default): auto. A frame with more than 300 lines is the console's 480i or 576i, but one with more than 576 lines (or, with Console timing set by hand, more than 360) is read as a 240-line game at a higher internal resolution, so with timing 4 a 480i game's two fields are averaged into one line. 1: every frame with more than 300 lines is the console's own 480i or 576i, on every TV timing, and the console's timing stays as set; an upscaled one is still found (960 lines: 480i at 2×, 1152: 576i at 2×). For cores that never upscale (Beetle Saturn) or run at 1×: a 240-line game at 2× would be read as 480i. Amiga, VGA and 24 kHz timings (6, 7, 9) are not affected. |
 | Cable | 0 RF, 1 Composite, 2 S-Video, 3 RGB, 4 TV show: the game as seen on a TV programme, from a studio through the antenna (see [TV show](#tv-show)). |
 | Comb filter | Better TVs separated colour with a comb filter. Only works when the console flips the subcarrier phase every line (PlayStation, Amiga). On a TV show (Cable 4) the broadcast's own NTSC timing lets it work for every console. |
 | Luma trap in the console | How much of the fine luma detail the console's encoder filtered out before mixing in colour. Lower it for a stronger rainbow on fine stripes (Sonic's waterfall), raise it for a cleaner picture. Real consoles differed a lot here: 0 is like an early Mega Drive Model 1 (strong rainbow), 0.75 (default) a typical console, 1 a later model with a better encoder. |
@@ -201,7 +214,7 @@ alternating, which the shader does not model separately.
 **Auto** guesses from the frame size: 256×192 → Master System, other 256-wide frames → SNES, 320×224 → Mega Drive, 320×240 and other 240-line
 modes → PlayStation, 320×200, 640×350 or 640×400 → VGA (NTSC Amiga on the 1084S preset), 256 or 512 lines and PUAE's default
 frames (360, 720 or 1440 wide with 287, 574, 242 or 484 lines) → Amiga, 336–400 lines → arcade 24 kHz,
-more than 300 lines → interlaced, more than 576 lines → upscaled (see Internal resolution). Set the id by hand when the guess is wrong (for example a Mega Drive game
+more than 300 lines → interlaced, more than 576 lines → upscaled (more than 720 with **Frames over 300 lines** 1; see Internal resolution). Set the id by hand when the guess is wrong (for example a Mega Drive game
 in 240-line PAL mode), or use a preset from `systems/`.
 
 ## TV show

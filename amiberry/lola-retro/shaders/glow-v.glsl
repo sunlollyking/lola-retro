@@ -21,6 +21,7 @@ const float LR_CABLE = 3.0;
 const float LR_CONSOLE = 6.0;
 const float LR_DEMOD = 0.0;
 const float LR_GHOST = 0.03;
+const float LR_HIRES = 0.0;
 const float LR_MON_MM = 1.0;
 const float LR_TAPE = 2.0;
 
@@ -166,13 +167,20 @@ void consoleTable(float id, out vec4 a, out vec4 b, out float c)
 
 // Internal resolution: an upscaled frame (more than 576 lines, or a console set by hand
 // whose native mode is smaller) is read as k x k blocks of one native pixel.
+// The frame's size cannot tell a console's own 480i from a 240-line game at 2x: both are 480
+// lines. Frames over 300 lines 1 says it is always the console's 480i/576i, on every TV timing:
+// the 480-line base of the PlayStation 2 (Console timing 5). For cores that never upscale
+// (Beetle Saturn sends its 480i as 640x448 or 704x480) and cores at 1x. An upscaled interlaced
+// frame is still found: 960 lines are 480i at 2x, 1152 lines 576i at 2x. 0 keeps the guess below.
 // Returns k (1 for native frames).
 float upscaleOf(vec2 orig)
 {
     float id = LR_CONSOLE;
     bool tv = id < 5.5 || (id > 7.5 && id < 8.5);       // VGA, Amiga and 24 kHz modes are never scaled
-    float base = (id > 4.5 && id < 5.5) ? 480.0 : 240.0; // PS2 by hand: 480i class, otherwise 240p class
-    bool scaled = id < 0.5 ? orig.y > 576.0 : (tv && orig.y > base * 1.5);
+    // 480i class: PS2 by hand, or any TV timing with Frames over 300 lines 1; otherwise 240p class
+    bool il = tv && (LR_HIRES > 0.5 || (id > 4.5 && id < 5.5));
+    float base = il ? 480.0 : 240.0;
+    bool scaled = (id < 0.5 && !il) ? orig.y > 576.0 : (tv && orig.y > base * 1.5);
     if (!scaled) return 1.0;
     for (float k = 2.0; k <= 16.0; k += 1.0)
     {

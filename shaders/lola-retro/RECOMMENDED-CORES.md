@@ -8,6 +8,8 @@ device. Three rules cover almost everything:
 1. **Internal resolution.** Native (1×) is the reference. Higher internal resolutions work too: the shader reads
    the frame as blocks of one console pixel, so the signal stays right and edges get smoother. 3× and up is
    detected by itself; for 2× and for upscaled 480-line consoles the table says which Console timing to set.
+   Cores that never upscale (Beetle Saturn) or run at 1×: with **Frames over 300 lines** at 1, every frame
+   with more than 300 lines is the console's own 480i or 576i, with the Console timing you set.
 2. **No filters inside the core.** Turn off any built-in "NTSC", "Blargg", "smoothing" or "blur" filter.
    The shader does that job.
 3. **Check the console timing.** Auto mode guesses from the frame size. For systems where the guess is wrong,
@@ -44,9 +46,9 @@ Systems that are not in that list use the id whose timing matches theirs.
 
 | System | Core | Preset | Console timing | Settings |
 |---|---|---|---|---|
-| PlayStation | SwanStation, Beetle PSX HW | Consumer TV (Composite) | auto (4); **4** at 2× internal resolution | Any internal resolution; 1× is the original look. Dithering on, no texture filtering, no "true colour". PGXP off for the original wobble. Try the comb filter on composite. |
-| Sega Saturn | Beetle Saturn | Consumer TV (Composite) | **4** | Auto picks Mega Drive timing for 320×224 games. |
-| Nintendo 64 | ParaLLEl N64, Mupen64Plus-Next | Consumer TV (Composite) or (S-Video) | auto (4); **4** at 2× upscaling | Any upscaling; 1× is the original look. Keep the console's own VI filter on for the original look. |
+| PlayStation | SwanStation, Beetle PSX HW | Consumer TV (Composite) | auto (4); **4** at 2× internal resolution; at 1× **4** and Frames over 300 lines **1** | Any internal resolution; 1× is the original look. At 1×, Frames over 300 lines 1 draws the 480i games (Tekken 3) in two fields with the PlayStation's own timing; at 2× leave it at 0, or every 2× frame is read as 480i. Dithering on, no texture filtering, no "true colour". PGXP off for the original wobble. Try the comb filter on composite. |
+| Sega Saturn | Beetle Saturn | Consumer TV (Composite) | **4**, and Frames over 300 lines **1** | Auto picks Mega Drive timing for 320×224 games. Beetle Saturn never upscales: its 448- and 480-line frames are always the console's own 480i (Virtua Fighter 2), and Frames over 300 lines 1 draws them in two fields. At 0 they are read as a 240-line game at 2×, which averages the two fields into one line. (Kronos at a higher internal resolution: leave it at 0.) |
+| Nintendo 64 | ParaLLEl N64, Mupen64Plus-Next | Consumer TV (Composite) or (S-Video) | auto (4); **4** at 2× upscaling; at 1× **4** and Frames over 300 lines **1** | Any upscaling; 1× is the original look. Keep the console's own VI filter on for the original look. |
 
 ## 128-bit (the PS2 generation)
 

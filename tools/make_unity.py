@@ -379,6 +379,7 @@ FIELDS = {
                                                        "PlayStation", "PlayStation 2", "Amiga", "PC VGA", "Arcade 15 kHz",
                                                        "Arcade 24 kHz"])),
     "LR_NORM": ("tvStandard", ("TvStandard", ["Auto", "NTSC", "PAL"])),
+    "LR_HIRES": ("framesOver300Lines", ("TallFrames", ["Auto", "Interlaced"])),
     "LR_CABLE": ("cable", ("Cable", ["RF", "Composite", "S-Video", "RGB", "TV show"])),
     "LR_COMB": ("combFilter", bool),
     "LR_YTRAP": ("lumaTrap", None),
