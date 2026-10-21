@@ -31,6 +31,8 @@
 
 - The author works on `main`: push there, no feature branches.
 - Talk to the author in Croatian; texts for users (GitHub issues, Reddit, the libretro forum) in English.
+- Write down what research finds, so it can be explained later why a value is used: `docs/sources/`, one note
+  per topic, with the sources, what was worked out, what was not found and where the code uses it.
 - Presets, the Amiberry and 86Box ports and the Unity package are generated: change the slang passes and
   `tools/make_presets.py`, then run `tools/make_presets.py` and `tools/make_glsl.py`. `tools/check_shaders.py`
   compiles every pass (needs glslangValidator).
