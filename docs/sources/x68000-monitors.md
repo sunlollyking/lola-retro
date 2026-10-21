@@ -85,9 +85,11 @@ Decided with the author on 2026-10-22, from the notes above and [x68000-video.md
   PAL 76% / 7.5%, NTSC 90% / 20%.
 - Checked by eye against the photos (2026-10-22): the CZ-600DE 15 kHz photo, viewed at 3x, shows thin dark
   gaps on bright green and blue, as the model does on bright colours (deeper gaps on darker ones); at about
-  2.4 photo pixels per line it is too coarse to measure. The 31 kHz CZ-601D photo (i.redd.it) could not be
-  opened in the browser here; its description (no gaps, slightly soft kana) matches the model's merged
-  lines and soft 768-dot text.
+  2.4 photo pixels per line it is too coarse to measure. The 31 kHz CZ-601D photo (the XVI's boot error box,
+  4000 px, about 2 photo pixels per dot and per line) was compared with the same box drawn in a 16-pixel
+  kana font through the x68000-monitor preset at the same scale: no gaps between the lines in either, and
+  the kana soft but readable in both (in the photo the strokes look darker and heavier, which the phone's
+  own blur adds to). Not sharp enough to measure the spot, so the 1084S's spot stays.
 
 ## Not found
 
