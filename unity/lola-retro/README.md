@@ -35,6 +35,9 @@ Add `#v1.12` (or another release tag) at the end to stay on that version.
 
 ## Set up
 
+To see it first: the repository has a small 2D test project, `unity/test-project` (its
+[README](https://github.com/zoran123456/lola-retro/tree/main/unity/test-project)).
+
 1. Select the camera that shows your game and **Add Component → Rendering → Lola Retro**.
 2. **URP:** select your renderer asset (the Universal Renderer Data, or Renderer 2D Data in a 2D project),
    **Add Renderer Feature → Lola Retro**. Every camera that uses that renderer can then have Lola Retro.

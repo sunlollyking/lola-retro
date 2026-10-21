@@ -1,0 +1,12 @@
+# made by Unity when the project is opened
+/Library/
+/Temp/
+/Logs/
+/obj/
+/UserSettings/
+/Build/
+/Builds/
+*.csproj
+*.sln
+.vs/
+.idea/

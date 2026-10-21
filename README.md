@@ -297,6 +297,7 @@ Measured on synthetic patterns:
 | `amiberry/lola-retro/` | The Amiga 1084S preset converted to GLSL for Amiberry. Details in its [README](amiberry/lola-retro/README.md). |
 | `86box/lola-retro/` | The PC monitor presets converted to GLSL for 86Box. Details in its [README](86box/lola-retro/README.md). |
 | `unity/lola-retro/` | The Unity package: every pass converted to HLSL, with all presets. Details in its [README](unity/lola-retro/README.md). |
+| `unity/test-project/` | A small Unity 2D project that shows the test pictures through the package. Details in its [README](unity/test-project/README.md). |
 | `web/lola-retro.html` | The original WebGL version. Open it in a browser, try test scenes or drop in your own screenshots. |
 | `tools/` | Preset generator, GLSL and Unity converters, compile checker and headless preview renderers. |
 | `test-images/` | Native-resolution test frames for the preview tools. |

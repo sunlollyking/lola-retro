@@ -1,0 +1,9 @@
+{
+  "dependencies": {
+    "com.zoran123456.lola-retro": "file:../../lola-retro",
+    "com.unity.modules.imgui": "1.0.0",
+    "com.unity.modules.imageconversion": "1.0.0",
+    "com.unity.modules.jsonserialize": "1.0.0",
+    "com.unity.modules.ui": "1.0.0"
+  }
+}
