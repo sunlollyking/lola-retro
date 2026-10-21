@@ -161,7 +161,7 @@ void main()
     // used rows spread between unused ones, it worked through all of them).
     float row = floor(vTexCoord.y * params.SourceSize.y);
     float y = row * T.scale;                           // the line's first row in the frame
-    float cable = global.LR_CABLE;
+    float cable = T.cable;
 
     // RGB: no encoding, the decoder reads the original frame.
     bool show = isShow(cable);

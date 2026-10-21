@@ -133,7 +133,7 @@ Every preset only sets parameters, so you can tweak any preset in **Quick Menu �
 |---|---|
 | Console timing | Pixel clock and colour-subcarrier rhythm of the console. 0 = auto (see below). |
 | TV standard | 0 auto (by line count), 1 NTSC, 2 PAL. Set it by hand for PAL consoles in 60 Hz mode (PAL60, common on PS2 and Dreamcast): the line count says NTSC but the colour is PAL. It also switches the colour decoder and the phosphors. On a TV show (Cable 4) it is the standard of the programme: `tv-show-broadcast` sets 2, a European programme, and a game in the other standard goes through the studio's standards converter (see [TV show](#tv-show)). |
-| Frames over 300 lines | 0 (default): auto. A frame with more than 300 lines is the console's 480i or 576i, but one with more than 576 lines (or, with Console timing set by hand, more than 360) is read as a 240-line game at a higher internal resolution, so with timing 4 a 480i game's two fields are averaged into one line. 1: every frame with more than 300 lines is the console's own 480i or 576i, on every TV timing, and the console's timing stays as set; an upscaled one is still found (960 lines: 480i at 2×, 1152: 576i at 2×). For cores that never upscale (Beetle Saturn) or run at 1×: a 240-line game at 2× would be read as 480i. Amiga, VGA and 24 kHz timings (6, 7, 9) are not affected. |
+| Frames over 300 lines | 0 (default): auto. A frame with more than 300 lines is the console's 480i or 576i, but one with more than 576 lines (or, with Console timing set by hand, more than 360) is read as a 240-line game at a higher internal resolution, so with timing 4 a 480i game's two fields are averaged into one line. 1: every frame with more than 300 lines is the console's own 480i or 576i, on every TV timing, and the console's timing stays as set; an upscaled one is still found (960 lines: 480i at 2×, 1152: 576i at 2×). For cores that never upscale (Beetle Saturn) or run at 1×: a 240-line game at 2× would be read as 480i. 2: every frame with more than 300 lines goes to a computer monitor instead, as if you had a second screen for the high-res modes (a compromise, see [Computer monitor for high-res frames](#computer-monitor-for-high-res-frames)). Amiga, VGA and 24 kHz timings (6, 7, 9) are not affected. |
 | Cable | 0 RF, 1 Composite, 2 S-Video, 3 RGB, 4 TV show: the game as seen on a TV programme, from a studio through the antenna (see [TV show](#tv-show)). |
 | Comb filter | Better TVs separated colour with a comb filter. Only works when the console flips the subcarrier phase every line (PlayStation, Amiga). On a TV show (Cable 4) the broadcast's own NTSC timing lets it work for every console. |
 | Luma trap in the console | How much of the fine luma detail the console's encoder filtered out before mixing in colour. Lower it for a stronger rainbow on fine stripes (Sonic's waterfall), raise it for a cleaner picture. Real consoles differed a lot here: 0 is like an early Mega Drive Model 1 (strong rainbow), 0.75 (default) a typical console, 1 a later model with a better encoder. |
@@ -260,7 +260,8 @@ in the other presets, but slower, because there the standards converter is worke
 
 ## PC monitor
 
-On 31 kHz modes (the `pc-monitor-vga` preset, or Console timing 7 in any preset) the tube is described in
+On 31 kHz modes (the `pc-monitor-vga` preset, Console timing 7 in any preset, or the high-res frames of
+**Frames over 300 lines** 2) the tube is described in
 millimetres, like a real monitor: viewable size, dot pitch, and the size of the beam spot on dark and on white.
 Every video mode follows from the same tube, so 320×200, 640×480, 800×600 and 1024×768 each look the way they
 did on that monitor.
@@ -304,6 +305,23 @@ picture stays crisp and calm for long work on the desktop, with gaps between the
 that mode. For a Trinitron or Diamondtron, set **Mask** to 1 (aperture grille).
 
 For the stand-alone PC emulator 86Box, the repository has these presets converted to GLSL (`86box/`).
+
+### Computer monitor for high-res frames
+
+**Frames over 300 lines** 2 draws every frame with more than 300 lines on this PC monitor, whatever the
+preset's cable and Console timing (the TV timings: auto, 1–5 and 8), as if you had switched to a second
+screen, as people did: an Atari ST owner had a high-res monitor for the desktop and a TV for games. The monitor
+is the one above: VGA timing (every line once, filling the height), the tube in mm from the Monitor values
+(Monitor size, Dot pitch, the spot sizes), RGB, sRGB phosphors, and a dot mask at the dot pitch (a mask set to
+0 stays off). Frames of 300 lines or fewer keep the preset as it is. An upscaled frame is still found when it is
+a whole multiple of a 480- or 576-line mode (960 lines: 640×480 at 2×); any other frame is taken as it is
+(1024×768).
+
+It is a compromise, so it is off by default: one screen stands in for two and switches by itself, and the rest
+of the preset stays as it is: the glass and its curvature, overscan, misconvergence, white point, glow and the
+TV's knobs. A TV's overscan cuts off the edges of a desktop, and its misconvergence gives small text coloured
+edges; for a picture closer to `pc-monitor-vga`, set Overscan to −0.035 and Misconvergence to 0.12. The TV presets carry
+the signal at 1280 samples per line, so frames up to 1280 pixels wide keep every pixel.
 
 ## Amiga 1084S
 

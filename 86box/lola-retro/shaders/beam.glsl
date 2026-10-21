@@ -35,6 +35,7 @@ const float LR_TAPE = 2.0;
 
 uniform float LR_GAMMA;
 uniform float LR_CONV;
+uniform float LR_MASK_TYPE;
 uniform float LR_PHOS;
 uniform float LR_OVERSCAN;
 uniform float LR_OVERSCAN_V;
@@ -176,6 +177,9 @@ void consoleTable(float id, out vec4 a, out vec4 b, out float c)
     else               { a = vec4(16.0, 16.0, 496.0, 2.0);        b = vec4(0.5, 0.75, 0.75, 0.875);                c = 0.0; }
 }
 
+// TV timings (and auto): everything but the Amiga, VGA and 24 kHz arcade (6, 7, 9)
+bool tvTiming(float id) { return id < 5.5 || (id > 7.5 && id < 8.5); }
+
 // Internal resolution: an upscaled frame (more than 576 lines, or a console set by hand
 // whose native mode is smaller) is read as k x k blocks of one native pixel.
 // The frame's size cannot tell a console's own 480i from a 240-line game at 2x: both are 480
@@ -183,12 +187,13 @@ void consoleTable(float id, out vec4 a, out vec4 b, out float c)
 // the 480-line base of the PlayStation 2 (Console timing 5). For cores that never upscale
 // (Beetle Saturn sends its 480i as 640x448 or 704x480) and cores at 1x. An upscaled interlaced
 // frame is still found: 960 lines are 480i at 2x, 1152 lines 576i at 2x. 0 keeps the guess below.
+// 2 (the computer monitor, see getTiming) finds the native lines the same way.
 // Returns k (1 for native frames).
 float upscaleOf(vec2 orig)
 {
     float id = LR_CONSOLE;
-    bool tv = id < 5.5 || (id > 7.5 && id < 8.5);       // VGA, Amiga and 24 kHz modes are never scaled
-    // 480i class: PS2 by hand, or any TV timing with Frames over 300 lines 1; otherwise 240p class
+    bool tv = tvTiming(id);                              // VGA, Amiga and 24 kHz modes are never scaled
+    // 480i class: PS2 by hand, or any TV timing with Frames over 300 lines 1 or 2; otherwise 240p class
     bool il = tv && (LR_HIRES > 0.5 || (id > 4.5 && id < 5.5));
     float base = il ? 480.0 : 240.0;
     bool scaled = (id < 0.5 && !il) ? orig.y > 576.0 : (tv && orig.y > base * 1.5);
@@ -198,6 +203,8 @@ float upscaleOf(vec2 orig)
         float lines = orig.y / k;
         if (lines == floor(lines) && lines >= base * 0.83 && lines <= base * 1.21) return k;
     }
+    // the computer monitor takes any other frame as it is: 1024x768 is a computer's own mode
+    if (il && LR_HIRES > 1.5) return 1.0;
     return max(1.0, floor(orig.y / base + 0.5));
 }
 
@@ -217,6 +224,8 @@ struct Timing
     float scale;       // internal resolution factor of the core (1 = native)
     float id;          // console timing id (see consoleTable)
     float hres;        // frame pixels per console pixel (Amiga: 1 lores, 2 hires, 4 superhires)
+    float monitor;     // 1 = drawn on the computer monitor (Frames over 300 lines 2)
+    float cable;       // the cable in use: Cable, or 3 (RGB) on the computer monitor
 };
 
 bool isAmiga(Timing t) { return t.id > 5.5 && t.id < 6.5; }
@@ -227,6 +236,18 @@ Timing getTiming(vec2 orig, uint frameCount)
     t.scale = upscaleOf(orig);
     vec2 nat = orig / t.scale;                          // the console's native mode
     float id = LR_CONSOLE < 0.5 ? autoConsole(nat) : LR_CONSOLE;
+    // Frames over 300 lines 2: a frame with more than 300 native lines on a TV timing is drawn
+    // as if the user had switched to a separate computer monitor, as people did (an Atari ST
+    // owner had a high-res monitor for the desktop and a TV for games). That monitor is the PC
+    // monitor model: VGA timing (scan mode 1: every line once, filling the height), the tube in
+    // mm from the Monitor values, RGB, sRGB phosphors and a dot mask (phosphorSet, maskType),
+    // whatever the preset's cable and timing; frames of 300 lines or fewer keep the preset.
+    // A compromise: one screen stands in for two and switches by itself, and the rest of the
+    // preset (the glass and its curvature, overscan, convergence, white point, the TV's knobs)
+    // stays as it is. Passes read the cable from here (t.cable), never from Cable directly.
+    t.monitor = (LR_HIRES > 1.5 && tvTiming(id) && nat.y > 300.0) ? 1.0 : 0.0;
+    if (t.monitor > 0.5) id = 7.0;
+    t.cable = t.monitor > 0.5 ? 3.0 : LR_CABLE;
     vec4 a; vec4 b; float c;
     consoleTable(id, a, b, c);
     t.id = id;
@@ -234,7 +255,8 @@ Timing getTiming(vec2 orig, uint frameCount)
     t.scan = a.w;
     t.interlace = (t.scan < 0.5 && nat.y > 300.0) ? 1.0 : 0.0;
     bool amiga = id > 5.5 && id < 6.5;
-    if (LR_NORM > 1.5) t.pal = 1.0;
+    if (t.monitor > 0.5) t.pal = 0.0;                   // a computer monitor has no TV standard
+    else if (LR_NORM > 1.5) t.pal = 1.0;
     else if (LR_NORM > 0.5) t.pal = 0.0;
     else
     {
@@ -252,11 +274,13 @@ Timing getTiming(vec2 orig, uint frameCount)
     if (amiga) t.pclk = base * (320.0 * cls) / a.z;
     // SVGA modes run faster lines: VESA 75 Hz clocks (800x600 49.5 MHz, 1024x768 78.75 MHz)
     if (t.scan > 0.5 && t.scan < 1.5 && orig.x > 720.0) t.pclk = 78.75 * orig.x * orig.y / (1024.0 * 768.0);
+    // the computer monitor: an upscaled frame runs at its native mode's clock (k pixels per pixel)
+    if (t.monitor > 0.5) t.pclk = (nat.x > 720.0 ? 78.75 * nat.x * nat.y / (1024.0 * 768.0) : base * nat.x / a.z) * t.scale;
     t.hres = amiga ? cls : orig.x / a.z;
     t.fsc = t.pal > 0.5 ? 4.433619 : 3.579545;
     // TV show: the station's encoder makes the subcarrier of a standard interlaced broadcast,
     // so its rhythm is the standard's (the PlayStation 2 row), not the console's
-    if (isShow(LR_CABLE)) { b = vec4(0.5, 0.75, 0.75, 0.875); c = 0.0; }
+    if (isShow(t.cable)) { b = vec4(0.5, 0.75, 0.75, 0.875); c = 0.0; }
     t.lineFrac = mix(b.x, b.y, t.pal);
     t.fieldStep = mix(b.z, b.w, t.pal);
     // 24 is a multiple of every field cycle above (1, 2, 3, 4, 8), so the phase never drifts
@@ -367,6 +391,10 @@ bool isPC(float scan) { return scan > 0.5 && scan < 1.5; }
 // the tube is described in mm
 bool inMM(float scan) { return isPC(scan) || (scan < 0.5 && LR_MON_MM > 0.5); }
 
+// The mask: the preset's, or on the computer monitor (Frames over 300 lines 2) the PC monitor's
+// dot mask, at its pitch in mm (Dot pitch); a mask turned off (0) stays off
+float maskType(Timing t) { return (t.monitor > 0.5 && LR_MASK_TYPE > 0.5) ? 3.0 : LR_MASK_TYPE; }
+
 // Viewable tube face in mm: one inch less than the nominal size, 4:3
 vec2 monTubeMM()
 {
@@ -415,6 +443,7 @@ vec3 gaussCdf(vec3 z)
 // monitors and RGB inputs use the standard axes. A TV show reaches the TV as composite.
 float decoderType(Timing t, float cable)
 {
+    if (t.monitor > 0.5) return 1.0;                  // the computer monitor: RGB, no decoder
     if (LR_DEMOD > 0.5) return LR_DEMOD;
     return (t.pal < 0.5 && (cable < 2.5 || isShow(cable))) ? 2.0 : 1.0;
 }
@@ -438,6 +467,7 @@ vec3 decodeRGB(float Y, vec2 uv, float dec)
 // 4 Japanese P22 (Sony Trinitron and Japanese sets, arcade monitors).
 float phosphorSet(Timing t)
 {
+    if (t.monitor > 0.5) return 1.0;                  // the computer monitor (Frames over 300 lines 2)
     if (LR_PHOS > 0.5) return LR_PHOS;
     if (t.scan > 0.5 && t.scan < 1.5) return 1.0;   // PC monitors: sRGB was defined from them
     if (t.id > 7.5) return 4.0;                       // arcade monitors
@@ -463,6 +493,7 @@ flat out float vScale;
 flat out float vScan;
 flat out vec2 vShare;   // share of the scan the source covers (x: active line, y: lines)
 flat out float vConvW;  // 320 x frame pixels per pixel of a 320-wide mode (misconvergence unit)
+flat out float vJitter; // RF: how far each line lands off (unstable sync)
 
 void lr_main()
 {
@@ -473,10 +504,11 @@ void lr_main()
     vScan = T.scan;
     float vis = (T.pal > 0.5 ? 288.0 : 240.0) * (T.interlace > 0.5 ? 2.0 : 1.0);
     // Picture height 1: the core's lines fill the height (not on a TV show), as in the CRT pass
-    bool fill = LR_FILL > 0.5 && !isShow(LR_CABLE);
+    bool fill = LR_FILL > 0.5 && !isShow(T.cable);
     vShare = vec2(activeShare(T, LR_OriginalSize.xy),
                   (T.scan < 0.5 && !fill) ? min(LR_OriginalSize.y / T.scale / vis, 1.0) : 1.0);
     vConvW = isAmiga(T) ? 320.0 * T.hres : LR_OriginalSize.x;
+    vJitter = T.cable < 0.5 ? 0.5 + LR_NOISE * 4.0 : 0.0;
 }
 
 void main()
@@ -490,6 +522,7 @@ flat in float vScale;
 flat in float vScan;
 flat in vec2 vShare;
 flat in float vConvW;
+flat in float vJitter;
 out vec4 FragColor;
 
 // Textures as 86Box binds them. The picture sits in the lower left corner of a power-of-two
@@ -517,7 +550,7 @@ void lr_main()
     float x = vTexCoord.x - 0.5 * LR_OutputSize.z;
 
     // RF: every line lands slightly off (unstable sync)
-    float jitter = LR_CABLE < 0.5 ? 0.5 + LR_NOISE * 4.0 : 0.0;
+    float jitter = vJitter;
     float seed = float(LR_FrameCount % 997u);
     float jit = jitter > 0.0 ? (hash13(vec3(i, seed, 5.0)) - 0.5) * jitter * LR_OriginalSize.z : 0.0;
     vec2 tc = vec2(x + jit, (i + 0.5) * LR_OriginalSize.w);   // the decoder's row of line i (row i)
@@ -544,6 +577,13 @@ void lr_main()
         // step of beam current, and its light (with the spot width of its own brightness) is
         // integrated over the pixel exactly. Units here: source pixels.
         float W = LR_OriginalSize.x;
+        // The decoded line has 4 samples per pixel in the PC presets, but 1280 per line in the TV
+        // presets (ENC_SAMPLES; Console timing 7 or Frames over 300 lines 2 there): 1.25 per pixel
+        // at 1024 wide, where a read at the pixel's centre would fall between two samples and mix
+        // up to 3/8 of the next pixel in. Then the sample that holds the pixel's centre is read.
+        float DW = float(ivec2(floor(Pass3InputSize)).x);
+        float spp = DW / W;                                // decoded samples per pixel
+        bool own = abs(spp - floor(spp + 0.5)) > 0.01;
         sLo = LR_MON_SPOT_LO * mmUnit * W;
         sHi = max(LR_MON_SPOT_LO, LR_MON_SPOT_HI) * mmUnit * W;
         float px = tc.x * W;
@@ -555,7 +595,8 @@ void lr_main()
             if (j > j1) break;
             float fj = float(j);
             // the pixel's value (outside the line: black border)
-            vec3 b = pow(clamp(lr_tex_LR_Decoded( vec2((fj + 0.5) / W, tc.y), 0.0).rgb, 0.0, 1.0), vec3(0.5 * LR_GAMMA));
+            float u = own ? (floor((fj + 0.5) * spp) + 0.5) / DW : (fj + 0.5) / W;
+            vec3 b = pow(clamp(lr_tex_LR_Decoded( vec2(u, tc.y), 0.0).rgb, 0.0, 1.0), vec3(0.5 * LR_GAMMA));
             vec3 sg = mix(vec3(sLo), vec3(sHi), b);
             vec3 zl = (fj - px) / sg, zr = (fj + 1.0 - px) / sg;
             vec3 l = b * b * (gaussCdf(zr) - gaussCdf(zl));

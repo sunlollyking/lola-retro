@@ -15,6 +15,7 @@ layout(location = 1) flat out float vScale;
 layout(location = 2) flat out float vScan;
 layout(location = 3) flat out vec2 vShare;   // share of the scan the source covers (x: active line, y: lines)
 layout(location = 4) flat out float vConvW;  // 320 x frame pixels per pixel of a 320-wide mode (misconvergence unit)
+layout(location = 5) flat out float vJitter; // RF: how far each line lands off (unstable sync)
 
 void main()
 {
@@ -25,10 +26,11 @@ void main()
     vScan = T.scan;
     float vis = (T.pal > 0.5 ? 288.0 : 240.0) * (T.interlace > 0.5 ? 2.0 : 1.0);
     // Picture height 1: the core's lines fill the height (not on a TV show), as in the CRT pass
-    bool fill = global.LR_FILL > 0.5 && !isShow(global.LR_CABLE);
+    bool fill = global.LR_FILL > 0.5 && !isShow(T.cable);
     vShare = vec2(activeShare(T, params.OriginalSize.xy),
                   (T.scan < 0.5 && !fill) ? min(params.OriginalSize.y / T.scale / vis, 1.0) : 1.0);
     vConvW = isAmiga(T) ? 320.0 * T.hres : params.OriginalSize.x;
+    vJitter = T.cable < 0.5 ? 0.5 + global.LR_NOISE * 4.0 : 0.0;
 }
 
 #pragma stage fragment
@@ -37,6 +39,7 @@ layout(location = 1) flat in float vScale;
 layout(location = 2) flat in float vScan;
 layout(location = 3) flat in vec2 vShare;
 layout(location = 4) flat in float vConvW;
+layout(location = 5) flat in float vJitter;
 layout(location = 0) out vec4 FragColor;
 layout(set = 0, binding = 3) uniform sampler2D LR_Decoded;
 
@@ -53,7 +56,7 @@ void main()
     float x = vTexCoord.x - 0.5 * params.OutputSize.z;
 
     // RF: every line lands slightly off (unstable sync)
-    float jitter = global.LR_CABLE < 0.5 ? 0.5 + global.LR_NOISE * 4.0 : 0.0;
+    float jitter = vJitter;
     float seed = float(params.FrameCount % 997u);
     float jit = jitter > 0.0 ? (hash13(vec3(i, seed, 5.0)) - 0.5) * jitter * params.OriginalSize.z : 0.0;
     vec2 tc = vec2(x + jit, (i + 0.5) * params.OriginalSize.w);   // the decoder's row of line i (row i)
@@ -80,6 +83,13 @@ void main()
         // step of beam current, and its light (with the spot width of its own brightness) is
         // integrated over the pixel exactly. Units here: source pixels.
         float W = params.OriginalSize.x;
+        // The decoded line has 4 samples per pixel in the PC presets, but 1280 per line in the TV
+        // presets (ENC_SAMPLES; Console timing 7 or Frames over 300 lines 2 there): 1.25 per pixel
+        // at 1024 wide, where a read at the pixel's centre would fall between two samples and mix
+        // up to 3/8 of the next pixel in. Then the sample that holds the pixel's centre is read.
+        float DW = float(textureSize(LR_Decoded, 0).x);
+        float spp = DW / W;                                // decoded samples per pixel
+        bool own = abs(spp - floor(spp + 0.5)) > 0.01;
         sLo = global.LR_MON_SPOT_LO * mmUnit * W;
         sHi = max(global.LR_MON_SPOT_LO, global.LR_MON_SPOT_HI) * mmUnit * W;
         float px = tc.x * W;
@@ -91,7 +101,8 @@ void main()
             if (j > j1) break;
             float fj = float(j);
             // the pixel's value (outside the line: black border)
-            vec3 b = pow(clamp(textureLod(LR_Decoded, vec2((fj + 0.5) / W, tc.y), 0.0).rgb, 0.0, 1.0), vec3(0.5 * global.LR_GAMMA));
+            float u = own ? (floor((fj + 0.5) * spp) + 0.5) / DW : (fj + 0.5) / W;
+            vec3 b = pow(clamp(textureLod(LR_Decoded, vec2(u, tc.y), 0.0).rgb, 0.0, 1.0), vec3(0.5 * global.LR_GAMMA));
             vec3 sg = mix(vec3(sLo), vec3(sHi), b);
             vec3 zl = (fj - px) / sg, zr = (fj + 1.0 - px) / sg;
             vec3 l = b * b * (gaussCdf(zr) - gaussCdf(zl));

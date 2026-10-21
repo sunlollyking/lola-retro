@@ -26,6 +26,7 @@ layout(location = 4) flat out float vShare;   // share of the active line the so
 #ifdef LR_FIELDS
 layout(location = 5) flat out float vAmiga;
 #endif
+layout(location = 6) flat out vec2 vSignal;  // the cable in use and the mask type (Timing: monitor switch)
 
 // Blackbody colour of the TV's white, relative to D65
 vec3 kelvinRGB(float T)
@@ -48,6 +49,7 @@ void main()
     vTiming = vec4(T.scan, T.pal, T.interlace, T.scale);
     vPhos = phosphorSet(T);
     vShare = activeShare(T, params.OriginalSize.xy);
+    vSignal = vec2(T.cable, maskType(T));
 #ifdef LR_FIELDS
     vAmiga = isAmiga(T) ? 1.0 : 0.0;
 #endif
@@ -64,6 +66,7 @@ layout(location = 4) flat in float vShare;
 #ifdef LR_FIELDS
 layout(location = 5) flat in float vAmiga;
 #endif
+layout(location = 6) flat in vec2 vSignal;
 layout(location = 0) out vec4 FragColor;
 layout(set = 0, binding = 2) uniform sampler2D LR_Beam;
 layout(set = 0, binding = 3) uniform sampler2D LR_Glow;
@@ -2023,7 +2026,7 @@ void main()
         // TV show: the studio's frame synchronizer made a standard interlaced picture out of
         // the console's 240p/288p frames, so every console line is drawn in both fields, half
         // a line apart, and the dark gaps between the lines are filled
-        bool show = isShow(global.LR_CABLE) && scan < 0.5;
+        bool show = isShow(vSignal.x) && scan < 0.5;
         bool prog = interlace < 0.5;                       // the console's own picture: 240p/288p
         if (show) interlace = 1.0;
         float dbl = (vga && srcH <= 300.0) ? 2.0 : 1.0;
@@ -2112,7 +2115,7 @@ void main()
         col *= smoothstep(-0.002, 0.002, xs) * smoothstep(1.002, 0.998, xs);
 
         // phosphor mask
-        float mt = global.LR_MASK_TYPE;
+        float mt = vSignal.y;
         float triads = global.LR_MASK_TRIADS;
         // tube in mm: from the mask pitch (a dot mask's pitch is diagonal, 0.866 of it horizontal)
         if (mm) triads = monTubeMM().y / (global.LR_MON_PITCH * (mt > 2.5 && mt < 3.5 ? 0.866 : 1.0));

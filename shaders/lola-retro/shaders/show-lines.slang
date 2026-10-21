@@ -24,7 +24,7 @@ void main()
     Timing T = getTiming(params.OriginalSize.xy, params.FrameCount);
     vLines = params.OriginalSize.y / T.scale;
     vMap = showLines(T.pal, T.interlace, vLines);
-    vShow = (isShow(global.LR_CABLE) && T.scan < 0.5) ? 1.0 : 0.0;
+    vShow = (isShow(T.cable) && T.scan < 0.5) ? 1.0 : 0.0;
 }
 
 #pragma stage fragment

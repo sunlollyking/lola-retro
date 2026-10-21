@@ -60,7 +60,7 @@ void main()
     float y = r * T.scale;                                  // the line's first row in the frame
     float st = (T.interlace > 0.5 ? 2.0 : 1.0) * T.scale;   // previous line of the same field (frame rows)
     float sr = st / T.scale;                                // the same in rows of this pass
-    float cable = global.LR_CABLE;
+    float cable = T.cable;
     bool show = isShow(cable);                   // TV show: the antenna brings composite
     float Y;
     vec2 uv;
