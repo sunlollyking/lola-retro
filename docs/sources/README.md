@@ -19,3 +19,4 @@ and marks what was worked out (inferred) rather than read.
 | [lite-presets.md](lite-presets.md) | the `lite/` and `super-lite/` presets (issue #12): what each pass costs, what was left out, speeds users reported |
 | [internal-resolution.md](internal-resolution.md) | upscaled frames (`upscaleOf`, the native pass), issue #14 |
 | [dither-blend.md](dither-blend.md) | which Dither blend (`LR_DBLEND`) matches composite (README) |
+| [windows-test.md](windows-test.md) | the presets on Windows (D3D11, D3D12, Vulkan, glcore), an Intel laptop: pictures, loading times, speed |

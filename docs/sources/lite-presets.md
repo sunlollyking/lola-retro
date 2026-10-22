@@ -178,6 +178,12 @@ pass for real Mali GPUs.
 
 ## Reported by users
 
+### Intel Graphics in a Core Ultra 5 225U (the author's laptop, 2026-10-22)
+
+Measured, not reported: see [windows-test.md](windows-test.md). At 1600x1200 on Vulkan, the presets' own
+cost in ms (full / lite / super lite): consumer-tv-composite 6.58 / 3.42 / 2.48, consumer-tv-scart-rgb
+5.42 / 2.19 / 1.68, trinitron-s-video 6.03 / 2.93 / 2.11. About 3.3 times slower than the M4 Pro per pixel.
+
 ### AMD Radeon 780M at 4K (issue #14, FARL555, 2026-10-22)
 
 Minisforum mini PC, Ryzen 7 8745H with Radeon 780M graphics, SteamOS, RetroArch 1.22.2 (RetroDeck),
