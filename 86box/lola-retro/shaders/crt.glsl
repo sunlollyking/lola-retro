@@ -2569,8 +2569,10 @@ void lr_main()
         // border, as on the real set. Picture height 1 lets the core's lines fill the height
         // instead, for cores that crop lines and set the aspect ratio from the lines they keep
         // (the picture is then a zoom of the same tube: lines and beam keep their look).
+        // The X68000's monitor too: its 15 kHz picture is 240 lines high, so a 256-line game on
+        // Console timing 11 runs 8 lines past it at the top and bottom, unless the lines fill it.
         float visField = x68 ? vSignal.w : scan > 0.5 ? BH : (pal > 0.5 ? 288.0 : 240.0) * (interlace > 0.5 ? 2.0 : 1.0);
-        float visLines = (LR_FILL > 0.5 && scan < 0.5 && !show) ? BH : visField;
+        float visLines = (LR_FILL > 0.5 && (scan < 0.5 || x68) && !show) ? BH : visField;
         bool il = interlace > 0.5 && LR_STEADY < 0.5;
         float stepL = il ? 2.0 : 1.0;
         float offL = il ? float(LR_FrameCount % 2u) : 0.0;

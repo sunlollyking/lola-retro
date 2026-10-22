@@ -79,6 +79,14 @@ Decided with the author on 2026-10-22, from the notes above and [x68000-video.md
   (1.5x), misconvergence (0.25) and curvature are the 1084S's (a monitor of the same class and years, its
   spot calibrated on a photo); white 9300 K and Japanese P22 phosphors are the Japanese TV standard.
 - The casing drawn around the tube (Around the tube) is the TV casing: the CZ-600D was a TV set too.
+- A 256-row frame on timing 11 is 256 rasters at 15 kHz in a picture 240 rasters high (the 15 kHz modes'
+  figure), so 8 rasters at the top and bottom fall outside it, as a taller window would on the monitor.
+  Picture height 1 (`LR_FILL`) fits the rows into the height, a zoom of the same tube as on the TV raster
+  (added 2026-10-22 after a comment on issue #9; before, Picture height only applied to the TV raster).
+  Checked in RetroArch (Metal, flat x68000-monitor, Overscan 0): a 256-row frame with its top 8 rows red
+  and bottom 8 green, timing 11 and Picture height 1, showed only a sliver of each before and both bands in
+  full after, at the same height as on timing 10; timing 10, Picture height 0 and 240-row frames gave
+  byte-identical pictures before and after.
 - Measured from the shader (contrast between line centre and gap, (max - min) / (max + min), linear light,
   centre of a flat screen, mask and glow off), 30% grey / white: 15 kHz 240 lines 87% / 16%; 31 kHz 256 lines
   scanned twice and 768x512 10% / 0.5%; 15 kHz interlaced 512x480 15% / 0.5%. For comparison, the 1084S:
