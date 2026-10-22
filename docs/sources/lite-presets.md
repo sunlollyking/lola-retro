@@ -1,0 +1,122 @@
+# Lite presets: what the chain costs and what can go
+
+Measured 2026-10-21/22 for issue #12 (a request for presets that run on older Android phones with Mali
+GPUs). All numbers here are measurements on this project's own passes, not from outside sources; what was
+worked out from them, rather than measured, is marked as such.
+
+## How it was measured
+
+- A small harness ran the presets' pass chains the way RetroArch runs them (pass sizes from the scale
+  types, filters and wrap modes of the reading pass, float targets in RGBA16F, feedback, the last pass in 8
+  bits at the viewport size), on macOS OpenGL 4.1 through ctypes, with the slang passes turned into GLSL
+  4.10. The harness is not in the repository.
+- GPU: Apple M4 Pro (16-core GPU). Each pass timed three ways that agreed: GL timer queries inside whole
+  frames, the pass drawn 30-60 times on its own into two targets in turn, and the same into one target with
+  additive blending (no per-pass overhead). The tables use the second.
+- A slow device: the Apple Software Renderer (one CPU core), one frame at 640x480.
+- Reference shaders from RetroArch's own slang library, run by the same harness, whose behaviour on phones
+  is known from users: zfast-crt, crt-geom-mini, crt-guest-advanced(-fastest), crt-royale and others.
+- The picture: each lite preset against its full preset on the same frame, PSNR over the 8-bit output, and
+  crops side by side at 2-4x zoom. Test frames: the repository's test-images, plus synthetic desktop
+  frames (1-pixel lines, checkerboards, bitmap text) at 640x480, 1024x768, 720x568, 640x256, 768x512 and
+  512x512 for the sharp monitors.
+
+## Where the time goes (full chain, consumer-tv-composite, ms)
+
+| Pass | 1440x1080 | 960x720 |
+|---|---|---|
+| encode (1280 x 224) | 0.13 | 0.13 |
+| decode (1280 x 224) | 0.35 | 0.35 |
+| beam (8192 x 230) | 0.60 | 0.59 |
+| crt (screen) | 0.48 | 0.21 |
+| native, glow-h, glow-v, present | 0.20 | 0.17 |
+| frame | 1.77 | 1.46 |
+
+The beam pass was the largest in every preset (35-60% of the frame; 1.2 ms for a 448-line interlaced
+frame, 1.9 ms for 1024x768 on the PC monitor) and does not shrink with the screen. The frame for other
+presets at 1440x1080: RF 1.89, S-Video 1.64, SCART RGB 1.38, TV show 2.26, PC monitor (320x200) 0.96,
+1084S 1.49, PlayStation 640x448i 3.19.
+
+The same frame through the reference shaders (1440x1080, ms): zfast-crt 0.04, crt-geom-mini 0.09,
+guest-advanced-fastest 0.18, crt-easymode-halation 0.40, crt-royale 0.62, guest-advanced 0.85. The full
+composite chain costs about 2x guest-advanced and 3x crt-royale.
+
+On the software renderer (640x480, one frame): zfast-crt 11 ms, crt-geom-mini 35 ms, guest-fastest 0.54 s,
+guest-advanced 5.4 s, crt-royale 6.3 s, the lite composite chain 11.9 s, of which the decoder 8.1 s (its
+tap loops). The full chain did not finish: with the scenes of Around the tube in crt.inc, the renderer's
+shader compiler ran for more than 10 minutes on the CRT pass, 15 s without them. (The M4's GL compiler
+needs 2.7 s for the whole chain either way.)
+
+## What was tried
+
+Against the full preset, consumer-tv-composite at 1440x1080 unless noted:
+
+| Change | Saves (ms) | Picture (PSNR) | In lite |
+|---|---|---|---|
+| beam pass one sample per screen pixel instead of 8192 | 0.47 | 57-72 dB on TV presets | yes |
+| the same, two samples per pixel | 0.37 | 61-74 dB | for tubes in mm |
+| CRT pass writes the screen (present folded in) | 0.06 | identical | yes |
+| no afterglow | 0.07 | identical on a still frame | yes |
+| scenes code compiled out of the CRT pass | 0.02 | identical | yes |
+| beam taps 2 sigma apart instead of 1 | 0.04 | 60 dB | no: small gain, the sum is no longer exact |
+| a cheaper dither (gamma 2.2 code + noise) | 0.02 | 51 dB | no: small gain |
+| mask from one point instead of 2x2 | 0.01 | 33 dB (moire) | no |
+| encoder and decoder at 640 samples per line | 0.30 | 38-51 dB, colour fringes shift a little | no (a compromise, see below) |
+| the same at 512 | 0.36 | 31-43 dB, edges visibly greener | no |
+| No flicker off | 0.08 | 39 dB, dot crawl moves | no |
+
+Beam width per screen pixel, by preset type (PSNR against the full preset):
+
+| Preset | 1 per pixel | 2 per pixel |
+|---|---|---|
+| TV presets (composite, TV show, PS1 interlaced), 1440x1080 and 960x720 | 57-72 dB | 61-74 dB |
+| studio RGB | 48-54 dB | 58-63 dB |
+| PC monitor, 320x200 up to 1024x768 | 39-60 dB | 50-68 dB |
+| pc-monitor-vga-extreme, 1024x768 | 24-30 dB | 35-42 dB |
+| 1084S, hires 640x256 and 720x568 | 40-52 dB | 50-57 dB |
+| X68000, 512x512 and 768x512 | 40-55 dB | 51-61 dB |
+
+Even the lowest numbers (extreme at x1, the 1084S hires at 640x480 at x1) show no difference by eye at 3-4x
+zoom; the PSNR comes from edges moved by a fraction of a pixel. The tubes in mm get two samples anyway:
+their spots are narrow next to the pixels of hires and 31 kHz modes.
+
+## The lite presets as made
+
+Every lite preset (62) against its full preset: 52-66 dB at 1440x1080, 44-66 dB at 640x480 (lowest: PC-98
+and Dreamcast on sharp 640x480 desktop frames, N64 and Saturn).
+
+In RetroArch itself (1.22.2, macOS, a temporary config, the built-in image viewer, a screenshot after 90
+frames): every lite preset compiles and runs on Metal with no errors in the log, and a selection (SNES,
+TV show, PC monitor, X68000) on glcore and Vulkan. Lite against full in the same RetroArch, same window:
+51-65 dB, except the presets with RF snow (old-tv-rf 38-55 dB, tv-show-broadcast 45-58 dB): the snow is
+random per frame and the full preset's afterglow smears it, the picture under it is the same.
+
+Time per frame (ms, full -> lite):
+
+| Preset | 1440x1080 | 960x720 | 640x480 |
+|---|---|---|---|
+| consumer-tv-composite | 1.81 -> 1.07 | 1.47 -> 0.81 | 1.34 -> 0.69 |
+| old-tv-rf | 1.80 -> 1.09 | 1.53 -> 0.85 | 1.37 -> 0.72 |
+| trinitron-s-video | 1.64 -> 0.88 | 1.30 -> 0.62 | 1.14 -> 0.50 |
+| consumer-tv-scart-rgb | 1.39 -> 0.65 | 1.04 -> 0.38 | 0.90 -> 0.26 |
+| tv-show-broadcast | 2.26 -> 1.25 | 1.79 -> 0.92 | 1.59 -> 0.72 |
+| amiga-1084s | 1.47 -> 0.82 | 1.17 -> 0.46 | 1.01 -> 0.34 |
+| x68000-monitor (768x512) | 2.72 -> 1.55 | 2.36 -> 1.06 | 2.14 -> 0.83 |
+| pc-monitor-vga (320x200) | 0.96 -> 0.58 | 0.67 -> 0.36 | 0.51 -> 0.27 |
+| playstation (640x448i) | 3.10 -> 1.85 | 2.69 -> 1.50 | 2.52 -> 1.30 |
+
+## Phones (worked out, not measured)
+
+No Mali GPU was measured. From published throughput figures, a budget Mali of the Mali-G52 MC2 class is
+roughly 50-100x slower than the M4 Pro's GPU, which would put the full composite chain at 720p at about
+70-140 ms a frame, lite at 40-75 ms, and guest-advanced-fastest at 6-12 ms. Things the M4 does not show and
+that should favour the lite presets on phones more than measured here: the full chain's beam texture is
+8192 wide (OpenGL ES 3.0 only promises 2048), and lite moves about a third as much render-target data
+(estimated from the target sizes). Arm's Mali Offline Compiler would give cycle and register counts per
+pass for real Mali GPUs.
+
+## Where the code uses it
+
+- `tools/make_presets.py`, `lite_passes`: the beam (and show-lines) pass at the viewport's width, x2 for
+  tubes in mm; crt-lite as the last pass, without present and without scale_type.
+- `shaders/crt-lite.slang`: crt.inc with LR_NO_FEEDBACK, LR_NO_BACKDROP and LR_PRESENT.

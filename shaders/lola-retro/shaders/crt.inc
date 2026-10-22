@@ -1,5 +1,5 @@
 // Lola Retro - pass 6: electron beam, phosphor mask and glass, at screen resolution.
-// Shared by crt.slang (SDR) and crt-hdr.slang (HDR).
+// Shared by crt.slang (SDR), crt-hdr.slang (HDR) and crt-lite.slang (the lite presets).
 // - Each source line is a beam with a Gaussian profile whose width grows with brightness
 //   (per colour gun), so bright lines merge and dark lines show gaps.
 // - Interlaced sources alternate fields; VGA 200-line modes are scanned twice.
@@ -12,6 +12,9 @@
 //   LR_FIT_43       the tube stays 4:3 whatever shape the picture area has
 //   LR_PACKED_SPOT  the beam pass has no alpha channel, the spot is packed onto red
 //   LR_ROWS_UP      rows count from the bottom of the screen (OpenGL), for light from above
+// Options for the lite presets (crt-lite.slang), with LR_NO_FEEDBACK:
+//   LR_NO_BACKDROP  nothing around the tube (Around the tube stays black)
+//   LR_PRESENT      the present pass done here: 8-bit output with its dither, straight to the screen
 
 #include "common.inc"
 
@@ -2181,8 +2184,10 @@ void main()
         col += 0.01 * global.LR_REFLECT * global.LR_ROOM * vec3(0.80, 0.92, 0.87);   // Room reflection in %
         col *= inside;
     }
+#ifndef LR_NO_BACKDROP
     if (global.LR_BACKDROP > 0.5 && inside < 1.0)
         col += (1.0 - inside) * backdrop(c, max(dist, 0.0), qq, tc, tubePx);
+#endif
 
 #ifndef LR_NO_FEEDBACK
     // the phosphor's afterglow, on the tube only (what is around it is not phosphor)
@@ -2192,5 +2197,18 @@ void main()
         col = max(col, prev * global.LR_PERSIST);
     }
 #endif
+#ifdef LR_PRESENT
+    // the dither of present.slang (keep the two the same): each channel takes the 8-bit code just
+    // below or just above its value, the upper one with the chance that keeps the average in
+    // linear light, with interleaved gradient noise, the same for the three channels
+    vec3 lin = clamp(col, 0.0, 1.0);
+    vec3 code = min(floor(pow(lin, vec3(1.0 / 2.2)) * 255.0), 254.0);
+    vec3 lo = pow(code / 255.0, vec3(2.2)), hi = pow((code + 1.0) / 255.0, vec3(2.2));
+    vec3 up = clamp((lin - lo) / (hi - lo), 0.0, 1.0);
+    vec2 fc = floor(vTexCoord * params.OutputSize.xy);
+    float n = fract(52.9829189 * fract(dot(fc, vec2(0.06711056, 0.00583715))));
+    FragColor = vec4((code + vec3(greaterThan(up, vec3(n)))) / 255.0, 1.0);
+#else
     FragColor = vec4(col, 1.0);
+#endif
 }

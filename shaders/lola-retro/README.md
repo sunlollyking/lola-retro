@@ -23,6 +23,8 @@ console pixel, so the signal stays right and the extra detail only makes edges s
 A few cases need one setting, see [RECOMMENDED-CORES.md](RECOMMENDED-CORES.md).
 
 On an HDR display, use the same presets from `lola-retro/hdr/curved` instead, see [HDR](#hdr).
+On a weak GPU (older phones, handhelds, old integrated graphics), use them from `lola-retro/lite/systems/curved`,
+see [Lite presets](#lite-presets).
 
 ## Systems
 
@@ -73,6 +75,7 @@ The device folders have the same 15 presets; `systems/curved` and `systems/flat`
 | `curved/` | The glass bulges like a real tube, with rounded corners. The picture on it stays nearly rectangular, as on a well adjusted set (see **Raster bend**). |
 | `flat/` | Same presets, flat screen and square corners. Pick this if curvature bothers you. |
 | `hdr/curved/`, `hdr/flat/` | The same presets for HDR displays, see [HDR](#hdr). |
+| `lite/curved/`, `lite/flat/`, `lite/systems/curved/`, `lite/systems/flat/` | The same presets for weak GPUs, see [Lite presets](#lite-presets). |
 
 ## Presets
 
@@ -416,6 +419,38 @@ as on a real CRT in such a room. If you play in a dark room, set **Room light** 
 black, as on a real tube in the dark. Glass glow still lifts the area right around bright things a little, as
 the real glass did.
 
+## Lite presets
+
+For weak GPUs: older phones, handhelds, old integrated graphics. The folders `lite/curved`, `lite/flat`,
+`lite/systems/curved` and `lite/systems/flat` hold the same presets with the same settings, and run about
+1.6 to 3.4 times as fast (more on smaller screens and on RGB). The picture is the same:
+
+- The beam pass works out each line on one sample per screen pixel instead of 8192 samples, the largest
+  saving: the screen cannot show more. The tubes described in millimetres (PC monitors, Amiga 1084S, X68000)
+  get two samples per pixel, because their spots are narrow next to the pixels of hires and 31 kHz modes.
+- The CRT pass writes the screen itself, so one pass and one full-screen buffer are left out, and RetroArch
+  does not add a copy pass.
+
+Side by side with the full presets, at 3× zoom, no difference can be seen (measured: 44–66 dB PSNR).
+Two things are left out, to save the GPU's time:
+
+- **Phosphor afterglow**: the faint trail behind bright things that move. It reads the whole previous frame
+  back every frame. **Phosphor afterglow** does nothing in these presets.
+- **Around the tube** stays black: no casing, room or scenes. Their code is left out of the pass too, which
+  keeps it small enough for weak shader compilers.
+
+| Apple M4 Pro, ms per frame | 1440×1080 | 960×720 | 640×480 |
+|---|---|---|---|
+| `consumer-tv-composite` | 1.81 → 1.07 | 1.47 → 0.81 | 1.34 → 0.69 |
+| `consumer-tv-scart-rgb` | 1.39 → 0.65 | 1.04 → 0.38 | 0.90 → 0.26 |
+| `amiga-1084s` | 1.47 → 0.82 | 1.17 → 0.46 | 1.01 → 0.34 |
+| `playstation` (640×448 interlaced) | 3.10 → 1.85 | 2.69 → 1.50 | 2.52 → 1.30 |
+
+The composite chain stays the heavy part: even lite costs about as much as crt-royale or
+crt-guest-advanced, so an old budget phone will still not reach full speed with composite. The RGB presets
+(`consumer-tv-scart-rgb`, `amiga-1084s`) are the lightest. How this was measured is in the repository
+(`docs/sources/lite-presets.md`).
+
 ## Performance
 
 The chain has eight passes (`tv-show-broadcast` nine) and the encoder and decoder do real signal
@@ -426,7 +461,8 @@ presets the encoder and decoder work at a fixed 1280 samples per line (about 27 
 the encoder's work grew with the square of the internal resolution: 16 times as much at 4×.) The PC and
 Amiga presets keep 4 samples per frame pixel, because their beam reads every pixel exactly.
 The beam pass works out each source line once on an 8192-pixel-wide texture, so the GPU has to support
-textures that wide (every desktop GPU of the last decade does).
+textures that wide (every desktop GPU of the last decade does). The beam pass is the largest of the chain;
+the [lite presets](#lite-presets) make it as wide as the screen.
 Older integrated graphics will not reach full speed: one user measured about 24 fps with the Amiga preset at
 1080p on Intel Haswell graphics (2013) with Vulkan; on the same GPU the glcore driver showed a broken picture.
 

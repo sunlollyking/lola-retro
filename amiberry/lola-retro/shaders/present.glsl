@@ -530,7 +530,8 @@ uniform sampler2D Source;
 // above its value, the upper one with the chance that makes their average in linear light the
 // value itself (noise added to the gamma-encoded value would brighten dark gradients a little).
 // The noise is interleaved gradient noise: high frequency, no clumps, the same for the three
-// channels so it adds no colour noise.
+// channels so it adds no colour noise. The lite presets do the same at the end of crt.inc
+// (LR_PRESENT): keep the two the same.
 void lr_main()
 {
     vec3 lin = clamp(textureLod(Source, vTexCoord, 0.0).rgb, 0.0, 1.0);

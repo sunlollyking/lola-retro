@@ -529,7 +529,8 @@ out vec4 FragColor;
 // above its value, the upper one with the chance that makes their average in linear light the
 // value itself (noise added to the gamma-encoded value would brighten dark gradients a little).
 // The noise is interleaved gradient noise: high frequency, no clumps, the same for the three
-// channels so it adds no colour noise.
+// channels so it adds no colour noise. The lite presets do the same at the end of crt.inc
+// (LR_PRESENT): keep the two the same.
 
 // Textures as 86Box binds them. The picture sits in the lower left corner of a power-of-two
 // texture (n texels of it), so every read goes through a helper.
