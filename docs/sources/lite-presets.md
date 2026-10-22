@@ -176,6 +176,43 @@ that should favour the lite presets on phones more than measured here: the full 
 (estimated from the target sizes). Arm's Mali Offline Compiler would give cycle and register counts per
 pass for real Mali GPUs.
 
+## Reported by users
+
+### AMD Radeon 780M at 4K (issue #14, FARL555, 2026-10-22)
+
+Minisforum mini PC, Ryzen 7 8745H with Radeon 780M graphics, SteamOS, RetroArch 1.22.2 (RetroDeck),
+SwanStation, a 4K TV, Lola Retro v1.15. GPU usage with `flat/trinitron-s-video` (full / lite / super lite):
+**70% / 60% / 45%**. The internal resolution of this test was not given (the same report tried 1x to 6x).
+
+The hardware, from published figures (not measured here):
+
+| | Radeon 780M (8745H) | Apple M4 Pro, 16-core GPU (this project's measurements) |
+|---|---|---|
+| GPU | 12 compute units, 768 shaders, up to 2600 MHz (AMD's listing for the 8745HS; the 8745H runs at slightly lower power) | 16 cores |
+| FP32 | about 4.0 TFLOPS (768 x 2 x 2.6 GHz; Notebookcheck's iGPU benchmark: 4,045 GFLOPS) | about 6.5-6.9 TFLOPS |
+| Memory | the system's DDR5, shared with the CPU: about 90 GB/s if the mini PC has dual-channel DDR5-5600 (not stated) | 273 GB/s |
+
+Worked out, not measured: the 780M has about 0.6 times the M4 Pro's arithmetic and a third of its memory
+bandwidth, so the chain should take roughly 2-3 times as long on it. That is still 25-50 times the budget
+Mali estimated above: a desktop-class iGPU, not a weak device.
+
+How to read the percentages (inferred):
+- GPU usage is the share of time the GPU is busy at the clock it runs at. At 60 Hz, 70% would be about
+  12 ms of the 16.7 ms frame, 60% about 10 ms, 45% about 7.5 ms, but only if the clock stayed the same; the
+  GPU lowers its clock when there is less to do, which makes the lighter presets look closer to the full
+  one than they are. The share also holds SwanStation's own rendering, the same in all three.
+- At 4K the CRT pass (once per screen pixel, the same in lite) is a larger part of the frame than at the
+  1080p measured here, so lite gains less: 70% to 60% fits that. On the M4 Pro at 1440x1080 the same preset
+  takes 1.62 / 0.87 / 0.54 ms.
+- Comparable numbers would need the GPU clock next to each percentage (SteamOS's performance overlay shows
+  it), or the clock fixed, and the internal resolution.
+
+Sources: AMD Ryzen 7 8745HS product page (https://www.amd.com/zh-tw/products/processors/laptop/ryzen/8000-series/amd-ryzen-7-8745hs.html);
+Notebookcheck, Ryzen 7 8745HS (https://www.notebookcheck.com/AMD-Ryzen-7-8745HS-Prozessor-Benchmarks-und-Specs.1007249.0.html);
+on the 8745H against the 8745HS (https://www.turbovs.com/review/amd-ryzen-7-8745h-9134); M4 Pro GPU figures
+from Low End Mac (https://lowendmac.com/2025/apple-silicon-m4-pro-chip-specs/) and EatYourBytes
+(https://www.eatyourbytes.com/applecpu-detail/apple-m4-pro-16-core-gpu/).
+
 ## Where the code uses it
 
 - `tools/make_presets.py`, `lite_passes`: the beam (and show-lines) pass at the viewport's width, x2 for
