@@ -65,7 +65,7 @@ uniform float LR_SCENE_SPEED;
 // Lola Retro - pass 6 for SDR displays. The pass itself is in crt.inc.
 
 // Lola Retro - pass 6: electron beam, phosphor mask and glass, at screen resolution.
-// Shared by crt.slang (SDR), crt-hdr.slang (HDR) and crt-lite.slang (the lite presets).
+// Shared by crt.slang (SDR), crt-hdr.slang (HDR), crt-lite.slang and crt-super-lite.slang.
 // - Each source line is a beam with a Gaussian profile whose width grows with brightness
 //   (per colour gun), so bright lines merge and dark lines show gaps.
 // - Interlaced sources alternate fields; VGA 200-line modes are scanned twice.
@@ -81,6 +81,7 @@ uniform float LR_SCENE_SPEED;
 // Options for the lite presets (crt-lite.slang), with LR_NO_FEEDBACK:
 //   LR_NO_BACKDROP  nothing around the tube (Around the tube stays black)
 //   LR_PRESENT      the present pass done here: 8-bit output with its dither, straight to the screen
+//   LR_SUPER_LITE   (crt-super-lite.slang) 3 beam lines instead of 4, a cheaper dither
 
 // Lola Retro - shared parameters, uniforms and helpers for every pass.
 //

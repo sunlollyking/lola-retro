@@ -48,7 +48,9 @@ little rainbow, just as it did on a living-room TV. On RGB you see the stripes t
 3. Video driver must be Vulkan, glcore, D3D11, D3D12 or Metal (the old `gl` driver does not run slang shaders).
 4. HDR display? Use the same presets from `lola-retro/hdr/curved`; setup is in [HDR](shaders/lola-retro/README.md#hdr).
 5. Older phone, handheld or weak GPU? Use the same presets from `lola-retro/lite/systems/curved`: about twice as
-   fast, the same picture, see [Lite presets](shaders/lola-retro/README.md#lite-presets).
+   fast, the same picture, see [Lite presets](shaders/lola-retro/README.md#lite-presets). Still too slow?
+   `lola-retro/super-lite/systems/curved` is about three times as fast, with small compromises, see
+   [Super lite presets](shaders/lola-retro/README.md#super-lite-presets).
 
 Default core settings are fine for most systems. The few that matter are in
 [RECOMMENDED-CORES.md](shaders/lola-retro/RECOMMENDED-CORES.md).
@@ -296,7 +298,7 @@ Measured on synthetic patterns:
 
 | Folder | Contents |
 |---|---|
-| `shaders/lola-retro/` | The RetroArch shader pack (slang): one preset per system in `systems/`, and 15 presets by device, each in a `curved/` and a `flat/` version, plus the same for HDR displays in `hdr/` and for weak GPUs in `lite/`. Details in its [README](shaders/lola-retro/README.md). |
+| `shaders/lola-retro/` | The RetroArch shader pack (slang): one preset per system in `systems/`, and 15 presets by device, each in a `curved/` and a `flat/` version, plus the same for HDR displays in `hdr/` and for weak GPUs in `lite/` and `super-lite/`. Details in its [README](shaders/lola-retro/README.md). |
 | `amiberry/lola-retro/` | The Amiga 1084S preset converted to GLSL for Amiberry. Details in its [README](amiberry/lola-retro/README.md). |
 | `86box/lola-retro/` | The PC monitor presets converted to GLSL for 86Box. Details in its [README](86box/lola-retro/README.md). |
 | `unity/lola-retro/` | The Unity package: every pass converted to HLSL, with all presets. Details in its [README](unity/lola-retro/README.md). |

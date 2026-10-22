@@ -1,5 +1,5 @@
 // Lola Retro - pass 6: electron beam, phosphor mask and glass, at screen resolution.
-// Shared by crt.slang (SDR), crt-hdr.slang (HDR) and crt-lite.slang (the lite presets).
+// Shared by crt.slang (SDR), crt-hdr.slang (HDR), crt-lite.slang and crt-super-lite.slang.
 // - Each source line is a beam with a Gaussian profile whose width grows with brightness
 //   (per colour gun), so bright lines merge and dark lines show gaps.
 // - Interlaced sources alternate fields; VGA 200-line modes are scanned twice.
@@ -15,6 +15,7 @@
 // Options for the lite presets (crt-lite.slang), with LR_NO_FEEDBACK:
 //   LR_NO_BACKDROP  nothing around the tube (Around the tube stays black)
 //   LR_PRESENT      the present pass done here: 8-bit output with its dither, straight to the screen
+//   LR_SUPER_LITE   (crt-super-lite.slang) 3 beam lines instead of 4, a cheaper dither
 
 #include "common.inc"
 
@@ -2096,9 +2097,18 @@ void main()
         int kn = int(clamp(ceil(3.5 * sig.y + 0.5 * hw - 1.0), 1.0, 6.0));
         float lastRow = -1e6;                                // TV show: the programme line read last
         vec4 bb = vec4(0.0);
+#ifdef LR_SUPER_LITE
+        // the nearest line and kn lines on each side: those left out are at least kn + 0.5 away,
+        // over 3.4 spot widths (3 lines for 240p TV instead of 4)
+        float jn = floor(u + 0.5);
+        for (int k = -kn; k <= kn; k++)
+        {
+            float j = jn + float(k);
+#else
         for (int k = -kn; k <= kn + 1; k++)
         {
             float j = j0 + float(k);
+#endif
             float i = j * stepL + offL;
             if (show)
             {
@@ -2198,6 +2208,13 @@ void main()
     }
 #endif
 #ifdef LR_PRESENT
+    vec2 fc = floor(vTexCoord * params.OutputSize.xy);
+    float n = fract(52.9829189 * fract(dot(fc, vec2(0.06711056, 0.00583715))));
+#ifdef LR_SUPER_LITE
+    // a cheaper dither: the same noise added to the 8-bit code before rounding (dark gradients
+    // come out a little brighter than in linear light)
+    FragColor = vec4(floor(pow(clamp(col, 0.0, 1.0), vec3(1.0 / 2.2)) * 255.0 + n) / 255.0, 1.0);
+#else
     // the dither of present.slang (keep the two the same): each channel takes the 8-bit code just
     // below or just above its value, the upper one with the chance that keeps the average in
     // linear light, with interleaved gradient noise, the same for the three channels
@@ -2205,9 +2222,8 @@ void main()
     vec3 code = min(floor(pow(lin, vec3(1.0 / 2.2)) * 255.0), 254.0);
     vec3 lo = pow(code / 255.0, vec3(2.2)), hi = pow((code + 1.0) / 255.0, vec3(2.2));
     vec3 up = clamp((lin - lo) / (hi - lo), 0.0, 1.0);
-    vec2 fc = floor(vTexCoord * params.OutputSize.xy);
-    float n = fract(52.9829189 * fract(dot(fc, vec2(0.06711056, 0.00583715))));
     FragColor = vec4((code + vec3(greaterThan(up, vec3(n)))) / 255.0, 1.0);
+#endif
 #else
     FragColor = vec4(col, 1.0);
 #endif

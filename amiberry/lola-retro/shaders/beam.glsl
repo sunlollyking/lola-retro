@@ -45,6 +45,8 @@ float LR_MON_SPOT_LO;
 float LR_MON_SPOT_HI;
 float LR_MON_CORNER;
 
+// Lola Retro - pass 5, the beam along each line. The pass itself is in beam.inc.
+
 // Lola Retro - pass 5: horizontal beam profile of every source line.
 // The spot shape, misconvergence and tube gamma only depend on the position along a
 // line, so they are worked out here once per line, on a fine grid (the pass is 8192

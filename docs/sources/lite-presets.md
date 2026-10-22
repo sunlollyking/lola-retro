@@ -1,4 +1,4 @@
-# Lite presets: what the chain costs and what can go
+# Lite and super lite presets: what the chain costs and what can go
 
 Measured 2026-10-21/22 for issue #12 (a request for presets that run on older Android phones with Mali
 GPUs). All numbers here are measurements on this project's own passes, not from outside sources; what was
@@ -105,11 +105,66 @@ Time per frame (ms, full -> lite):
 | pc-monitor-vga (320x200) | 0.96 -> 0.58 | 0.67 -> 0.36 | 0.51 -> 0.27 |
 | playstation (640x448i) | 3.10 -> 1.85 | 2.69 -> 1.50 | 2.52 -> 1.30 |
 
+## Super lite
+
+For GPUs too weak for lite: as little GPU time as the model allows, with compromises that change the
+picture a little, each where it shows least. Measured the same way.
+
+The CRT pass of lite, by parts (consumer-tv-composite, 1440x1080, each part switched off in turn, ms):
+vertical beam sum 0.12, mask (2x2 points) 0.07, glass glow 0.02, phosphor matrix 0.02, dither 0.01,
+shoulder 0.01, the rest (geometry, setup, writing the screen) 0.07; 0.34 in all.
+
+| Change on top of lite | Saves (ms, 1440x1080) | Picture | In super lite |
+|---|---|---|---|
+| no native pass (upscaled frames read one row per line) | 0.03-0.04 | the same at 1x | yes |
+| encoder: chroma filter integrated over the pixel steps (each pixel read once, 3-8 reads instead of 17), luma trap one read per pixel with the pixel's sinc instead of 25 taps | 0.03-0.05 | 44 dB at 1280 samples | yes |
+| decoder works out every other sample (taps still on every sample) | 0.17 | 41-50 dB on composite, 43 dB on RGB | yes, not on the 1084S |
+| beam pass taps 2 dark-spot widths apart | 0.04 | dark detail up to 1.5% brighter | yes |
+| beam pass one sample per screen pixel on the tubes in mm too | 0.1-0.4 (hires) | 47-51 dB | yes |
+| CRT pass: 3 beam lines (the nearest and one on each side) instead of 4 | 0.03 | the line left out is over 3.4 spot widths away | yes |
+| CRT pass: cheaper dither (noise added to the 8-bit code) | 0.01 | 51 dB | yes |
+| no misconvergence | 0.00 | 35 dB on RGB | no: costs nothing |
+| mask from one point with edges widened by the pixel's footprint | 0.03 | 38 dB on the 1084S (2 px per triad at 1080p): its pattern changes | no |
+| encoder and decoder at 640 samples | 0.12 more than the half-rate decoder | the Mega Drive waterfall's rainbow turns greener (a 1-pixel stripe's third harmonic folds down next to the subcarrier) | no |
+| encoder and decoder at 960 | as the half-rate decoder | 40-43 dB at 320 and 256 wide, 27 dB at 640 wide (1.5 samples per pixel) | no |
+| glass glow from mipmaps of the beam texture instead of two passes | about 0.07 (the passes' overhead) | the beam texture is about 6x wider than tall: one mip level blurs far too much vertically | no |
+| decoder on the 1084S at half rate | 0.2 on hires | 29 dB on hires (its beam reads the signal as a smooth curve) | no |
+| decoder's Gaussian weights by recurrence instead of an exp per tap | none on the M4 | identical (91-98 dB) | no: no gain measured (it might help on GPUs where exp is slow) |
+
+The super lite presets as made, against the full presets (all 62, one frame each): 37.5-51 dB at
+1440x1080 (lowest: N64, Saturn and Dreamcast on their 640x480 test frames, S-Video), 30.8-51 dB at 640x480
+(lowest: PC-98 on a sharp 640x480 desktop, where 1-pixel stripes on a screen narrower than the frame come
+out as their average). The Mega Drive waterfall's rainbow and the blended dithering look as in the full
+preset at 2x zoom. In RetroArch (1.22.2, as for lite): every super lite preset compiles and runs on Metal with
+no errors in the log, a selection on glcore and Vulkan; against the full presets in the same RetroArch,
+37.8-51 dB on Metal, 44-51 dB on glcore and Vulkan.
+
+Time per frame (ms, full / lite / super lite):
+
+| Preset | 1440x1080 | 960x720 | 640x480 |
+|---|---|---|---|
+| consumer-tv-composite | 1.81 / 1.08 / 0.71 | 1.46 / 0.83 / 0.50 | 1.34 / 0.70 / 0.39 |
+| old-tv-rf | 1.83 / 1.10 / 0.74 | 1.50 / 0.84 / 0.53 | 1.37 / 0.73 / 0.43 |
+| trinitron-s-video | 1.63 / 0.88 / 0.60 | 1.30 / 0.63 / 0.39 | 1.11 / 0.52 / 0.29 |
+| consumer-tv-scart-rgb | 1.34 / 0.65 / 0.53 | 1.05 / 0.39 / 0.28 | 0.90 / 0.27 / 0.18 |
+| tv-show-broadcast | 2.20 / 1.30 / 0.95 | 1.81 / 0.93 / 0.64 | 1.57 / 0.72 / 0.47 |
+| amiga-1084s | 1.53 / 0.81 / 0.56 | 1.16 / 0.47 / 0.31 | 1.01 / 0.34 / 0.24 |
+| x68000-monitor (768x512) | 2.68 / 1.52 / 0.95 | 2.33 / 1.04 / 0.59 | 2.12 / 0.82 / 0.46 |
+| pc-monitor-vga (320x200) | 0.97 / 0.57 / 0.42 | 0.64 / 0.36 / 0.24 | 0.50 / 0.26 / 0.18 |
+| pc-monitor-vga (1024x768) | 3.84 / 2.31 / 1.29 | 3.32 / 1.80 / 0.97 | 3.27 / 1.49 / 0.82 |
+| playstation (640x448i) | 3.09 / 1.79 / 1.26 | 2.63 / 1.49 / 0.93 | 2.49 / 1.28 / 0.80 |
+
+Where super lite's time goes (consumer-tv-composite, 1440x1080, ms): encoder 0.08, decoder 0.17, the two
+glow passes 0.07 (mostly the cost of a pass), beam 0.07, CRT pass 0.31. At 960x720 the decoder (0.17) and the
+CRT pass (0.15) are about even. Ideas not done: the decoder demodulating products made by the encoder (no
+rotation per frame of the subcarrier cycle at every tap), glass glow without its two passes, mediump
+precision in the CRT and beam passes (faster on Mali, nothing to measure it on here).
+
 ## Phones (worked out, not measured)
 
 No Mali GPU was measured. From published throughput figures, a budget Mali of the Mali-G52 MC2 class is
 roughly 50-100x slower than the M4 Pro's GPU, which would put the full composite chain at 720p at about
-70-140 ms a frame, lite at 40-75 ms, and guest-advanced-fastest at 6-12 ms. Things the M4 does not show and
+70-140 ms a frame, lite at 40-75 ms, super lite at 25-50 ms, and guest-advanced-fastest at 6-12 ms. Things the M4 does not show and
 that should favour the lite presets on phones more than measured here: the full chain's beam texture is
 8192 wide (OpenGL ES 3.0 only promises 2048), and lite moves about a third as much render-target data
 (estimated from the target sizes). Arm's Mali Offline Compiler would give cycle and register counts per
@@ -120,3 +175,8 @@ pass for real Mali GPUs.
 - `tools/make_presets.py`, `lite_passes`: the beam (and show-lines) pass at the viewport's width, x2 for
   tubes in mm; crt-lite as the last pass, without present and without scale_type.
 - `shaders/crt-lite.slang`: crt.inc with LR_NO_FEEDBACK, LR_NO_BACKDROP and LR_PRESENT.
+- `tools/make_presets.py`, `super_lite_passes`: on top of lite, no native pass, the decoder at half the
+  encoder's width (not on the 1084S, glow-h twice its share), the beam at x1 for every tube, the super lite
+  passes.
+- `shaders/encode-super-lite.slang`, `beam-super-lite.slang`, `crt-super-lite.slang`: encode.inc, beam.inc and
+  crt.inc with LR_SUPER_LITE (encode.slang and beam.slang include the same files without it).

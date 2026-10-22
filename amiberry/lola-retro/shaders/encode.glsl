@@ -104,6 +104,8 @@ uniform float LR_ROOM;
 uniform float LR_SPILL;
 uniform float LR_SCENE_SPEED;
 
+// Lola Retro - pass 1, the console's video encoder. The pass itself is in encode.inc.
+
 // Lola Retro - pass 1: console video encoder.
 // RGB -> YUV, chroma band-limited and QAM-modulated onto the colour subcarrier.
 // Output: composite, one frame of the subcarrier cycle per channel (R, G, B); S-Video: R = luma,

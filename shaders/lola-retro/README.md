@@ -24,7 +24,8 @@ A few cases need one setting, see [RECOMMENDED-CORES.md](RECOMMENDED-CORES.md).
 
 On an HDR display, use the same presets from `lola-retro/hdr/curved` instead, see [HDR](#hdr).
 On a weak GPU (older phones, handhelds, old integrated graphics), use them from `lola-retro/lite/systems/curved`,
-see [Lite presets](#lite-presets).
+see [Lite presets](#lite-presets); if that is still too slow, from `lola-retro/super-lite/systems/curved`
+(see [Super lite presets](#super-lite-presets)).
 
 ## Systems
 
@@ -76,6 +77,7 @@ The device folders have the same 15 presets; `systems/curved` and `systems/flat`
 | `flat/` | Same presets, flat screen and square corners. Pick this if curvature bothers you. |
 | `hdr/curved/`, `hdr/flat/` | The same presets for HDR displays, see [HDR](#hdr). |
 | `lite/curved/`, `lite/flat/`, `lite/systems/curved/`, `lite/systems/flat/` | The same presets for weak GPUs, see [Lite presets](#lite-presets). |
+| `super-lite/curved/`, `super-lite/flat/`, `super-lite/systems/curved/`, `super-lite/systems/flat/` | The same presets for very weak GPUs, with compromises, see [Super lite presets](#super-lite-presets). |
 
 ## Presets
 
@@ -448,8 +450,43 @@ Two things are left out, to save the GPU's time:
 
 The composite chain stays the heavy part: even lite costs about as much as crt-royale or
 crt-guest-advanced, so an old budget phone will still not reach full speed with composite. The RGB presets
-(`consumer-tv-scart-rgb`, `amiga-1084s`) are the lightest. How this was measured is in the repository
+(`consumer-tv-scart-rgb`, `amiga-1084s`) are the lightest. Still too slow? See
+[Super lite presets](#super-lite-presets). How this was measured is in the repository
 (`docs/sources/lite-presets.md`).
+
+## Super lite presets
+
+For GPUs too weak even for lite: older budget phones, small handhelds. The folders `super-lite/curved`,
+`super-lite/flat`, `super-lite/systems/curved` and `super-lite/systems/flat` hold the same presets and
+settings with the whole model still at work: the composite signal with its blended dithering and rainbow, the
+beam that grows with brightness, the mask and the glass. They cost about a third of the full presets, a
+quarter on smaller screens (full / lite / super lite):
+
+| Apple M4 Pro, ms per frame | 1440×1080 | 960×720 | 640×480 |
+|---|---|---|---|
+| `consumer-tv-composite` | 1.81 / 1.08 / 0.71 | 1.46 / 0.83 / 0.50 | 1.34 / 0.70 / 0.39 |
+| `consumer-tv-scart-rgb` | 1.34 / 0.65 / 0.53 | 1.05 / 0.39 / 0.28 | 0.90 / 0.27 / 0.18 |
+| `trinitron-s-video` | 1.63 / 0.88 / 0.60 | 1.30 / 0.63 / 0.39 | 1.11 / 0.52 / 0.29 |
+| `amiga-1084s` | 1.53 / 0.81 / 0.56 | 1.16 / 0.47 / 0.31 | 1.01 / 0.34 / 0.24 |
+| `playstation` (640×448 interlaced) | 3.09 / 1.79 / 1.26 | 2.63 / 1.49 / 0.93 | 2.49 / 1.28 / 0.80 |
+
+Unlike lite, they give up a little of the picture (37–51 dB PSNR against the full presets at 1440×1080):
+
+- The decoder works out every other sample of the signal. The encoder keeps all of them, so the rainbow
+  and the blended dithering stay as they were; the picture moves by half a sample (1/2560 of the line).
+- The encoder reads each source pixel once for its colour filter and luma trap.
+- The beam is worked out with half the taps, on one sample per screen pixel for every tube: dark detail can
+  come out up to 1.5% brighter, and on a screen narrower than a hires frame, 1-pixel patterns come out as
+  their average.
+- The CRT pass adds up 3 lines per pixel instead of 4, with a cheaper dither.
+- No `native` pass: run 3D cores at their native resolution (1×). At a higher internal resolution the
+  picture still works, but the upscaled detail is read one row per console line instead of averaged.
+- As in lite: no phosphor afterglow, nothing around the tube.
+
+Even super lite simulates the whole chain, so it stays well above shaders that only draw scanlines and a
+mask: on the same GPU and frame at 960×720, crt-guest-advanced-fastest takes about 0.12 ms and crt-royale
+about 0.56 ms. An old budget phone may still not reach full speed on composite; the RGB presets are the
+lightest.
 
 ## Performance
 
