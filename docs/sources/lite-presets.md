@@ -141,10 +141,10 @@ The super lite presets as made, against the full presets (all 62, one frame each
 1440x1080 (lowest: N64, Saturn and Dreamcast on their 640x480 test frames, S-Video), 30.8-51 dB at 640x480
 (lowest: PC-98 on a sharp 640x480 desktop, where 1-pixel stripes on a screen narrower than the frame come
 out as their average). The Mega Drive waterfall's rainbow and the blended dithering look as in the full
-preset at 2x zoom. In RetroArch (1.22.2, as for lite), before the decoder products: every super lite preset
-compiles and runs on Metal with no errors in the log, a selection on glcore and Vulkan; against the full
-presets in the same RetroArch, 37.8-51 dB on Metal, 44-51 dB on glcore and Vulkan. With the products the
-picture is the same in the harness (65-74 dB against super lite without them, all 62 presets as above).
+preset at 2x zoom. In RetroArch (1.22.2, as for lite), with the decoder products: every super lite preset
+compiles and runs on Metal with no errors in the log, and SNES, TV show, PC monitor and X68000 on glcore and
+Vulkan; against the full presets in the same RetroArch, 37.8-51.6 dB on Metal, 44-51.6 dB on glcore and
+Vulkan, as before the products.
 
 Time per frame (ms, full / lite / super lite):
 
