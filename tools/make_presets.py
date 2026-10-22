@@ -366,8 +366,9 @@ def lite_passes(passes, values):
 #   6.5 MHz amplifier's signal as a smooth curve, and hires lost too much at half.
 # - The beam pass at one sample per screen pixel for every tube, with half the taps
 #   (beam-super-lite.slang); encode-super-lite.slang reads each source pixel once for the chroma
-#   filter and the luma trap; crt-super-lite.slang sums 3 beam lines instead of 4 and dithers
-#   more cheaply.
+#   filter and the luma trap, and multiplies the signal by the decoder's reference subcarrier
+#   itself, so decode-super-lite.slang only low-passes it; crt-super-lite.slang sums 3 beam lines
+#   instead of 4 and dithers more cheaply.
 def super_lite_passes(passes, values):
     p = lite_passes(passes, values)
     p = re.sub(r"^scale_type_x(\d+) = viewport\nscale_x\1 = 2\.0$", r"scale_type_x\1 = viewport\nscale_x\1 = 1.0",
@@ -377,9 +378,10 @@ def super_lite_passes(passes, values):
                        "scale_type_x1 = source\nscale_x1 = 0.5\nscale_type_y1 = source\nscale_y1 = 1.0", p, flags=re.M)
         p, g = re.subn(r"^scale_x2 = 0\.125$", "scale_x2 = 0.25", p, flags=re.M)
         assert k == 1 and g == 1 and "shader1 = ../shaders/decode.slang" in p
-    p = (p.replace("/encode.slang", "/encode-super-lite.slang").replace("/beam.slang", "/beam-super-lite.slang")
-         .replace("/crt-lite.slang", "/crt-super-lite.slang"))
-    assert "shader0 = ../shaders/encode-super-lite.slang" in p and "crt-super-lite" in p and "beam-super-lite" in p
+    p = (p.replace("/encode.slang", "/encode-super-lite.slang").replace("/decode.slang", "/decode-super-lite.slang")
+         .replace("/beam.slang", "/beam-super-lite.slang").replace("/crt-lite.slang", "/crt-super-lite.slang"))
+    assert "shader0 = ../shaders/encode-super-lite.slang" in p and "decode-super-lite" in p and "crt-super-lite" in p
+    assert "beam-super-lite" in p
     return p
 
 

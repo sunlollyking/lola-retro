@@ -42,6 +42,8 @@ uniform float LR_OVERSCAN_V;
 uniform float LR_MON_SIZE;
 uniform float LR_MON_CORNER;
 
+// Lola Retro - pass 2, the TV's decoder. The pass itself is in decode.inc.
+
 // Lola Retro - pass 2: the TV's decoder.
 // Luma: low-pass with peaking ("sharpness"), plus a trap that removes the
 // chroma band (done by re-modulating the decoded chroma, as a real LC trap does

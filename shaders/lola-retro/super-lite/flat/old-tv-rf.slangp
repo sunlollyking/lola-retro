@@ -13,7 +13,7 @@ scale_type_y0 = source
 scale_y0 = 1.0
 float_framebuffer0 = true
 
-shader1 = ../../shaders/decode.slang
+shader1 = ../../shaders/decode-super-lite.slang
 alias1 = LR_Decoded
 filter_linear1 = true
 wrap_mode1 = clamp_to_border

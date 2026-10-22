@@ -464,17 +464,19 @@ quarter on smaller screens (full / lite / super lite):
 
 | Apple M4 Pro, ms per frame | 1440×1080 | 960×720 | 640×480 |
 |---|---|---|---|
-| `consumer-tv-composite` | 1.81 / 1.08 / 0.71 | 1.46 / 0.83 / 0.50 | 1.34 / 0.70 / 0.39 |
-| `consumer-tv-scart-rgb` | 1.34 / 0.65 / 0.53 | 1.05 / 0.39 / 0.28 | 0.90 / 0.27 / 0.18 |
-| `trinitron-s-video` | 1.63 / 0.88 / 0.60 | 1.30 / 0.63 / 0.39 | 1.11 / 0.52 / 0.29 |
-| `amiga-1084s` | 1.53 / 0.81 / 0.56 | 1.16 / 0.47 / 0.31 | 1.01 / 0.34 / 0.24 |
-| `playstation` (640×448 interlaced) | 3.09 / 1.79 / 1.26 | 2.63 / 1.49 / 0.93 | 2.49 / 1.28 / 0.80 |
+| `consumer-tv-composite` | 1.81 / 1.06 / 0.62 | 1.49 / 0.82 / 0.41 | 1.34 / 0.68 / 0.31 |
+| `consumer-tv-scart-rgb` | 1.37 / 0.65 / 0.52 | 1.05 / 0.39 / 0.29 | 0.89 / 0.27 / 0.19 |
+| `trinitron-s-video` | 1.62 / 0.87 / 0.54 | 1.25 / 0.65 / 0.34 | 1.14 / 0.51 / 0.24 |
+| `amiga-1084s` | 1.50 / 0.82 / 0.57 | 1.13 / 0.47 / 0.31 | 1.01 / 0.34 / 0.24 |
+| `playstation` (640×448 interlaced) | 3.12 / 1.84 / 1.08 | 2.70 / 1.45 / 0.77 | 2.46 / 1.28 / 0.61 |
 
 Unlike lite, they give up a little of the picture (37–51 dB PSNR against the full presets at 1440×1080):
 
 - The decoder works out every other sample of the signal. The encoder keeps all of them, so the rainbow
   and the blended dithering stay as they were; the picture moves by half a sample (1/2560 of the line).
-- The encoder reads each source pixel once for its colour filter and luma trap.
+- The encoder reads each source pixel once for its colour filter and luma trap. It also multiplies its signal
+  by the TV decoder's reference subcarrier, so the decoder only has to filter it: the same sums, to rounding,
+  at less than half the decoder's work.
 - The beam is worked out with half the taps, on one sample per screen pixel for every tube: dark detail can
   come out up to 1.5% brighter, and on a screen narrower than a hires frame, 1-pixel patterns come out as
   their average.

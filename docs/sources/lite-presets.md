@@ -129,42 +129,48 @@ shoulder 0.01, the rest (geometry, setup, writing the screen) 0.07; 0.34 in all.
 | encoder and decoder at 960 | as the half-rate decoder | 40-43 dB at 320 and 256 wide, 27 dB at 640 wide (1.5 samples per pixel) | no |
 | glass glow from mipmaps of the beam texture instead of two passes | about 0.07 (the passes' overhead) | the beam texture is about 6x wider than tall: one mip level blurs far too much vertically | no |
 | decoder on the 1084S at half rate | 0.2 on hires | 29 dB on hires (its beam reads the signal as a smooth curve) | no |
-| decoder's Gaussian weights by recurrence instead of an exp per tap | none on the M4 | identical (91-98 dB) | no: no gain measured (it might help on GPUs where exp is slow) |
+| the encoder multiplies its signal by the decoder's reference subcarrier (products, averaged over the No flicker frames); the decoder only low-passes them, and its trap is the band of the average signal around the subcarrier. The same sums, so the same picture | decoder 0.18 -> 0.08 (SNES), 0.35 -> 0.16 (PS1 640x448i); encoder +0.005 | 65-74 dB against super lite without it (rounding) | yes |
+| the decoder's Gaussian weights by recurrence instead of an exp at every tap | none on the M4 | the same | yes: on the software renderer the PS1 decoder took 4.8 -> 3.1 s (SNES unchanged), so it should help GPUs where exp is slow |
+
+On the software renderer (one CPU core, 640x480, one frame), super lite before and after the last two:
+SNES 10.7 -> 8.7 s (decoder 7.3 -> 5.2 s), PlayStation 640x448i 16.4 -> 8.9 s (decoder 10.6 -> 3.1 s). The
+decoder's own Timing (getTiming at every pixel) costs 0.3 s of the SNES's 5.2 s there and nothing measurable
+on the M4: left as it is.
 
 The super lite presets as made, against the full presets (all 62, one frame each): 37.5-51 dB at
 1440x1080 (lowest: N64, Saturn and Dreamcast on their 640x480 test frames, S-Video), 30.8-51 dB at 640x480
 (lowest: PC-98 on a sharp 640x480 desktop, where 1-pixel stripes on a screen narrower than the frame come
 out as their average). The Mega Drive waterfall's rainbow and the blended dithering look as in the full
-preset at 2x zoom. In RetroArch (1.22.2, as for lite): every super lite preset compiles and runs on Metal with
-no errors in the log, a selection on glcore and Vulkan; against the full presets in the same RetroArch,
-37.8-51 dB on Metal, 44-51 dB on glcore and Vulkan.
+preset at 2x zoom. In RetroArch (1.22.2, as for lite), before the decoder products: every super lite preset
+compiles and runs on Metal with no errors in the log, a selection on glcore and Vulkan; against the full
+presets in the same RetroArch, 37.8-51 dB on Metal, 44-51 dB on glcore and Vulkan. With the products the
+picture is the same in the harness (65-74 dB against super lite without them, all 62 presets as above).
 
 Time per frame (ms, full / lite / super lite):
 
 | Preset | 1440x1080 | 960x720 | 640x480 |
 |---|---|---|---|
-| consumer-tv-composite | 1.81 / 1.08 / 0.71 | 1.46 / 0.83 / 0.50 | 1.34 / 0.70 / 0.39 |
-| old-tv-rf | 1.83 / 1.10 / 0.74 | 1.50 / 0.84 / 0.53 | 1.37 / 0.73 / 0.43 |
-| trinitron-s-video | 1.63 / 0.88 / 0.60 | 1.30 / 0.63 / 0.39 | 1.11 / 0.52 / 0.29 |
-| consumer-tv-scart-rgb | 1.34 / 0.65 / 0.53 | 1.05 / 0.39 / 0.28 | 0.90 / 0.27 / 0.18 |
-| tv-show-broadcast | 2.20 / 1.30 / 0.95 | 1.81 / 0.93 / 0.64 | 1.57 / 0.72 / 0.47 |
-| amiga-1084s | 1.53 / 0.81 / 0.56 | 1.16 / 0.47 / 0.31 | 1.01 / 0.34 / 0.24 |
-| x68000-monitor (768x512) | 2.68 / 1.52 / 0.95 | 2.33 / 1.04 / 0.59 | 2.12 / 0.82 / 0.46 |
-| pc-monitor-vga (320x200) | 0.97 / 0.57 / 0.42 | 0.64 / 0.36 / 0.24 | 0.50 / 0.26 / 0.18 |
-| pc-monitor-vga (1024x768) | 3.84 / 2.31 / 1.29 | 3.32 / 1.80 / 0.97 | 3.27 / 1.49 / 0.82 |
-| playstation (640x448i) | 3.09 / 1.79 / 1.26 | 2.63 / 1.49 / 0.93 | 2.49 / 1.28 / 0.80 |
+| consumer-tv-composite | 1.81 / 1.06 / 0.62 | 1.49 / 0.82 / 0.41 | 1.34 / 0.68 / 0.31 |
+| old-tv-rf | 1.84 / 1.06 / 0.67 | 1.48 / 0.85 / 0.47 | 1.37 / 0.72 / 0.37 |
+| trinitron-s-video | 1.62 / 0.87 / 0.54 | 1.25 / 0.65 / 0.34 | 1.14 / 0.51 / 0.24 |
+| consumer-tv-scart-rgb | 1.37 / 0.65 / 0.52 | 1.05 / 0.39 / 0.29 | 0.89 / 0.27 / 0.19 |
+| tv-show-broadcast | 2.23 / 1.30 / 0.89 | 1.82 / 0.94 / 0.57 | 1.59 / 0.73 / 0.41 |
+| amiga-1084s | 1.50 / 0.82 / 0.57 | 1.13 / 0.47 / 0.31 | 1.01 / 0.34 / 0.24 |
+| x68000-monitor (768x512) | 2.69 / 1.53 / 0.95 | 2.27 / 1.04 / 0.59 | 2.15 / 0.83 / 0.46 |
+| pc-monitor-vga (320x200) | 0.96 / 0.58 / 0.42 | 0.64 / 0.35 / 0.25 | 0.51 / 0.34 / 0.21 |
+| pc-monitor-vga (1024x768) | 3.89 / 2.32 / 1.32 | 3.42 / 1.75 / 0.98 | 3.24 / 1.52 / 0.83 |
+| playstation (640x448i) | 3.12 / 1.84 / 1.08 | 2.70 / 1.45 / 0.77 | 2.46 / 1.28 / 0.61 |
 
-Where super lite's time goes (consumer-tv-composite, 1440x1080, ms): encoder 0.08, decoder 0.17, the two
-glow passes 0.07 (mostly the cost of a pass), beam 0.07, CRT pass 0.31. At 960x720 the decoder (0.17) and the
-CRT pass (0.15) are about even. Ideas not done: the decoder demodulating products made by the encoder (no
-rotation per frame of the subcarrier cycle at every tap), glass glow without its two passes, mediump
-precision in the CRT and beam passes (faster on Mali, nothing to measure it on here).
+Where super lite's time goes (consumer-tv-composite, 1440x1080, ms): encoder 0.09, decoder 0.08, the two
+glow passes 0.07 (mostly the cost of a pass), beam 0.07, CRT pass 0.31; at 960x720 the CRT pass (0.15) is
+still the largest. Ideas not done: glass glow without its two passes, mediump precision in the CRT and beam
+passes (faster on Mali, nothing to measure it on here).
 
 ## Phones (worked out, not measured)
 
 No Mali GPU was measured. From published throughput figures, a budget Mali of the Mali-G52 MC2 class is
 roughly 50-100x slower than the M4 Pro's GPU, which would put the full composite chain at 720p at about
-70-140 ms a frame, lite at 40-75 ms, super lite at 25-50 ms, and guest-advanced-fastest at 6-12 ms. Things the M4 does not show and
+70-140 ms a frame, lite at 40-75 ms, super lite at 20-40 ms, and guest-advanced-fastest at 6-12 ms. Things the M4 does not show and
 that should favour the lite presets on phones more than measured here: the full chain's beam texture is
 8192 wide (OpenGL ES 3.0 only promises 2048), and lite moves about a third as much render-target data
 (estimated from the target sizes). Arm's Mali Offline Compiler would give cycle and register counts per
@@ -178,5 +184,7 @@ pass for real Mali GPUs.
 - `tools/make_presets.py`, `super_lite_passes`: on top of lite, no native pass, the decoder at half the
   encoder's width (not on the 1084S, glow-h twice its share), the beam at x1 for every tube, the super lite
   passes.
-- `shaders/encode-super-lite.slang`, `beam-super-lite.slang`, `crt-super-lite.slang`: encode.inc, beam.inc and
-  crt.inc with LR_SUPER_LITE (encode.slang and beam.slang include the same files without it).
+- `shaders/encode-super-lite.slang`, `decode-super-lite.slang`, `beam-super-lite.slang`, `crt-super-lite.slang`:
+  encode.inc, decode.inc, beam.inc and crt.inc with LR_SUPER_LITE (encode.slang, decode.slang and beam.slang
+  include the same files without it). The products: `products` and `tint` in encode.inc, the LR_SUPER_LITE
+  branch of the chroma in decode.inc.

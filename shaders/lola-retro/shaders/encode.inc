@@ -185,6 +185,41 @@ float chromaAt(vec2 uv, float n, float y, float fs, Timing T, float off, float v
     return uv.x * sin(ph) + vSignW(y, T, vsw) * uv.y * cos(ph);
 }
 
+#ifdef LR_SUPER_LITE
+// What the decoder demodulates, made here (super lite): the signal of each frame of the cycle
+// times the TV decoder's reference subcarrier for that frame, as (sin, cos), with the frame's PAL
+// V-switch on the cos part, averaged over the frames. The decoder then only has to low-pass it
+// instead of demodulating every frame at every tap (decode.inc). The reference is the frame's own
+// subcarrier phase plus the decoder's tint, which tint() gives as the decoder works it out.
+float tint(Timing T, float cable)
+{
+    float t = T.pal > 0.5 ? 0.0 : radians(global.LR_TINT);
+    if (cable < 0.5)
+    {
+        float ea = -TAU * T.fsc * RF_ECHO_US;
+        t += atan(RF_ECHO * sin(ea), 1.0 + RF_ECHO * cos(ea));
+    }
+    else if (isShow(cable) && global.LR_GHOST > 0.0)
+    {
+        float ea = -TAU * T.fsc * SHOW_GHOST_US;
+        t += atan(global.LR_GHOST * sin(ea), 1.0 + global.LR_GHOST * cos(ea));
+    }
+    return t;
+}
+
+vec2 products(vec3 s, float n, float y, float fs, Timing T, vec3 off, vec3 vsw, int nf, float tn)
+{
+    vec2 p = vec2(0.0);
+    for (int k = 0; k < 3; k++)
+    {
+        if (k >= nf) break;
+        float ph = phaseAtOff(n / fs, y, T, off[k]) + tn;
+        p += s[k] * vec2(sin(ph), vSignW(y, T, vsw[k]) * cos(ph));
+    }
+    return p / float(nf);
+}
+#endif
+
 // TV show: the transmitter's white clipper. With negative modulation the carrier runs out a
 // little above peak white (PAL B/G: white at 10-15% of the carrier, so at about 114-120% of the
 // picture signal; NTSC at about 120 IRE), so the composite signal is clipped a little below
@@ -235,7 +270,11 @@ void main()
     if (cable > 1.5 && !show)
     {
         // S-Video: luma and chroma on separate wires
+#ifdef LR_SUPER_LITE
+        FragColor = vec4(a.x, products(cr, n, y, fs, T, off, vsw, nf, tint(T, cable)), 1.0);
+#else
         FragColor = nf > 1 ? vec4(a.x, cr) : vec4(a.x, cr.x, 0.0, 1.0);
+#endif
         return;
     }
 
@@ -277,5 +316,10 @@ void main()
     // composite: one frame per channel (the frames beyond nf stay 0)
     if (nf < 2) comp.y = 0.0;
     if (nf < 3) comp.z = 0.0;
+#ifdef LR_SUPER_LITE
+    // super lite: the frames' average in x, what the decoder demodulates in y and z
+    FragColor = vec4((comp.x + comp.y + comp.z) / float(nf), products(comp, n, y, fs, T, off, vsw, nf, tint(T, cable)), 1.0);
+#else
     FragColor = vec4(comp, 1.0);
+#endif
 }
