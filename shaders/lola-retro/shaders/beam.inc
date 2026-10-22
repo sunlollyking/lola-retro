@@ -44,9 +44,10 @@ layout(set = 0, binding = 3) uniform sampler2D LR_Decoded;
 
 void main()
 {
-    // one row per native line; the rows past the last line are spare
+    // one row per native line; the rows past the last line are spare (a margin: the division
+    // can land a hair over a whole number)
     float i = floor(vTexCoord.y * params.OutputSize.y);
-    if (i >= params.OriginalSize.y / vScale)
+    if (i + 0.01 >= params.OriginalSize.y / vScale)
     {
         FragColor = vec4(0.0);
         return;

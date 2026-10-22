@@ -17,3 +17,5 @@ and marks what was worked out (inferred) rather than read.
 | [x68000-video.md](x68000-video.md) | the X68000 monitor model: video modes, what px68k sends |
 | [x68000-monitors.md](x68000-monitors.md) | the X68000 monitor model: the monitors |
 | [lite-presets.md](lite-presets.md) | the `lite/` and `super-lite/` presets (issue #12): what each pass costs, what was left out |
+| [internal-resolution.md](internal-resolution.md) | upscaled frames (`upscaleOf`, the native pass), issue #14 |
+| [dither-blend.md](dither-blend.md) | which Dither blend (`LR_DBLEND`) matches composite (README) |

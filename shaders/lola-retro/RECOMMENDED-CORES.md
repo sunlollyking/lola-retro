@@ -8,6 +8,8 @@ device. Three rules cover almost everything:
 1. **Internal resolution.** Native (1×) is the reference. Higher internal resolutions work too: the shader reads
    the frame as blocks of one console pixel, so the signal stays right and edges get smoother. 3× and up is
    detected by itself; for 2× and for upscaled 480-line consoles the table says which Console timing to set.
+   A PAL game at 5× or more: set **TV standard** to 2, as a few heights fit both standards (1440 lines are
+   240 lines at 6× and 288 at 5×).
    Cores that never upscale (Beetle Saturn) or run at 1×: with **Frames over 300 lines** at 1, every frame
    with more than 300 lines is the console's own 480i or 576i, with the Console timing you set.
 2. **No filters inside the core.** Turn off any built-in "NTSC", "Blargg", "smoothing" or "blur" filter.

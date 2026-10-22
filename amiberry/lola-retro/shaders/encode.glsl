@@ -174,7 +174,8 @@ vec4 showLines(float pal, float interlace, float lines)
     // the console's own standard by the same rule as TV standard auto (getTiming)
     float own = ((prog ? lines : lines * 0.5) > 240.5 ? 288.0 : 240.0) * (prog ? 1.0 : 2.0);
     float scv = own / plines;
-    return vec4(prog ? 2.0 : 1.0, scv, 0.5 * scv - 0.5 - floor(0.5 * (own - lines)), plines);
+    // (lines of an upscaled frame can be a hair off a whole number: a margin)
+    return vec4(prog ? 2.0 : 1.0, scv, 0.5 * scv - 0.5 - floor(0.5 * (own - lines) + 0.01), plines);
 }
 
 // The TV presets run the encoder and decoder at a fixed 1280 samples per line (about 27 MHz,
@@ -274,6 +275,10 @@ vec3 x68Raster(float rows, float id)
 // (Beetle Saturn sends its 480i as 640x448 or 704x480) and cores at 1x. An upscaled interlaced
 // frame is still found: 960 lines are 480i at 2x, 1152 lines 576i at 2x. 0 keeps the guess below.
 // 2 (the computer monitor, see getTiming) finds the native lines the same way.
+// More than one k can fit: 1440 lines are 240 lines at 6x and 288 at 5x, 1120 lines 224 at 5x
+// and 280 at 4x. A k that gives a standard height wins: 240 or 224 lines for NTSC, 288 or 256
+// for PAL (twice that in the 480i class), NTSC first unless TV standard is set to PAL. Without
+// one, the smallest k that fits (docs/sources/internal-resolution.md).
 // Returns k (1 for native frames).
 float upscaleOf(vec2 orig)
 {
@@ -284,11 +289,23 @@ float upscaleOf(vec2 orig)
     float base = il ? 480.0 : 240.0;
     bool scaled = (id < 0.5 && !il) ? orig.y > 576.0 : (tv && orig.y > base * 1.5);
     if (!scaled) return 1.0;
+    // the standard heights, the preferred one first
+    vec4 hs = (LR_NORM > 1.5 ? vec4(288.0, 256.0, 240.0, 224.0) : vec4(240.0, 224.0, 288.0, 256.0))
+            * (il ? 2.0 : 1.0);
+    float first = 0.0, best = 0.0, rank = 4.0;
     for (float k = 2.0; k <= 16.0; k += 1.0)
     {
-        float lines = orig.y / k;
-        if (lines == floor(lines) && lines >= base * 0.83 && lines <= base * 1.21) return k;
+        // whole lines: rounded and multiplied back, as a division can land a hair off a whole number
+        float lines = floor(orig.y / k + 0.5);
+        if (lines * k != orig.y || lines < base * 0.83 || lines > base * 1.21) continue;
+        if (first < 0.5) first = k;
+        for (int j = 0; j < 4; j++)
+        {
+            if (lines == hs[j] && float(j) < rank) { best = k; rank = float(j); }
+        }
     }
+    if (best > 0.5) return best;
+    if (first > 0.5) return first;
     // the computer monitor takes any other frame as it is: 1024x768 is a computer's own mode
     if (il && LR_HIRES > 1.5) return 1.0;
     return max(1.0, floor(orig.y / base + 0.5));
@@ -397,8 +414,10 @@ Timing getTiming(vec2 orig, uint frameCount)
 // pixel) and draw every line twice or weave two fields. Other consoles keep (1, 1).
 vec2 consoleUnit(Timing t) { return isAmiga(t) ? vec2(t.hres, t.interlace > 0.5 ? 2.0 : 1.0) : vec2(1.0); }
 
-// y is a source row; rows of one upscaled block belong to the same native line
-float nativeLine(float y, Timing t) { return floor(y / t.scale); }
+// y is a source row; rows of one upscaled block belong to the same native line. The row's centre
+// is divided: for the first row of a line y / k is a whole number, and a GPU's division can land
+// a hair under it (AMD at 3x), which would put the row in the line before.
+float nativeLine(float y, Timing t) { return floor((y + 0.5) / t.scale); }
 float physLine(float y, Timing t) { float l = nativeLine(y, t); return t.interlace > 0.5 ? floor(l * 0.5) : l; }
 bool oddField(float y, Timing t) { return t.interlace > 0.5 && mod(nativeLine(y, t), 2.0) > 0.5; }
 

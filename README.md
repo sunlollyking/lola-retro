@@ -88,6 +88,10 @@ shader parameters. It takes out only the stripes that alternate from one pixel t
 and Mario's pipe blend without composite's rainbow and blur. It is off by default because no real TV did this;
 it is modern processing, like the notch filter of the RetroTINK 4K Pro.
 
+To blend as much as the composite presets do: on NTSC, 1 for 320-wide modes (most PlayStation games, Mega Drive
+H40) and 0.5 for 256-wide modes (NES, SNES, Master System, Mega Drive H32). PAL composite blended much less, about
+0.45 and 0.1, because its colour subcarrier sits further from the stripes.
+
 ![Dither blend off and on, with composite for comparison](docs/dither-blend-sonic.jpg)
 
 ## Colour like the TV you had

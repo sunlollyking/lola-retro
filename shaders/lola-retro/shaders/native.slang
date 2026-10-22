@@ -38,7 +38,9 @@ layout(set = 0, binding = 2) uniform sampler2D Source;
 void main()
 {
     float y = floor(vTexCoord.y * params.SourceSize.y);
-    if (mod(y, vScale) > 0.5)
+    // the row's centre: for a line's first row y / k is a whole number, and a GPU's division
+    // can land a hair under it, so mod(y, k) came out k instead of 0 (AMD at 3x: a black picture)
+    if (mod(y + 0.5, vScale) > 1.0)
     {
         // only the first row of each console line is read by the encoder
         FragColor = vec4(0.0);
