@@ -46,6 +46,9 @@ little rainbow, just as it did on a living-room TV. On RGB you see the stripes t
    (or `systems/flat`), for example `snes.slangp`. Each one is the TV or monitor most people had for that system,
    with the system's timing set. The presets by device are in `curved` and `flat`.
 3. Video driver must be Vulkan, glcore, D3D11, D3D12 or Metal (the old `gl` driver does not run slang shaders).
+   On Windows use Vulkan, or glcore: with D3D11 or D3D12 a full preset takes about 25 seconds to load every time
+   a game starts (on a laptop with Intel graphics; Vulkan 3 to 7 seconds, glcore 8 to 13), see
+   [Windows](shaders/lola-retro/README.md#windows).
 4. HDR display? Use the same presets from `lola-retro/hdr/curved`; setup is in [HDR](shaders/lola-retro/README.md#hdr).
 5. Older phone, handheld or weak GPU? Use the same presets from `lola-retro/lite/systems/curved`: about twice as
    fast, the same picture, see [Lite presets](shaders/lola-retro/README.md#lite-presets). Still too slow?

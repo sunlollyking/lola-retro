@@ -111,6 +111,23 @@ The shaders are in the slang format, so the video driver must be **Vulkan, glcor
 
 To use a preset automatically for one system, load it and choose **Quick Menu → Shaders → Save → Save Core Preset**.
 
+### Windows
+
+Use **Vulkan** (or glcore). D3D11 and D3D12 work and show the same picture, but RetroArch turns the passes
+into HLSL for Microsoft's compiler, which takes a long time over the full presets' CRT pass. On a laptop with
+an Intel Core Ultra 5 225U (RetroArch 1.22.2), the seconds RetroArch took to start, load the preset and
+show one second of picture:
+
+| Driver | Full presets | Lite and super lite | No shader |
+|---|---|---|---|
+| Vulkan | 3 to 7 | 3.5 to 4.5 | 2 |
+| glcore | 8 to 13 | 3.5 to 4.5 | 2 |
+| D3D11, D3D12 | 24 to 31 | 4 to 6 | 2 to 3 |
+
+That wait comes every time a game starts with the preset (changing a parameter does not recompile). The
+lite presets leave out Around the tube, which is very likely what takes the time. For HDR use Vulkan too:
+glcore has no HDR. On old Intel graphics glcore has shown a broken picture (see [Performance](#performance)).
+
 ## Core settings that matter
 
 For every system (core, preset, console timing and settings), see
@@ -508,6 +525,9 @@ textures that wide (every desktop GPU of the last decade does). The beam pass is
 the [lite presets](#lite-presets) make it as wide as the screen.
 Older integrated graphics will not reach full speed: one user measured about 24 fps with the Amiga preset at
 1080p on Intel Haswell graphics (2013) with Vulkan; on the same GPU the glcore driver showed a broken picture.
+Recent integrated graphics have room to spare: on a laptop with an Intel Core Ultra 5 225U (Vulkan, a 1600×1200
+picture) the full presets take 5.4 to 6.6 ms of the 16.7 ms a frame has at 60 Hz, lite 2.2 to 3.4 ms and
+super lite 1.7 to 2.5 ms (`docs/sources/windows-test.md` in the repository).
 
 ## Tested
 
@@ -516,6 +536,10 @@ and the Metal screenshots match, practically pixel for pixel, the offline render
 Earlier versions were rendered in RetroArch 1.18 with the glcore and Vulkan drivers and reported working with
 Vulkan and glcore on Windows (NVIDIA). Direct3D 10/11/12 failed in 1.0 and 1.1; 1.2 fixes the cause (every pass
 now samples without derivatives, which the Direct3D compiler requires inside loops).
+v1.16 was run on Windows 11 with Intel graphics (Core Ultra 5 225U) on D3D11, D3D12, Vulkan and glcore: 12
+of the 15 device presets (all but three of the PC monitors) and lite and super lite composite start with no
+errors, and D3D11, Vulkan and glcore give the same picture
+(RetroArch cannot take a screenshot of the shader's output on D3D12, so its picture was not compared).
 The HDR output has been checked numerically (the HDR10 signal decodes back to the intended brightness)
 and confirmed on macOS with the Vulkan driver and a DisplayHDR 400 monitor. Reports from other HDR
 displays are welcome. The Amiberry and 86Box versions are in use in Amiberry and 86Box on macOS.
