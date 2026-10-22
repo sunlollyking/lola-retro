@@ -65,7 +65,7 @@ For a PAL console set **TV standard** to 2 if the auto setting picks NTSC (the f
 
 ## Curved or flat
 
-The device folders have the same 14 presets; `systems/curved` and `systems/flat` have one per system.
+The device folders have the same 15 presets; `systems/curved` and `systems/flat` have one per system.
 
 | Folder | Screen |
 |---|---|
@@ -108,7 +108,7 @@ To use a preset automatically for one system, load it and choose **Quick Menu �
 
 ## Core settings that matter
 
-For every system from NES to PS2 (core, preset, console timing and settings), see
+For every system (core, preset, console timing and settings), see
 [RECOMMENDED-CORES.md](RECOMMENDED-CORES.md). The short version:
 
 The composite simulation needs the console's real pixel grid:
@@ -119,6 +119,8 @@ The composite simulation needs the console's real pixel grid:
 - **SNES** (Snes9x, bsnes): built-in NTSC/blargg filters **off**, hi-res blending **off**.
 - **DOS and Windows 9x** (DOSBox Pure): leave the default VGA output; use `pc-monitor-vga`. It covers every PC
   mode from 320×200 to 1024×768 (the other presets would read 640×480 as a 480i TV picture).
+- **Sharp X68000** (px68k): use `systems/x68000`. For a game that shows 256 lines at 15 kHz (gaps between the
+  lines on the real monitor), set **Console timing** to 11 (see [X68000 monitor](#x68000-monitor)).
 - RetroArch: **Settings → Video → Scaling → Aspect Ratio**: *Core provided* or *4:3*. Integer scaling is optional.
   With **Around the tube** on, *Full* works too: the tube stays 4:3 and the monitor's surroundings fill the rest of the screen.
 
@@ -138,7 +140,7 @@ Every preset only sets parameters, so you can tweak any preset in **Quick Menu �
 |---|---|
 | Console timing | Pixel clock and colour-subcarrier rhythm of the console. 0 = auto (see below). |
 | TV standard | 0 auto (by line count), 1 NTSC, 2 PAL. Set it by hand for PAL consoles in 60 Hz mode (PAL60, common on PS2 and Dreamcast): the line count says NTSC but the colour is PAL. It also switches the colour decoder and the phosphors. On a TV show (Cable 4) it is the standard of the programme: `tv-show-broadcast` sets 2, a European programme, and a game in the other standard goes through the studio's standards converter (see [TV show](#tv-show)). |
-| Frames over 300 lines | 0 (default): auto. A frame with more than 300 lines is the console's 480i or 576i, but one with more than 576 lines (or, with Console timing set by hand, more than 360) is read as a 240-line game at a higher internal resolution, so with timing 4 a 480i game's two fields are averaged into one line. 1: every frame with more than 300 lines is the console's own 480i or 576i, on every TV timing, and the console's timing stays as set; an upscaled one is still found (960 lines: 480i at 2×, 1152: 576i at 2×). For cores that never upscale (Beetle Saturn) or run at 1×: a 240-line game at 2× would be read as 480i. 2: every frame with more than 300 lines goes to a computer monitor instead, as if you had a second screen for the high-res modes (a compromise, see [Computer monitor for high-res frames](#computer-monitor-for-high-res-frames)). Amiga, VGA and 24 kHz timings (6, 7, 9) are not affected. |
+| Frames over 300 lines | A 480-line frame can be a console's own 480i or a 240-line game at 2× internal resolution, and its size cannot tell which. 0 (default): auto. Up to 576 lines is the console's 480i or 576i, more is read as upscaled; with Console timing set by hand, already more than 360 lines (so on timing 4 a 480i game's two fields are averaged into one line). 1: every frame over 300 lines is the console's own 480i or 576i, on every TV timing, with the timing as set; an upscaled one is still found (960 lines: 480i at 2×, 1152: 576i at 2×). For cores that never upscale (Beetle Saturn) or run at 1×: a 240-line game at 2× would be read as 480i. 2: every frame over 300 lines goes to a computer monitor instead, as if you had a second screen for the high-res modes (a compromise, see [Computer monitor for high-res frames](#computer-monitor-for-high-res-frames)). The Amiga, VGA, 24 kHz and X68000 timings (6, 7, 9, 10, 11) are not affected. |
 | Cable | 0 RF, 1 Composite, 2 S-Video, 3 RGB, 4 TV show: the game as seen on a TV programme, from a studio through the antenna (see [TV show](#tv-show)). |
 | Comb filter | Better TVs separated colour with a comb filter. Only works when the console flips the subcarrier phase every line (PlayStation, Amiga). On a TV show (Cable 4) the broadcast's own NTSC timing lets it work for every console. |
 | Luma trap in the console | How much of the fine luma detail the console's encoder filtered out before mixing in colour. Lower it for a stronger rainbow on fine stripes (Sonic's waterfall), raise it for a cleaner picture. Real consoles differed a lot here: 0 is like an early Mega Drive Model 1 (strong rainbow), 0.75 (default) a typical console, 1 a later model with a better encoder. |
@@ -149,7 +151,7 @@ Every preset only sets parameters, so you can tweak any preset in **Quick Menu �
 | No flicker | On by default. Shows a still picture the way the eye saw the moving one: the dots and the cross-colour that crawl from frame to frame are averaged over the frames of their cycle (2 on the PlayStation), so they cancel, as the eye blended them at 50 or 60 Hz (the NES and SNES only alternate between two positions 2/3 of a cycle apart, so there they halve instead); both interlaced fields are drawn every frame. Turn it off for the real moving dot crawl and 480i field flicker. |
 | TV show: tape copies | Cable 4 only. How many Betacam SP copies the game footage went through before it was broadcast (recorded, then edited onto the master tape: 2). Each copy softens luma and colour a little more. 0 is a live programme. |
 | TV show: antenna ghost | Cable 4 only. A faint copy of the picture shifted to the right, from a reflection off a building or a hill on the way to the roof antenna. |
-| Beam width in dark areas / on white | The beam spot grows with brightness, in both directions: bright lines merge and bright detail rounds off, dark lines show gaps and dark detail stays sharp. TVs; monitors in mm (PC monitors, the 1084S) use the spot sizes in mm below. |
+| Beam width in dark areas / on white | The beam spot grows with brightness, in both directions: bright lines merge and bright detail rounds off, dark lines show gaps and dark detail stays sharp. TVs; monitors in mm (PC monitors, the 1084S, the X68000's) use the spot sizes in mm below. |
 | Horizontal focus | Horizontal spot size relative to the vertical one; 0.5 = a round spot. Not used on monitors in mm (their spot is round). |
 | Tube gamma | 2.4 is typical. |
 | Phosphor afterglow | Real phosphors fade within about a millisecond, so keep this low. |
@@ -159,18 +161,18 @@ Every preset only sets parameters, so you can tweak any preset in **Quick Menu �
 | Mask strength / triads per screen height | Lower the triad count for a coarser mask. Below about 2 screen pixels per triad the mask fades out to avoid moiré, so the fine PC mask shows best at 4K. On monitors in mm the triad count comes from the mask pitch instead. |
 | Mask on screen pixels | 0 (default): the mask at the tube's own size (triads per screen height, or the dot pitch in mm), the same on every display. 2–6: the mask drawn on whole screen pixels, one triad every 2 to 6 pixels, like the pixel masks of other CRT shaders: it lines up with the screen's pixels, so it shows no moiré and does not fade out on a low-resolution display, but the number of triads follows your resolution instead of the tube. 2 is magenta and green (fine), 3 red, green and blue, 4 and up coarser. 1 (auto) takes the whole number of pixels nearest the tube's own triads (for 360 triads: 3 at 1080p, 4 at 1440p, 6 at 4K). For the aperture grille, slot mask and shadow mask; best on an LCD with RGB stripes. |
 | White point | 6500 K neutral, 9300 K is the bluish white many TVs and monitors had. |
-| Phosphors | 0 auto, 1 sRGB, 2 SMPTE-C, 3 EBU, 4 Japanese P22. The colours of the tube's phosphors. Auto: SMPTE-C on NTSC sets, EBU on PAL sets, sRGB on PC monitors, Japanese P22 on arcade monitors; the Trinitron preset uses Japanese P22 and the studio monitor EBU. Colours outside your display's range are clipped in SDR and kept in HDR. |
+| Phosphors | 0 auto, 1 sRGB, 2 SMPTE-C, 3 EBU, 4 Japanese P22. The colours of the tube's phosphors. Auto: SMPTE-C on NTSC sets, EBU on PAL sets, sRGB on PC monitors, Japanese P22 on arcade monitors and the X68000's; the Trinitron preset uses Japanese P22 and the studio monitor EBU. Colours outside your display's range are clipped in SDR and kept in HDR. |
 | Curvature, Rounded corners, Glass glow, Glass glow size, Darker edges, Overscan, Overscan height, Room reflection | The glass. Curvature is how much the glass bulges: its edges bow outwards and crop the corners of the picture. Glass glow sets how strong the halo around bright things is, Glass glow size how far it reaches. Set curvature and corners to 0 for a flat screen (that is all the `flat` presets change). Overscan is how far the picture runs past the edges of the glass; negative overscan adds a black border, like PC monitors. Overscan height is added to it for the height alone, like the monitor's height knob: raise it to fill the height (a 224-line SNES game keeps thin black bars at the top and bottom otherwise), lower it for a border at the top and bottom only. Room reflection is the room's light the glass reflects, in % of white, in a dim room (Room light 1): 0.2 on a TV, 0 on the studio monitors. |
 | Raster bend | How much of the glass curvature the picture follows. The deflection was corrected so that the raster looks nearly rectangular from the front; a well adjusted set kept the bow of its lines to about 1% of the height, which is the default (0.3). 0 is a perfectly corrected raster, 1 a picture bent as much as the glass. |
 | Picture height | 0 (default): the picture sits in the TV's 240- or 288-line field, so a game with fewer lines (224) keeps a border, as on the real set. 1: the core's lines fill the height. Use it with **Aspect Ratio: Core provided** for cores that crop lines and set the aspect ratio from the lines they keep (Geargrafx, Beetle PCE/Saturn/PSX with their scanline options); with a fixed 4:3 it stretches the picture. It is a zoom of the same tube, so lines and beam keep their look. Not used on a TV show (Cable 4). |
 | Linearity error horizontal, vertical | Off (0) by default. Real deflection was never perfectly linear: one side of the picture came out squeezed and the other stretched, differently on every set. Positive values squeeze the left or the top, negative the right or the bottom; 0.05 to 0.1 is a cheap set. |
-| 15 kHz monitor in mm | Describes the tube in mm for 15 kHz modes too (on in the `amiga-1084s` preset): the parameters below then apply, the monitor shows the whole active line (a 320-pixel Amiga line leaves side borders), and 320×200 / 640×400 are read as an NTSC Amiga instead of VGA. PC monitors (31 kHz) always use mm. |
-| Monitor size, Dot pitch | Nominal size in inches (the viewable picture is one inch less) and the mask pitch in mm. See [PC monitor](#pc-monitor) and [Amiga 1084S](#amiga-1084s). |
-| Spot size in dark areas / on white | The beam spot in mm (width at half brightness). 0.30 / 0.45 is a typical 15-inch PC monitor, 0.28 / 0.65 the 1084S; lower both for a sharper tube. |
+| 15 kHz monitor in mm | Describes the tube in mm for 15 kHz modes too (on in the `amiga-1084s` preset): the parameters below then apply, the monitor shows the whole active line (a 320-pixel Amiga line leaves side borders), and 320×200 / 640×400 are read as an NTSC Amiga instead of VGA. PC monitors (31 kHz) and the X68000 monitor always use mm. |
+| Monitor size, Dot pitch | Nominal size in inches (the viewable picture is one inch less) and the mask pitch in mm. See [PC monitor](#pc-monitor), [Amiga 1084S](#amiga-1084s) and [X68000 monitor](#x68000-monitor). |
+| Spot size in dark areas / on white | The beam spot in mm (width at half brightness). 0.30 / 0.45 is a typical 15-inch PC monitor, 0.28 / 0.65 the 1084S (and the X68000 preset); lower both for a sharper tube. |
 | Spot size in the corners | How much larger the spot is in the corners than in the centre (deflection defocus). 1.4 is typical for a PC monitor (dynamic focus kept good ones below 1.5, cheap ones reached 2); the 1084S had static focus, 1.5. |
 | Real size: your screen's height, unit | Draws the tube as large as the monitor in **Monitor size** really was, with black (or **Around the tube**) around it, instead of filling your screen. Enter the height of your screen's picture area (measured, in cm, or in inches with unit 1); 0 fills the screen. On a large display this puts the monitor at its real size in front of you. Needs the picture area as tall as the screen (full screen). |
-| Around the tube | What is around the tube: 0 black, 1 the monitor in a room, 2–11 the monitor in a scene (see [Scenes](#scenes)). The casing is measured on photos of real monitors and drawn as large as the real one, so it shows best with **Real size**. `amiga-1084s` gets an Amiga monitor (after the M1438S): warm off-white, a thick flat front, a tunnel with mitred corners down to a thin black mask at the glass, a plain chin with a green power light. The PC presets get a 90s PC monitor (after a Compaq 151FS): aged cream, a raised rim around a shallower recess, a blank plaque, and a control strip below with buttons and a green light. The TV presets get a 90s TV (after photos of several): dark grey plastic, thin sides, the glass almost flush with the front, and a tall chin with a speaker grille on each side of the controls (a power switch, a red light, four small buttons). TVs came from 14 to 29 inches, so the TV is sized to **Monitor size**. The walls around the glass face the picture, so the screen lights them softly in its colours and they change with it (**Screen light on the casing**); the room lights them from above, darker at the top and lighter at the bottom, and the satin plastic catches a little of the ceiling and the lamp on the edges that face up. |
-| Room light | How bright the room is: 1 a dim room (warm lamps), 3 a lit room, 20 daylight. It lights the casing and the wall (in a scene only the casing, in the scene's colour: white in space, pink in synthwave, like its sun), and sets the reflection on the glass too (Room reflection is how much the tube reflects in a dim room), so in daylight the tube's black turns grey, as on the real one. Lower Room reflection if you want it darker. |
+| Around the tube | What is around the tube: 0 black, 1 the monitor in a room, 2–11 the monitor in a scene (see [Scenes](#scenes)). The casing is measured on photos of real monitors and drawn as large as the real one, so it shows best with **Real size**. `amiga-1084s` gets an Amiga monitor (after the M1438S): warm off-white, a thick flat front, a tunnel with mitred corners down to a thin black mask at the glass, a plain chin with a green power light. The PC presets get a 90s PC monitor (after a Compaq 151FS): aged cream, a raised rim around a shallower recess, a blank plaque, and a control strip below with buttons and a green light. The TV presets get a 90s TV (after photos of several): dark grey plastic, thin sides, the glass almost flush with the front, and a tall chin with a speaker grille on each side of the controls (a power switch, a red light, four small buttons). TVs came from 14 to 29 inches, so the TV is sized to **Monitor size**. `x68000-monitor` gets the TV too: the CZ-600D was a TV set as well. The walls around the glass face the picture, so the screen lights them softly in its colours and they change with it (**Screen light on the casing**); the room lights them from above, darker at the top and lighter at the bottom, and the satin plastic catches a little of the ceiling and the lamp on the edges that face up. |
+| Room light | How bright the room is: 1 a dim room (warm lamps), 3 a lit room, 20 daylight. 0 is a dark room: the glass reflects nothing, and black stays black (best on an OLED in the dark). It lights the casing and the wall (in a scene only the casing, in the scene's colour: white in space, pink in synthwave, like its sun), and sets the reflection on the glass too (Room reflection is how much the tube reflects in a dim room), so in daylight the tube's black turns grey, as on the real one. Lower Room reflection if you want it darker. |
 | Screen light on the casing | How strongly the screen lights the walls around the glass: 0 off, 1 as on the real monitor (worked out from the screen's light, the angle of the walls and the tinted glass; about 3–5% of the picture beside them, softly spread, as plastic scatters it), up to 3. Best seen in a dark room. |
 | Scene speed | How fast the scenes move: 1 normal, 0 a still picture, up to 3. |
 | HDR: paper white, HDR: display peak | Only in the `hdr` presets. Paper white is how bright a full white screen is, display peak the most your display can show. See [HDR](#hdr). |
@@ -221,7 +223,7 @@ alternating, which the shader does not model separately.
 **Auto** guesses from the frame size: 256×192 → Master System, other 256-wide frames → SNES, 320×224 → Mega Drive, 320×240 and other 240-line
 modes → PlayStation, 320×200, 640×350 or 640×400 → VGA (NTSC Amiga on the 1084S preset), 256 or 512 lines and PUAE's default
 frames (360, 720 or 1440 wide with 287, 574, 242 or 484 lines) → Amiga, 336–400 lines → arcade 24 kHz,
-more than 300 lines → interlaced, more than 576 lines → upscaled (more than 720 with **Frames over 300 lines** 1; see Internal resolution). Set the id by hand when the guess is wrong (for example a Mega Drive game
+more than 300 lines → interlaced, more than 576 lines → upscaled (more than 720 with **Frames over 300 lines** 1 or 2; see Internal resolution). Set the id by hand when the guess is wrong (for example a Mega Drive game
 in 240-line PAL mode), or use a preset from `systems/`.
 
 ## TV show
@@ -408,6 +410,12 @@ presets keep working with HDR on as well (RetroArch converts them), they just do
 With a bright display (peak about 4× paper white or more) you can raise **Mask strength** towards 1.0:
 the gaps between the phosphors go dark like on a real tube and the picture stays as bright.
 
+**True black on an OLED.** The presets assume a dim room with a lamp on (Room light 1), so the glass reflects
+a little of the room's light and the tube's black is a faint grey (about 0.35 nits at the default paper white),
+as on a real CRT in such a room. If you play in a dark room, set **Room light** to 0: black is then exactly
+black, as on a real tube in the dark. Glass glow still lifts the area right around bright things a little, as
+the real glass did.
+
 ## Performance
 
 The chain has eight passes (`tv-show-broadcast` nine) and the encoder and decoder do real signal
@@ -424,14 +432,17 @@ Older integrated graphics will not reach full speed: one user measured about 24 
 
 ## Tested
 
-Rendered in RetroArch 1.18 with the glcore and Vulkan drivers, and reported working with Vulkan and glcore on
-Windows (NVIDIA). Direct3D 10/11/12 failed in 1.0 and 1.1; 1.2 fixes the cause (every pass now samples
-without derivatives, which the Direct3D compiler requires inside loops). Metal has not been confirmed yet.
+Every preset of v1.14 compiles and runs in RetroArch 1.22.2 on macOS with the Metal, glcore and Vulkan drivers,
+and the Metal screenshots match, practically pixel for pixel, the offline renders every change is checked with.
+Earlier versions were rendered in RetroArch 1.18 with the glcore and Vulkan drivers and reported working with
+Vulkan and glcore on Windows (NVIDIA). Direct3D 10/11/12 failed in 1.0 and 1.1; 1.2 fixes the cause (every pass
+now samples without derivatives, which the Direct3D compiler requires inside loops).
 The HDR output has been checked numerically (the HDR10 signal decodes back to the intended brightness)
 and confirmed on macOS with the Vulkan driver and a DisplayHDR 400 monitor. Reports from other HDR
 displays are welcome. The Amiberry and 86Box versions are in use in Amiberry and 86Box on macOS.
 The PC monitor model was checked against its physics (spot width, stripe contrast, line structure and brightness
-agree within 2% in every mode) and against photos of real VGA monitors; the 1084S against photos of a real 1084S.
+agree within 2% in every mode) and against photos of real VGA monitors; the 1084S against photos of a real 1084S;
+the X68000 monitor against Sharp's manuals and photos of X68000 monitors, not yet with frames from px68k itself.
 Reports are welcome.
 
 ## License

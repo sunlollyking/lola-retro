@@ -294,7 +294,7 @@ Measured on synthetic patterns:
 
 | Folder | Contents |
 |---|---|
-| `shaders/lola-retro/` | The RetroArch shader pack (slang): one preset per system in `systems/`, and 14 presets by device, each in a `curved/` and a `flat/` version, plus the same for HDR displays in `hdr/`. Details in its [README](shaders/lola-retro/README.md). |
+| `shaders/lola-retro/` | The RetroArch shader pack (slang): one preset per system in `systems/`, and 15 presets by device, each in a `curved/` and a `flat/` version, plus the same for HDR displays in `hdr/`. Details in its [README](shaders/lola-retro/README.md). |
 | `amiberry/lola-retro/` | The Amiga 1084S preset converted to GLSL for Amiberry. Details in its [README](amiberry/lola-retro/README.md). |
 | `86box/lola-retro/` | The PC monitor presets converted to GLSL for 86Box. Details in its [README](86box/lola-retro/README.md). |
 | `unity/lola-retro/` | The Unity package: every pass converted to HLSL, with all presets. Details in its [README](unity/lola-retro/README.md). |
